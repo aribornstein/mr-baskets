@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebXR Basketball Game</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      #score {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 24px;
+        color: white;
+        z-index: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Display the score on screen -->
+    <div id="score">Score: 0</div>
+
+    <!-- We load Three.js and the ARButton module from a CDN -->
+    <script type="module">
+      import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
+      import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/ARButton.js";
+
+      let scene, camera, renderer;
+      let controller;
+      let clock;
+      let balls = [];
+      let score = 0;
+      const scoreEl = document.getElementById("score");
+
+      init();
+      animate();
+
+      function init() {
+        // Create a Three.js scene and camera.
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(
+          70,
+          window.innerWidth / window.innerHeight,
+          0.01,
+          20
+        );
+
+        // Create a WebGLRenderer with alpha enabled.
+        // In an immersive AR session the camera feed appears as the background.
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // Add an ARButton that starts an immersive-ar session.
+        // (The "local-floor" feature helps to position objects relative to the floor.)
+        document.body.appendChild(
+          ARButton.createButton(renderer, {
+            requiredFeatures: ["local-floor"],
+          })
+        );
+
+        // Create a hoop using a torus geometry.
+        // This hoop will appear as a ring floating in your room.
+        const hoopGeometry = new THREE.TorusGeometry(0.3, 0.02, 16, 100);
+        const hoopMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const hoop = new THREE.Mesh(hoopGeometry, hoopMaterial);
+        hoop.name = "hoop";
+        // Position the hoop 2 meters ahead and 1.5 meters high.
+        hoop.position.set(0, 1.5, -2);
+        // Rotate so the ring faces you.
+        hoop.rotation.x = Math.PI / 2;
+        scene.add(hoop);
+
+        // Optional: Add a backboard (a simple plane) behind the hoop.
+        const boardGeometry = new THREE.PlaneGeometry(0.6, 0.4);
+        const boardMaterial = new THREE.MeshBasicMaterial({
+          color: 0x0000ff,
+          side: THREE.DoubleSide,
+        });
+        const backboard = new THREE.Mesh(boardGeometry, boardMaterial);
+        backboard.position.set(0, 1.5, -2.05);
+        scene.add(backboard);
+
+        // Set up the controller.
+        // When you press the controller trigger the "select" event fires.
+        controller = renderer.xr.getController(0);
+        controller.addEventListener("select", onSelect);
+        scene.add(controller);
+
+        // Clock for delta time calculations.
+        clock = new THREE.Clock();
+
+        window.addEventListener("resize", onWindowResize, false);
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      // When the user presses the trigger, create a basketball.
+      function onSelect() {
+        // Create a sphere geometry for the ball.
+        const ballGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+        const ballMaterial = new THREE.MeshBasicMaterial({ color: 0xffa500 });
+        const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+
+        // Get the controller's world orientation to determine the throw direction.
+        const tempMatrix = new THREE.Matrix4();
+        tempMatrix.extractRotation(controller.matrixWorld);
+        // The -Z axis is the "forward" direction.
+        const direction = new THREE.Vector3(0, 0, -1).applyMatrix4(tempMatrix);
+
+        // Place the ball at the controller's current position.
+        ball.position.copy(controller.position);
+        // Give the ball an initial velocity (adjust multiplier to change throw speed).
+        ball.userData.velocity = direction.multiplyScalar(2);
+        // Add a gravity vector to simulate falling.
+        ball.userData.gravity = new THREE.Vector3(0, -9.8, 0);
+
+        balls.push(ball);
+        scene.add(ball);
+      }
+
+      // Update the on-screen score.
+      function updateScore() {
+        scoreEl.innerHTML = "Score: " + score;
+      }
+
+      // A simple check to see if a ball has "scored" by being close to the hoop center.
+      function checkHoopCollision(ball, hoop) {
+        // Get the hoop's world position.
+        const hoopWorldPos = new THREE.Vector3();
+        hoop.getWorldPosition(hoopWorldPos);
+        // Use a threshold distance (0.3 meters) for scoring.
+        const distance = ball.position.distanceTo(hoopWorldPos);
+        return distance < 0.3;
+      }
+
+      function animate() {
+        renderer.setAnimationLoop(render);
+      }
+
+      function render() {
+        const delta = clock.getDelta();
+
+        // Update each ball’s position and check for scoring.
+        for (let i = balls.length - 1; i >= 0; i--) {
+          const ball = balls[i];
+          // Update velocity with gravity.
+          ball.userData.velocity.add(
+            ball.userData.gravity.clone().multiplyScalar(delta)
+          );
+          // Update ball position.
+          ball.position.add(ball.userData.velocity.clone().multiplyScalar(delta));
+
+          // Remove the ball if it falls too low.
+          if (ball.position.y < -1) {
+            scene.remove(ball);
+            balls.splice(i, 1);
+            continue;
+          }
+
+          // Get the hoop from the scene.
+          const hoop = scene.getObjectByName("hoop");
+          if (hoop && checkHoopCollision(ball, hoop)) {
+            score++;
+            updateScore();
+            // Remove the ball once it scores.
+            scene.remove(ball);
+            balls.splice(i, 1);
+            continue;
+          }
+        }
+
+        renderer.render(scene, camera);
+      }
+    </script>
+  </body>
+</html>

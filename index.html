@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>WebXR Basketball Game – Grab and Throw</title>
+    <title>WebXR Basketball – Hold & Throw</title>
     <style>
       body {
         margin: 0;
@@ -16,10 +16,22 @@
         color: white;
         z-index: 1;
       }
+      #instructions {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        font-size: 18px;
+        color: white;
+        z-index: 1;
+      }
     </style>
   </head>
   <body>
+    <!-- Display score and instructions -->
     <div id="score">Score: 0</div>
+    <div id="instructions">
+      Hold trigger to grab the ball, release to throw it!
+    </div>
     <script type="module">
       import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
       import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/ARButton.js";
@@ -28,20 +40,21 @@
       let controller;
       let clock;
       let score = 0;
-      const balls = []; // All thrown balls with physics
+      const thrownBalls = []; // Balls that have been thrown
       const scoreEl = document.getElementById("score");
 
       // For the grabbing mechanic:
-      let heldBall = null; // The ball currently held (if any)
-      // To estimate throw velocity, we record the controller's recent positions.
+      let heldBall = null; // The ball currently held
+      // To estimate the throw velocity, record the controller’s recent world positions.
+      // (We use a 200ms window for velocity estimation.)
       const controllerHistory = [];
-      // We'll record positions for the last 100ms.
-      const HISTORY_TIME_MS = 100;
+      const HISTORY_TIME_MS = 200;
 
       init();
       animate();
 
       function init() {
+        // Set up scene, camera, and renderer.
         scene = new THREE.Scene();
         camera = new THREE.PerspectiveCamera(
           70,
@@ -50,26 +63,23 @@
           20
         );
 
-        // WebGLRenderer with alpha so the passthrough camera shows behind.
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.xr.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // ARButton for immersive AR session.
+        // Start an AR session using the ARButton.
         document.body.appendChild(
-          ARButton.createButton(renderer, {
-            requiredFeatures: ["local-floor"],
-          })
+          ARButton.createButton(renderer, { requiredFeatures: ["local-floor"] })
         );
 
-        // Create a hoop: a red torus representing the basket.
+        // Create a hoop (a red torus) to serve as the basket.
         const hoopGeometry = new THREE.TorusGeometry(0.3, 0.02, 16, 100);
         const hoopMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
         const hoop = new THREE.Mesh(hoopGeometry, hoopMaterial);
         hoop.name = "hoop";
-        // Position the hoop 2 meters ahead and 1.5 meters high.
+        // Place the hoop 2 meters ahead and 1.5 meters high.
         hoop.position.set(0, 1.5, -2);
         hoop.rotation.x = Math.PI / 2;
         scene.add(hoop);
@@ -86,9 +96,9 @@
 
         // Set up the controller.
         controller = renderer.xr.getController(0);
-        // When the trigger is pressed, spawn a ball to hold.
+        // When you press the trigger, “grab” a ball.
         controller.addEventListener("selectstart", onSelectStart);
-        // When the trigger is released, throw the ball.
+        // When you release the trigger, “throw” the ball.
         controller.addEventListener("selectend", onSelectEnd);
         scene.add(controller);
 
@@ -102,41 +112,39 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
 
-      // Called when the user presses the trigger: spawn and attach a ball.
+      // When trigger is pressed, create a ball and attach it to the controller.
       function onSelectStart() {
-        // Only create a ball if none is held.
-        if (heldBall === null) {
-          // Create a small sphere for the ball.
+        // Only create a ball if none is currently held.
+        if (!heldBall) {
           const ballGeometry = new THREE.SphereGeometry(0.05, 16, 16);
           const ballMaterial = new THREE.MeshBasicMaterial({ color: 0xffa500 });
           const ball = new THREE.Mesh(ballGeometry, ballMaterial);
 
-          // Attach the ball to the controller.
-          // Position it slightly in front of the controller so you can see it.
-          ball.position.set(0, 0, -0.1);
+          // Position the ball relative to the controller so it appears in your hand.
+          // Adjust the offset as needed for a natural “grip.”
+          ball.position.set(0, -0.03, -0.1);
+          // Parent the ball to the controller so it follows your hand exactly.
           controller.add(ball);
-
           heldBall = ball;
-          // Clear any previous history.
+
+          // Reset controller history for this grab.
           controllerHistory.length = 0;
         }
       }
 
-      // Called when the user releases the trigger: throw the held ball.
+      // When trigger is released, detach the ball and throw it.
       function onSelectEnd() {
-        if (heldBall !== null) {
-          // Detach the ball from the controller.
-          // Compute its world position before removing it.
+        if (heldBall) {
+          // Update the ball's world transform before detaching.
           heldBall.updateMatrixWorld();
           const worldPosition = new THREE.Vector3();
           heldBall.getWorldPosition(worldPosition);
-          // Remove from controller and add to scene.
+          // Detach the ball from the controller and add it to the scene.
           controller.remove(heldBall);
           heldBall.position.copy(worldPosition);
           scene.add(heldBall);
 
-          // Estimate the throw velocity based on the controller's history.
-          // Use the oldest recorded position within the HISTORY_TIME_MS window.
+          // Estimate throw velocity based on the recorded controller history.
           const now = performance.now();
           let earliest = null;
           for (let i = 0; i < controllerHistory.length; i++) {
@@ -145,39 +153,38 @@
               break;
             }
           }
-          // If none found, use the first entry.
+          // If no point is older than HISTORY_TIME_MS, take the first recorded entry.
           if (!earliest && controllerHistory.length > 0) {
             earliest = controllerHistory[0];
           }
           const currentPos = new THREE.Vector3();
           controller.getWorldPosition(currentPos);
 
-          let velocity = new THREE.Vector3();
+          const velocity = new THREE.Vector3();
           if (earliest) {
             const dt = (now - earliest.time) / 1000; // convert ms to seconds
             if (dt > 0) {
               velocity.subVectors(currentPos, earliest.pos).divideScalar(dt);
             }
           } else {
-            // Fallback: if no history, simply use the controller's forward direction.
+            // Fallback velocity if history is empty.
             const tempMatrix = new THREE.Matrix4();
             tempMatrix.extractRotation(controller.matrixWorld);
-            velocity = new THREE.Vector3(0, 0, -1).applyMatrix4(tempMatrix).multiplyScalar(2);
+            velocity.copy(new THREE.Vector3(0, 0, -1).applyMatrix4(tempMatrix).multiplyScalar(2));
           }
 
-          // Store the computed velocity and gravity for the ball.
+          // Assign the calculated velocity and a gravity vector to the ball.
           heldBall.userData.velocity = velocity;
           heldBall.userData.gravity = new THREE.Vector3(0, -9.8, 0);
 
-          // Add the ball to our physics list.
-          balls.push(heldBall);
+          // Add the ball to our array of thrown balls.
+          thrownBalls.push(heldBall);
           heldBall = null;
-          // Clear the history.
           controllerHistory.length = 0;
         }
       }
 
-      // Check if a thrown ball has scored by coming close to the hoop center.
+      // Check whether a ball is close enough to the hoop center to count as a score.
       function checkHoopCollision(ball, hoop) {
         const hoopWorldPos = new THREE.Vector3();
         hoop.getWorldPosition(hoopWorldPos);
@@ -185,7 +192,7 @@
         return distance < 0.3;
       }
 
-      // Update the on-screen score.
+      // Update the on-screen score display.
       function updateScore() {
         scoreEl.innerHTML = "Score: " + score;
       }
@@ -198,41 +205,39 @@
         const delta = clock.getDelta();
         const now = performance.now();
 
-        // If a ball is held, record the controller's world position with a timestamp.
-        if (heldBall !== null) {
+        // While holding the ball, record the controller's world positions.
+        if (heldBall) {
           const pos = new THREE.Vector3();
           controller.getWorldPosition(pos);
           controllerHistory.push({ time: now, pos: pos.clone() });
-          // Remove entries older than HISTORY_TIME_MS.
+          // Remove history entries older than HISTORY_TIME_MS.
           while (controllerHistory.length && now - controllerHistory[0].time > HISTORY_TIME_MS) {
             controllerHistory.shift();
           }
         }
 
-        // Update thrown balls.
-        for (let i = balls.length - 1; i >= 0; i--) {
-          const ball = balls[i];
-          // Update velocity with gravity.
-          ball.userData.velocity.add(
-            ball.userData.gravity.clone().multiplyScalar(delta)
-          );
-          // Update ball position.
+        // Update the physics of thrown balls.
+        for (let i = thrownBalls.length - 1; i >= 0; i--) {
+          const ball = thrownBalls[i];
+          // Apply gravity to the ball’s velocity.
+          ball.userData.velocity.add(ball.userData.gravity.clone().multiplyScalar(delta));
+          // Update ball position using the velocity.
           ball.position.add(ball.userData.velocity.clone().multiplyScalar(delta));
 
           // Remove the ball if it falls too low.
           if (ball.position.y < -1) {
             scene.remove(ball);
-            balls.splice(i, 1);
+            thrownBalls.splice(i, 1);
             continue;
           }
 
-          // Check for scoring using the hoop.
+          // Check for a score.
           const hoop = scene.getObjectByName("hoop");
           if (hoop && checkHoopCollision(ball, hoop)) {
             score++;
             updateScore();
             scene.remove(ball);
-            balls.splice(i, 1);
+            thrownBalls.splice(i, 1);
             continue;
           }
         }

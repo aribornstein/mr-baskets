@@ -79,7 +79,7 @@
 
         // Request a local-floor session.
         document.body.appendChild(
-          ARButton.createButton(renderer, { requiredFeatures: ["local-floor"] })
+          ARButton.createButton(renderer, { requiredFeatures: ["bounded-floor"] })
         );
 
         // When the XR session starts, adjust the scene's position so that the floor aligns.

@@ -16,7 +16,7 @@
         color: white;
         z-index: 2;
       }
-      /* Calibration overlay now instructs the user to hold the "x" key */
+      /* Calibration overlay now instructs the user to hold the "X" button on the left controller */
       #calibration {
         position: absolute;
         top: 0;
@@ -41,7 +41,7 @@
     <div id="score">Score: 0</div>
     <div id="calibration">
       <p>Please stand in a T-pose (arms extended) for calibration.</p>
-      <p>Hold the "X" key for 3 seconds to calibrate the floor.</p>
+      <p>Hold the left controller's "X" button for 3 seconds to calibrate the floor.</p>
     </div>
     <script type="module">
       import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
@@ -69,6 +69,9 @@
       let isHoldingBall = false;
       const PICKUP_THRESHOLD = 0.3; // meters
 
+      // For controller calibration polling
+      let calibrateTimeout = null;
+
       async function init() {
         await RAPIER.init();
         rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
@@ -87,8 +90,7 @@
           ARButton.createButton(renderer, { requiredFeatures: ["local-floor"] })
         );
 
-        // Instead of a button, set up key listeners for calibration.
-        setupKeyListeners();
+        // No more key listeners for calibration - we poll the controllers instead.
 
         // Lighting:
         const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
@@ -148,25 +150,6 @@
         console.log("Calibration complete. Measured Y:", measuredY, "Offset applied:", offset);
         const calibOverlay = document.getElementById("calibration");
         if(calibOverlay) calibOverlay.style.display = "none";
-      }
-
-      // Setup key listeners to detect holding the "x" key for 3 seconds.
-      let calibrateTimeout = null;
-      function setupKeyListeners() {
-        window.addEventListener('keydown', (event) => {
-          if (event.key.toLowerCase() === 'x' && calibrateTimeout === null) {
-            calibrateTimeout = setTimeout(() => {
-              calibrateFloor();
-              calibrateTimeout = null;
-            }, 3000);
-          }
-        });
-        window.addEventListener('keyup', (event) => {
-          if (event.key.toLowerCase() === 'x' && calibrateTimeout !== null) {
-            clearTimeout(calibrateTimeout);
-            calibrateTimeout = null;
-          }
-        });
       }
 
       // Ground creation:
@@ -284,9 +267,39 @@
         }
       }
 
+      // Poll the XR session each frame for the left controller's "X" button (button index 3)
+      function checkControllerXButton() {
+        const session = renderer.xr.getSession();
+        if (session) {
+          session.inputSources.forEach((source) => {
+            // Look for left-hand controllers (which have the X button)
+            if (source.handedness === "left" && source.gamepad) {
+              const xButton = source.gamepad.buttons[3];
+              if (xButton && xButton.pressed) {
+                if (!calibrateTimeout) {
+                  calibrateTimeout = setTimeout(() => {
+                    calibrateFloor();
+                    calibrateTimeout = null;
+                  }, 3000);
+                }
+              } else {
+                if (calibrateTimeout) {
+                  clearTimeout(calibrateTimeout);
+                  calibrateTimeout = null;
+                }
+              }
+            }
+          });
+        }
+      }
+
       // Animation loop:
       function animate() {
         const delta = clock.getDelta();
+
+        // Poll the controller to check for X button press
+        checkControllerXButton();
+
         if (!isHoldingBall) {
           rapierWorld.step();
           if (ballRigidBody && basketballMesh) {

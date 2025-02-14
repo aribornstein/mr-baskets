@@ -50,7 +50,7 @@
       <p>Please stand in a T-pose (arms extended) for calibration.</p>
       <p>
         Hold the left controller's "X" button for 3 seconds to calibrate the
-        floor and change the ball's color.
+        floor.
       </p>
     </div>
     <script type="module">
@@ -203,11 +203,6 @@
         console.log("Calibration complete. Measured Y:", measuredY, "Offset applied:", offset);
         const calibOverlay = document.getElementById("calibration");
         if (calibOverlay) calibOverlay.style.display = "none";
-        // Change the basketball color to green (0x00ff00)
-        if (basketballMesh && basketballMesh.material) {
-          basketballMesh.material.color.set(0x00ff00);
-          console.log("Basketball color changed to green.");
-        }
       }
 
       // Ground creation:

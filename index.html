@@ -62,7 +62,6 @@
       const BALL_RADIUS = 0.12;
       const HOOP_RADIUS = 0.3;
       const hoopY = 1.8; // Nominal hoop height above floor
-      // floorOffset is initially 0. We’ll adjust the scene based on calibration.
       let floorOffset = 0;
 
       // Ball pickup/throw configuration:
@@ -127,6 +126,10 @@
       }
 
       function setupController(controller) {
+        // Initialize userData to track previous position and velocity.
+        controller.userData.prevPos = new THREE.Vector3();
+        controller.userData.velocity = new THREE.Vector3();
+
         controller.addEventListener("selectstart", onSelectStart);
         controller.addEventListener("selectend", onSelectEnd);
         scene.add(controller);
@@ -279,7 +282,6 @@
           const ballPos = new THREE.Vector3();
           basketballMesh.getWorldPosition(ballPos);
           if (controllerPos.distanceTo(ballPos) < PICKUP_THRESHOLD) {
-            // Remove from old controller and attach to the new one.
             currentController.remove(basketballMesh);
             controller.add(basketballMesh);
             basketballMesh.position.set(0, -0.05, -0.1);
@@ -299,7 +301,16 @@
           controller.remove(basketballMesh);
           basketballMesh.position.copy(worldPos);
           scene.add(basketballMesh);
+
+          // Create a new physics body at the ball's position.
           createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
+
+          // Retrieve the controller's last computed velocity and apply it to the ball.
+          const throwVelocity = controller.userData.velocity || new THREE.Vector3();
+          ballRigidBody.setLinvel(
+            { x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z },
+            true
+          );
         }
       }
 
@@ -338,9 +349,23 @@
       function animate() {
         const delta = clock.getDelta();
 
+        // Update each controller's velocity based on its movement.
+        controllers.forEach((ctrl) => {
+          const currentPos = new THREE.Vector3();
+          ctrl.getWorldPosition(currentPos);
+          if (!ctrl.userData.prevPos) {
+            ctrl.userData.prevPos = currentPos.clone();
+          }
+          // Compute velocity as the difference over time.
+          const velocity = currentPos.clone().sub(ctrl.userData.prevPos).divideScalar(delta);
+          ctrl.userData.velocity.copy(velocity);
+          ctrl.userData.prevPos.copy(currentPos);
+        });
+
         // Poll the controller to check for X button press for calibration.
         checkControllerXButton();
 
+        // Step physics and update ball mesh if not held.
         if (!isHoldingBall) {
           rapierWorld.step();
           if (ballRigidBody && basketballMesh) {
@@ -348,7 +373,9 @@
             basketballMesh.position.set(t.x, t.y, t.z);
             const r = ballRigidBody.rotation();
             basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
-            if (basketballMesh.position.y < (hoopY + floorOffset)) {
+
+            // Check if the ball has passed through the hoop.
+            if (basketballMesh.position.y < hoopY + floorOffset) {
               const hoopCenter = new THREE.Vector3(0, hoopY + floorOffset, -2);
               if (basketballMesh.position.distanceTo(hoopCenter) < HOOP_RADIUS) {
                 score++;

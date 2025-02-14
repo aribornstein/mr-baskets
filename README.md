@@ -4,7 +4,7 @@ This project is a WebXR-based basketball game that leverages augmented reality (
 
 ## Today's Features
 - **AR Passthrough:** Uses ARButton to enable local-floor AR experiences.
-- **VR Hands Integration:** Loads generic hand models for both controllers using GLTFLoader.
+- **VR Hands Integration:** Loads generic hand models for both controllers using GLTFLoader and [webxr-input-profiles](https://github.com/immersive-web/webxr-input-profiles/tree/main)
 - **Physics Simulation:** Implements physics with Rapier for realistic ball and hoop interactions.
 - **Ball Handling:** Allows ball pickup and throw with real-time velocity tracking.
 - **Floor Calibration:** Provides calibration for floor position using controller button polling.

@@ -77,8 +77,7 @@
 
       // Ball pickup/throw configuration:
       let isHoldingBall = false;
-      // We'll use two arrays: one for controllers (for input events)
-      // and one for the corresponding hand objects (for the visual hand models).
+      // Arrays for controllers and corresponding hand objects.
       const controllers = [];
       const hands = [];
 
@@ -133,6 +132,8 @@
           // Create controller for input events.
           const controller = renderer.xr.getController(i);
           controller.userData.index = i; // store index for later reference
+          // Initialize velocity to avoid undefined errors.
+          controller.userData.velocity = new THREE.Vector3();
           controller.addEventListener("selectstart", onSelectStart);
           controller.addEventListener("selectend", onSelectEnd);
           scene.add(controller);
@@ -141,7 +142,6 @@
           // Create a hand object (for a skinned hand model).
           const hand = renderer.xr.getHand(i);
           const handModel = handModelFactory.createHandModel(hand, "mesh");
-          // Optionally, adjust the scale or position of the hand model here.
           hand.add(handModel);
           scene.add(hand);
           hands.push(hand);
@@ -159,7 +159,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
 
-      // Calibration function remains the same, but also changes the ball's color.
+      // Calibration function: calibrates floor and changes ball color.
       function calibrateFloor() {
         const refSpace = renderer.xr.getReferenceSpace();
         let measuredY = 0;
@@ -275,7 +275,6 @@
       }
 
       // Controller event handlers for snapping the ball to the hand.
-      // Here we use the controller’s index to find the corresponding hand object.
       function onSelectStart(event) {
         const controller = event.target;
         const index = controller.userData.index;
@@ -289,15 +288,14 @@
             ballRigidBody = null;
             ballCollider = null;
           }
-          // Remove the ball from the scene (if needed) and attach it to the hand.
+          // Remove the ball from the scene and attach it to the hand.
           scene.remove(basketballMesh);
           hand.add(basketballMesh);
           // Position the ball so that it appears naturally in the palm.
           basketballMesh.position.set(0, -0.02, -0.1);
           isHoldingBall = true;
         } else {
-          // If the ball is held by the other hand, transfer it.
-          // Find the hand currently holding the ball by traversing parents.
+          // Transfer the ball if held by the other hand.
           const currentHolder = basketballMesh.parent;
           if (currentHolder !== hand) {
             currentHolder.remove(basketballMesh);
@@ -323,7 +321,6 @@
           // Create a new physics body for the ball.
           createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
           // Apply the controller’s last computed velocity as throw velocity.
-          // (We use the controller’s velocity computed in the animate loop.)
           const throwVelocity = controller.userData.velocity || new THREE.Vector3();
           ballRigidBody.setLinvel(
             { x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z },
@@ -373,6 +370,7 @@
             ctrl.userData.prevPos = currentPos.clone();
           }
           const velocity = currentPos.clone().sub(ctrl.userData.prevPos).divideScalar(delta);
+          // Copy computed velocity into the initialized vector.
           ctrl.userData.velocity.copy(velocity);
           ctrl.userData.prevPos.copy(currentPos);
         });

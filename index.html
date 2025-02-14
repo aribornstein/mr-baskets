@@ -48,7 +48,7 @@
       import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/ARButton.js";
       import * as RAPIER from "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js";
 
-      let scene, camera, renderer, controller, clock;
+      let scene, camera, renderer, clock;
       let rapierWorld;
       let score = 0;
       const scoreEl = document.getElementById("score");
@@ -69,7 +69,11 @@
       let isHoldingBall = false;
       const PICKUP_THRESHOLD = 0.3; // meters
 
-      // For controller calibration polling
+      // To support two controllers and passing between hands:
+      let currentController = null;
+      const controllers = [];
+
+      // For controller calibration polling (left-hand only)
       let calibrateTimeout = null;
 
       async function init() {
@@ -77,7 +81,7 @@
         rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
 
         scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -109,11 +113,12 @@
         createHoopPhysics({ x: 0, y: hoopY + floorOffset, z: -2 });
         createHoopVisual({ x: 0, y: hoopY + floorOffset, z: -2 });
 
-        // Setup controller for ball pickup/throw.
-        controller = renderer.xr.getController(0);
-        controller.addEventListener("selectstart", onSelectStart);
-        controller.addEventListener("selectend", onSelectEnd);
-        scene.add(controller);
+        // Setup both controllers for ball pickup/throw.
+        const controller0 = renderer.xr.getController(0);
+        const controller1 = renderer.xr.getController(1);
+        setupController(controller0);
+        setupController(controller1);
+        controllers.push(controller0, controller1);
 
         clock = new THREE.Clock();
         window.addEventListener("resize", onWindowResize, false);
@@ -121,8 +126,14 @@
         renderer.setAnimationLoop(animate);
       }
 
+      function setupController(controller) {
+        controller.addEventListener("selectstart", onSelectStart);
+        controller.addEventListener("selectend", onSelectEnd);
+        scene.add(controller);
+      }
+
       function onWindowResize() {
-        camera.aspect = window.innerWidth/window.innerHeight;
+        camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
@@ -131,12 +142,12 @@
       function calibrateFloor() {
         const refSpace = renderer.xr.getReferenceSpace();
         let measuredY = 0;
-        if(refSpace && refSpace.transform && refSpace.transform.position) {
+        if (refSpace && refSpace.transform && refSpace.transform.position) {
           measuredY = refSpace.transform.position.y;
         }
         const expectedEyeHeight = 1.6;
         let offset;
-        if(measuredY < 0.1) {
+        if (measuredY < 0.1) {
           console.warn("Measured Y is too low; using expected eye height for calibration.");
           offset = expectedEyeHeight;
         } else {
@@ -149,7 +160,7 @@
         floorOffset = offset;
         console.log("Calibration complete. Measured Y:", measuredY, "Offset applied:", offset);
         const calibOverlay = document.getElementById("calibration");
-        if(calibOverlay) calibOverlay.style.display = "none";
+        if (calibOverlay) calibOverlay.style.display = "none";
         // Change the basketball color to green (0x00ff00)
         if (basketballMesh && basketballMesh.material) {
           basketballMesh.material.color.set(0x00ff00);
@@ -177,7 +188,7 @@
         });
         const groundMesh = new THREE.Mesh(groundGeo, groundMat);
         groundMesh.name = "ground";
-        groundMesh.rotation.x = -Math.PI/2;
+        groundMesh.rotation.x = -Math.PI / 2;
         groundMesh.position.y = floorOffset;
         scene.add(groundMesh);
       }
@@ -210,7 +221,7 @@
         const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, HOOP_RADIUS)
           .setRestitution(0.5)
           .setFriction(0.8);
-        const euler = new THREE.Euler(Math.PI/2, 0, 0);
+        const euler = new THREE.Euler(Math.PI / 2, 0, 0);
         const threeQuat = new THREE.Quaternion().setFromEuler(euler);
         const rapierQuat = { x: threeQuat.x, y: threeQuat.y, z: threeQuat.z, w: threeQuat.w };
         ringColliderDesc.setRotation(rapierQuat);
@@ -228,7 +239,7 @@
         const hoopGeometry = new THREE.TorusGeometry(HOOP_RADIUS, 0.02, 16, 100);
         const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
         hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
-        hoopMesh.rotation.x = Math.PI/2;
+        hoopMesh.rotation.x = Math.PI / 2;
         hoopMesh.position.set(pos.x, pos.y, pos.z);
         hoopMesh.name = "hoop";
         scene.add(hoopMesh);
@@ -240,29 +251,48 @@
         scene.add(backboardMesh);
       }
 
-      // Controller event handlers for ball pickup/throw:
-      function onSelectStart() {
-        if (!isHoldingBall && basketballMesh) {
-          const controllerPos = new THREE.Vector3();
-          controller.getWorldPosition(controllerPos);
+      // Controller event handlers for ball pickup/throw and passing between hands:
+      function onSelectStart(event) {
+        const controller = event.target;
+        const controllerPos = new THREE.Vector3();
+        controller.getWorldPosition(controllerPos);
+
+        // If no one is holding the ball, try to pick it up.
+        if (!isHoldingBall) {
           const ballPos = new THREE.Vector3();
           basketballMesh.getWorldPosition(ballPos);
           if (controllerPos.distanceTo(ballPos) < PICKUP_THRESHOLD) {
             isHoldingBall = true;
+            currentController = controller;
             if (ballRigidBody) {
               rapierWorld.removeRigidBody(ballRigidBody);
               ballRigidBody = null;
               ballCollider = null;
             }
             controller.add(basketballMesh);
+            // Set a fixed offset relative to the controller.
             basketballMesh.position.set(0, -0.05, -0.1);
+          }
+        }
+        // If another controller is trying to pick up the ball (pass), transfer it if within range.
+        else if (currentController !== controller) {
+          const ballPos = new THREE.Vector3();
+          basketballMesh.getWorldPosition(ballPos);
+          if (controllerPos.distanceTo(ballPos) < PICKUP_THRESHOLD) {
+            // Remove from old controller and attach to the new one.
+            currentController.remove(basketballMesh);
+            controller.add(basketballMesh);
+            basketballMesh.position.set(0, -0.05, -0.1);
+            currentController = controller;
           }
         }
       }
 
-      function onSelectEnd() {
-        if (isHoldingBall) {
+      function onSelectEnd(event) {
+        const controller = event.target;
+        if (isHoldingBall && currentController === controller) {
           isHoldingBall = false;
+          currentController = null;
           basketballMesh.updateMatrixWorld();
           const worldPos = new THREE.Vector3();
           basketballMesh.getWorldPosition(worldPos);
@@ -274,7 +304,7 @@
       }
 
       // Poll the XR session each frame for the left controller's "X" button.
-      // The X button is at index 2 on the left controller.
+      // The X button is at index 4 on the left controller.
       function checkControllerXButton() {
         const session = renderer.xr.getSession();
         if (session) {
@@ -308,7 +338,7 @@
       function animate() {
         const delta = clock.getDelta();
 
-        // Poll the controller to check for X button press
+        // Poll the controller to check for X button press for calibration.
         checkControllerXButton();
 
         if (!isHoldingBall) {

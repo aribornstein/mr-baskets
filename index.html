@@ -41,7 +41,7 @@
     <div id="score">Score: 0</div>
     <div id="calibration">
       <p>Please stand in a T-pose (arms extended) for calibration.</p>
-      <p>Hold the left controller's "X" button for 3 seconds to calibrate the floor.</p>
+      <p>Hold the left controller's "X" button for 3 seconds to calibrate the floor and change the ball's color.</p>
     </div>
     <script type="module">
       import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
@@ -90,8 +90,6 @@
           ARButton.createButton(renderer, { requiredFeatures: ["local-floor"] })
         );
 
-        // No more key listeners for calibration - we poll the controllers instead.
-
         // Lighting:
         const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
         scene.add(hemiLight);
@@ -129,7 +127,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
 
-      // Calibration function remains the same.
+      // Calibration function remains the same, but now also changes the ball's color.
       function calibrateFloor() {
         const refSpace = renderer.xr.getReferenceSpace();
         let measuredY = 0;
@@ -150,6 +148,11 @@
         console.log("Calibration complete. Measured Y:", measuredY, "Offset applied:", offset);
         const calibOverlay = document.getElementById("calibration");
         if(calibOverlay) calibOverlay.style.display = "none";
+        // Change the basketball color to green (0x00ff00)
+        if (basketballMesh && basketballMesh.material) {
+          basketballMesh.material.color.set(0x00ff00);
+          console.log("Basketball color changed to green.");
+        }
       }
 
       // Ground creation:
@@ -189,6 +192,7 @@
 
       function createBallVisual(pos) {
         const geometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
+        // Initially set ball color to orange
         const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
         basketballMesh = new THREE.Mesh(geometry, material);
         basketballMesh.position.set(pos.x, pos.y, pos.z);
@@ -275,18 +279,22 @@
             // Look for left-hand controllers (which have the X button)
             if (source.handedness === "left" && source.gamepad) {
               const xButton = source.gamepad.buttons[3];
-              if (xButton && xButton.pressed) {
-                if (!calibrateTimeout) {
-                  calibrateTimeout = setTimeout(() => {
-                    calibrateFloor();
+              if (xButton) {
+                if (xButton.pressed) {
+                  if (!calibrateTimeout) {
+                    calibrateTimeout = setTimeout(() => {
+                      calibrateFloor();
+                      calibrateTimeout = null;
+                    }, 3000);
+                  }
+                } else {
+                  if (calibrateTimeout) {
+                    clearTimeout(calibrateTimeout);
                     calibrateTimeout = null;
-                  }, 3000);
+                  }
                 }
               } else {
-                if (calibrateTimeout) {
-                  clearTimeout(calibrateTimeout);
-                  calibrateTimeout = null;
-                }
+                console.warn("No button at index 3 found on this controller.");
               }
             }
           });

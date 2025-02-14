@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>WebXR Basketball with Snap-to-Hand Trigger</title>
+    <title>WebXR Basketball with VR Hands</title>
     <style>
       body {
         margin: 0;
@@ -41,11 +41,15 @@
     <div id="score">Score: 0</div>
     <div id="calibration">
       <p>Please stand in a T-pose (arms extended) for calibration.</p>
-      <p>Hold the left controller's "X" button for 3 seconds to calibrate the floor and change the ball's color.</p>
+      <p>
+        Hold the left controller's "X" button for 3 seconds to calibrate the
+        floor and change the ball's color.
+      </p>
     </div>
     <script type="module">
       import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
       import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/ARButton.js";
+      import { XRHandModelFactory } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/XRHandModelFactory.js";
       import * as RAPIER from "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js";
 
       let scene, camera, renderer, clock;
@@ -66,9 +70,10 @@
 
       // Ball pickup/throw configuration:
       let isHoldingBall = false;
-      // To support two controllers and passing between hands:
-      let currentController = null;
+      // We'll use two arrays: one for controllers (for input events)
+      // and one for the corresponding hand objects (for the visual hand models).
       const controllers = [];
+      const hands = [];
 
       // For controller calibration polling (left-hand only)
       let calibrateTimeout = null;
@@ -78,7 +83,12 @@
         rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
 
         scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+        camera = new THREE.PerspectiveCamera(
+          70,
+          window.innerWidth / window.innerHeight,
+          0.01,
+          20
+        );
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -110,28 +120,30 @@
         createHoopPhysics({ x: 0, y: hoopY + floorOffset, z: -2 });
         createHoopVisual({ x: 0, y: hoopY + floorOffset, z: -2 });
 
-        // Setup both controllers for ball snap/pickup and throw.
-        const controller0 = renderer.xr.getController(0);
-        const controller1 = renderer.xr.getController(1);
-        setupController(controller0);
-        setupController(controller1);
-        controllers.push(controller0, controller1);
+        // Set up controllers and corresponding hand objects.
+        const handModelFactory = new XRHandModelFactory();
+        for (let i = 0; i < 2; i++) {
+          // Create controller for input events.
+          const controller = renderer.xr.getController(i);
+          controller.userData.index = i; // store index for later reference
+          controller.addEventListener("selectstart", onSelectStart);
+          controller.addEventListener("selectend", onSelectEnd);
+          scene.add(controller);
+          controllers.push(controller);
+
+          // Create a hand object (for a skinned hand model).
+          const hand = renderer.xr.getHand(i);
+          const handModel = handModelFactory.createHandModel(hand, "mesh");
+          // Optionally, adjust the scale or position of the hand model here.
+          hand.add(handModel);
+          scene.add(hand);
+          hands.push(hand);
+        }
 
         clock = new THREE.Clock();
         window.addEventListener("resize", onWindowResize, false);
 
         renderer.setAnimationLoop(animate);
-      }
-
-      function setupController(controller) {
-        // Initialize userData to track previous position and velocity.
-        controller.userData.prevPos = new THREE.Vector3();
-        controller.userData.velocity = new THREE.Vector3();
-
-        // Use the trigger (select) events to snap the ball to the hand.
-        controller.addEventListener("selectstart", onSelectStart);
-        controller.addEventListener("selectend", onSelectEnd);
-        scene.add(controller);
       }
 
       function onWindowResize() {
@@ -150,7 +162,9 @@
         const expectedEyeHeight = 1.6;
         let offset;
         if (measuredY < 0.1) {
-          console.warn("Measured Y is too low; using expected eye height for calibration.");
+          console.warn(
+            "Measured Y is too low; using expected eye height for calibration."
+          );
           offset = expectedEyeHeight;
         } else {
           offset = measuredY;
@@ -207,7 +221,7 @@
 
       function createBallVisual(pos) {
         const geometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
-        // Initially set ball color to orange
+        // Initially set ball color to orange.
         const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
         basketballMesh = new THREE.Mesh(geometry, material);
         basketballMesh.position.set(pos.x, pos.y, pos.z);
@@ -253,48 +267,56 @@
         scene.add(backboardMesh);
       }
 
-      // Controller event handlers for snapping the ball to the hand:
+      // Controller event handlers for snapping the ball to the hand.
+      // Here we use the controller’s index to find the corresponding hand object.
       function onSelectStart(event) {
         const controller = event.target;
-        // Snap the ball to this controller regardless of its current location.
+        const index = controller.userData.index;
+        const hand = hands[index];
+
+        // Snap the ball to this hand regardless of its current location.
         if (!isHoldingBall) {
-          // If the ball is currently in the physics world, remove it.
+          // Remove the ball from physics.
           if (ballRigidBody) {
             rapierWorld.removeRigidBody(ballRigidBody);
             ballRigidBody = null;
             ballCollider = null;
           }
-          // Remove the ball from the scene (if it exists) and attach it to the controller.
+          // Remove the ball from the scene (if needed) and attach it to the hand.
           scene.remove(basketballMesh);
-          controller.add(basketballMesh);
-          // Set a fixed offset relative to the controller.
-          basketballMesh.position.set(0, -0.05, -0.1);
+          hand.add(basketballMesh);
+          // Position the ball so that it appears naturally in the palm.
+          basketballMesh.position.set(0, -0.02, -0.1);
           isHoldingBall = true;
-          currentController = controller;
-        } else if (currentController !== controller) {
+        } else {
           // If the ball is held by the other hand, transfer it.
-          currentController.remove(basketballMesh);
-          controller.add(basketballMesh);
-          basketballMesh.position.set(0, -0.05, -0.1);
-          currentController = controller;
+          // Find the hand currently holding the ball by traversing parents.
+          const currentHolder = basketballMesh.parent;
+          if (currentHolder !== hand) {
+            currentHolder.remove(basketballMesh);
+            hand.add(basketballMesh);
+            basketballMesh.position.set(0, -0.02, -0.1);
+          }
         }
       }
 
       function onSelectEnd(event) {
         const controller = event.target;
-        if (isHoldingBall && currentController === controller) {
+        const index = controller.userData.index;
+        const hand = hands[index];
+        if (isHoldingBall) {
           isHoldingBall = false;
-          currentController = null;
-          // Detach the ball from the controller and place it into the world.
+          // Detach the ball from the hand and place it in the world.
           basketballMesh.updateMatrixWorld();
           const worldPos = new THREE.Vector3();
           basketballMesh.getWorldPosition(worldPos);
-          controller.remove(basketballMesh);
+          hand.remove(basketballMesh);
           basketballMesh.position.copy(worldPos);
           scene.add(basketballMesh);
-          // Create a new physics body at the ball's position.
+          // Create a new physics body for the ball.
           createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
-          // Apply the controller's last computed velocity as the throw velocity.
+          // Apply the controller’s last computed velocity as throw velocity.
+          // (We use the controller’s velocity computed in the animate loop.)
           const throwVelocity = controller.userData.velocity || new THREE.Vector3();
           ballRigidBody.setLinvel(
             { x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z },
@@ -304,12 +326,10 @@
       }
 
       // Poll the XR session each frame for the left controller's "X" button.
-      // The X button is at index 4 on the left controller.
       function checkControllerXButton() {
         const session = renderer.xr.getSession();
         if (session) {
           session.inputSources.forEach((source) => {
-            // Look for left-hand controllers (which have the X button)
             if (source.handedness === "left" && source.gamepad) {
               const xButton = source.gamepad.buttons[4];
               if (xButton) {
@@ -334,27 +354,26 @@
         }
       }
 
-      // Animation loop:
+      // Animation loop.
       function animate() {
         const delta = clock.getDelta();
 
-        // Update each controller's velocity based on its movement.
+        // Update each controller's velocity.
         controllers.forEach((ctrl) => {
           const currentPos = new THREE.Vector3();
           ctrl.getWorldPosition(currentPos);
           if (!ctrl.userData.prevPos) {
             ctrl.userData.prevPos = currentPos.clone();
           }
-          // Compute velocity as the difference over time.
           const velocity = currentPos.clone().sub(ctrl.userData.prevPos).divideScalar(delta);
           ctrl.userData.velocity.copy(velocity);
           ctrl.userData.prevPos.copy(currentPos);
         });
 
-        // Poll for calibration button press on left-hand controller.
+        // Check for calibration (using left-hand controller's "X" button).
         checkControllerXButton();
 
-        // Update ball physics if it is not held.
+        // Step physics and update ball mesh if not held.
         if (!isHoldingBall && ballRigidBody && basketballMesh) {
           rapierWorld.step();
           const t = ballRigidBody.translation();
@@ -375,6 +394,7 @@
             }
           }
         }
+
         renderer.render(scene, camera);
       }
 

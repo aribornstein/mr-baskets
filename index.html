@@ -16,7 +16,7 @@
         color: white;
         z-index: 2;
       }
-      /* Calibration overlay now includes a button */
+      /* Calibration overlay now instructs the user to hold the "x" key */
       #calibration {
         position: absolute;
         top: 0;
@@ -32,19 +32,16 @@
         justify-content: center;
         z-index: 3;
       }
-      #calibrateBtn {
-        margin-top: 20px;
-        padding: 10px 20px;
-        font-size: 18px;
-        cursor: pointer;
+      #calibration p {
+        margin: 0;
       }
     </style>
   </head>
   <body>
     <div id="score">Score: 0</div>
     <div id="calibration">
-      <div>Please stand in a T-pose (arms extended) so we can calibrate the floor.</div>
-      <button id="calibrateBtn">Calibrate</button>
+      <p>Please stand in a T-pose (arms extended) for calibration.</p>
+      <p>Hold the "X" key for 3 seconds to calibrate the floor.</p>
     </div>
     <script type="module">
       import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
@@ -90,15 +87,8 @@
           ARButton.createButton(renderer, { requiredFeatures: ["local-floor"] })
         );
 
-        // Instead of automatically shifting the scene on session start,
-        // we now wait for the user to calibrate.
-        renderer.xr.addEventListener("sessionstart", () => {
-          console.log("XR session started");
-          // (Optionally, you can log or use XR data here.)
-        });
-
-        // Setup calibration button event
-        document.getElementById("calibrateBtn").addEventListener("click", calibrateFloor);
+        // Instead of waiting for a button click, we use key events for calibration.
+        setupKeyListeners();
 
         // Lighting:
         const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
@@ -137,17 +127,14 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
 
-      // Calibration function:
+      // Calibration function remains unchanged.
       function calibrateFloor() {
-        // Attempt to get the XR reference space's transform.
         const refSpace = renderer.xr.getReferenceSpace();
         let measuredY = 0;
         if(refSpace && refSpace.transform && refSpace.transform.position) {
           measuredY = refSpace.transform.position.y;
         }
-        // In an ideal local-floor system, measuredY would be the distance from the floor.
-        // However, if a bug causes the headset to report eye level, measuredY may be near 0.
-        // We use an expected average eye height (e.g., 1.6m) if measuredY is too low.
+        // Use expected eye height if measured value is too low.
         const expectedEyeHeight = 1.6;
         let offset;
         if(measuredY < 0.1) {
@@ -156,14 +143,30 @@
         } else {
           offset = measuredY;
         }
-        // Shift the entire scene downward so that the floor is at y=0.
-        // In a correctly calibrated setup, scene.position.y should be -offset.
         scene.position.y = -offset;
-        floorOffset = offset; // store offset for use with other objects
+        floorOffset = offset;
         console.log("Calibration complete. Measured Y:", measuredY, "Offset applied:", offset);
-        // Remove the calibration overlay.
         const calibOverlay = document.getElementById("calibration");
         if(calibOverlay) calibOverlay.style.display = "none";
+      }
+
+      // Setup key listeners to detect holding the "x" key for 3 seconds.
+      let calibrateKeyDownTime = null;
+      function setupKeyListeners() {
+        window.addEventListener('keydown', (event) => {
+          if (event.key.toLowerCase() === 'x' && calibrateKeyDownTime === null) {
+            calibrateKeyDownTime = performance.now();
+          }
+        });
+        window.addEventListener('keyup', (event) => {
+          if (event.key.toLowerCase() === 'x' && calibrateKeyDownTime !== null) {
+            const heldDuration = performance.now() - calibrateKeyDownTime;
+            if (heldDuration >= 3000) {
+              calibrateFloor();
+            }
+            calibrateKeyDownTime = null;
+          }
+        });
       }
 
       // Ground creation:

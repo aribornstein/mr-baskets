@@ -1,297 +1,374 @@
-<!-- … [rest of HTML remains unchanged] … -->
-<script type="module">
-  import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
-  import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/ARButton.js";
-  import * as RAPIER from "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js";
-
-  let scene, camera, renderer, controller, clock;
-  let rapierWorld;
-  let score = 0;
-  const scoreEl = document.getElementById("score");
-
-  // Three.js meshes and physics references
-  let basketballMesh, hoopMesh, backboardMesh;
-  let ballRigidBody = null, ballCollider = null;
-  let hoopBody = null, boardBody = null;
-
-  // Constants
-  const BALL_RADIUS = 0.12;
-  const HOOP_RADIUS = 0.3;
-  const hoopY = 1.8; // Nominal hoop height above floor
-  // floorOffset is initially 0. We’ll adjust the scene based on calibration.
-  let floorOffset = 0;
-
-  // Ball pickup/throw configuration:
-  let isHoldingBall = false;
-  const PICKUP_THRESHOLD = 0.3; // meters
-
-  // For controller calibration polling
-  let calibrateTimeout = null;
-
-  async function init() {
-    await RAPIER.init();
-    rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
-
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
-
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
-    document.body.appendChild(renderer.domElement);
-
-    // Request a local-floor session.
-    document.body.appendChild(
-      ARButton.createButton(renderer, { requiredFeatures: ["local-floor"] })
-    );
-
-    // Lighting:
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
-    scene.add(hemiLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(0, 4, 2);
-    scene.add(dirLight);
-
-    // Create ground.
-    createGroundPhysics();
-    createGroundVisual();
-
-    // Create basketball.
-    createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-    createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-
-    // Create hoop & backboard.
-    createHoopPhysics({ x: 0, y: hoopY + floorOffset, z: -2 });
-    createHoopVisual({ x: 0, y: hoopY + floorOffset, z: -2 });
-
-    // Setup controller for ball pickup/throw.
-    controller = renderer.xr.getController(0);
-    controller.addEventListener("selectstart", onSelectStart);
-    controller.addEventListener("selectend", onSelectEnd);
-    scene.add(controller);
-
-    clock = new THREE.Clock();
-    window.addEventListener("resize", onWindowResize, false);
-
-    renderer.setAnimationLoop(animate);
-  }
-
-  function onWindowResize() {
-    camera.aspect = window.innerWidth/window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  }
-
-  // Calibration function remains the same, but now also changes the ball's color.
-  function calibrateFloor() {
-    const refSpace = renderer.xr.getReferenceSpace();
-    let measuredY = 0;
-    if(refSpace && refSpace.transform && refSpace.transform.position) {
-      measuredY = refSpace.transform.position.y;
-    }
-    const expectedEyeHeight = 1.6;
-    let offset;
-    if(measuredY < 0.1) {
-      console.warn("Measured Y is too low; using expected eye height for calibration.");
-      offset = expectedEyeHeight;
-    } else {
-      offset = measuredY;
-    }
-    // Instead of moving the scene, update the XR reference space:
-    const offsetTransform = new XRRigidTransform({ x: 0, y: -offset, z: 0 });
-    const newRefSpace = refSpace.getOffsetReferenceSpace(offsetTransform);
-    renderer.xr.setReferenceSpace(newRefSpace);
-    floorOffset = offset;
-    console.log("Calibration complete. Measured Y:", measuredY, "Offset applied:", offset);
-    const calibOverlay = document.getElementById("calibration");
-    if(calibOverlay) calibOverlay.style.display = "none";
-    // Change the basketball color to green (0x00ff00)
-    if (basketballMesh && basketballMesh.material) {
-      basketballMesh.material.color.set(0x00ff00);
-      console.log("Basketball color changed to green.");
-    }
-  }
-
-  // Ground creation:
-  function createGroundPhysics() {
-    const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorOffset, 0);
-    const groundBody = rapierWorld.createRigidBody(groundBodyDesc);
-    const groundColliderDesc = RAPIER.ColliderDesc.cuboid(5, 0.1, 5)
-      .setRestitution(0.2)
-      .setFriction(0.8);
-    rapierWorld.createCollider(groundColliderDesc, groundBody);
-  }
-
-  function createGroundVisual() {
-    const groundGeo = new THREE.CircleGeometry(5, 32);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x333333,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.2,
-    });
-    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.name = "ground";
-    groundMesh.rotation.x = -Math.PI/2;
-    groundMesh.position.y = floorOffset;
-    scene.add(groundMesh);
-  }
-
-  // Basketball creation:
-  function createBallPhysics(pos) {
-    const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
-    ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
-    const colliderDesc = RAPIER.ColliderDesc.ball(BALL_RADIUS)
-      .setRestitution(0.7)
-      .setFriction(0.7);
-    ballCollider = rapierWorld.createCollider(colliderDesc, ballRigidBody);
-  }
-
-  function createBallVisual(pos) {
-    const geometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
-    // Initially set ball color to orange
-    const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
-    basketballMesh = new THREE.Mesh(geometry, material);
-    basketballMesh.position.set(pos.x, pos.y, pos.z);
-    basketballMesh.name = "basketball";
-    scene.add(basketballMesh);
-  }
-
-  // Hoop & backboard creation:
-  function createHoopPhysics(pos) {
-    const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
-    hoopBody = rapierWorld.createRigidBody(hoopBodyDesc);
-
-    const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, HOOP_RADIUS)
-      .setRestitution(0.5)
-      .setFriction(0.8);
-    const euler = new THREE.Euler(Math.PI/2, 0, 0);
-    const threeQuat = new THREE.Quaternion().setFromEuler(euler);
-    const rapierQuat = { x: threeQuat.x, y: threeQuat.y, z: threeQuat.z, w: threeQuat.w };
-    ringColliderDesc.setRotation(rapierQuat);
-    rapierWorld.createCollider(ringColliderDesc, hoopBody);
-
-    const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
-    boardBody = rapierWorld.createRigidBody(boardBodyDesc);
-    const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.3, 0.2, 0.01)
-      .setRestitution(0.3)
-      .setFriction(0.8);
-    rapierWorld.createCollider(boardColliderDesc, boardBody);
-  }
-
-  function createHoopVisual(pos) {
-    const hoopGeometry = new THREE.TorusGeometry(HOOP_RADIUS, 0.02, 16, 100);
-    const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
-    hoopMesh.rotation.x = Math.PI/2;
-    hoopMesh.position.set(pos.x, pos.y, pos.z);
-    hoopMesh.name = "hoop";
-    scene.add(hoopMesh);
-
-    const boardGeometry = new THREE.PlaneGeometry(0.6, 0.4);
-    const boardMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-    backboardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
-    backboardMesh.position.set(pos.x, pos.y, pos.z - 0.05);
-    scene.add(backboardMesh);
-  }
-
-  // Controller event handlers for ball pickup/throw:
-  function onSelectStart() {
-    if (!isHoldingBall && basketballMesh) {
-      const controllerPos = new THREE.Vector3();
-      controller.getWorldPosition(controllerPos);
-      const ballPos = new THREE.Vector3();
-      basketballMesh.getWorldPosition(ballPos);
-      if (controllerPos.distanceTo(ballPos) < PICKUP_THRESHOLD) {
-        isHoldingBall = true;
-        if (ballRigidBody) {
-          rapierWorld.removeRigidBody(ballRigidBody);
-          ballRigidBody = null;
-          ballCollider = null;
-        }
-        controller.add(basketballMesh);
-        basketballMesh.position.set(0, -0.05, -0.1);
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebXR Basketball with T-Pose Calibration</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
       }
-    }
-  }
+      #score {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 24px;
+        color: white;
+        z-index: 2;
+      }
+      /* Calibration overlay instructs the user to hold the "X" button on the left controller */
+      #calibration {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        font-size: 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 3;
+      }
+      #calibration p {
+        margin: 0;
+      }
+      /* Debug overlay to show controller state */
+      #debug {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #0f0;
+        font-family: monospace;
+        font-size: 14px;
+        padding: 10px;
+        z-index: 4;
+        max-height: 40%;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="score">Score: 0</div>
+    <div id="calibration">
+      <p>Please stand in a T-pose (arms extended) for calibration.</p>
+      <p>Hold the left controller's "X" button for 3 seconds to calibrate the floor and change the ball's color.</p>
+    </div>
+    <div id="debug">Debug info will appear here</div>
+    <script type="module">
+      import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
+      import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/ARButton.js";
+      import * as RAPIER from "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js";
 
-  function onSelectEnd() {
-    if (isHoldingBall) {
-      isHoldingBall = false;
-      basketballMesh.updateMatrixWorld();
-      const worldPos = new THREE.Vector3();
-      basketballMesh.getWorldPosition(worldPos);
-      controller.remove(basketballMesh);
-      basketballMesh.position.copy(worldPos);
-      scene.add(basketballMesh);
-      createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
-    }
-  }
+      let scene, camera, renderer, controller, clock;
+      let rapierWorld;
+      let score = 0;
+      const scoreEl = document.getElementById("score");
+      const debugEl = document.getElementById("debug");
 
-  // Poll the XR session each frame for the left controller's "X" button.
-  // The X button is at index 2 on the left controller.
-  function checkControllerXButton() {
-    const session = renderer.xr.getSession();
-    if (session) {
-      session.inputSources.forEach((source) => {
-        // Look for left-hand controllers (which have the X button)
-        if (source.handedness === "left" && source.gamepad) {
-          // Changed from index 3 to index 2
-          const xButton = source.gamepad.buttons[2];
-          if (xButton) {
-            if (xButton.pressed) {
-              if (!calibrateTimeout) {
-                calibrateTimeout = setTimeout(() => {
-                  calibrateFloor();
-                  calibrateTimeout = null;
-                }, 3000);
-              }
-            } else {
-              if (calibrateTimeout) {
-                clearTimeout(calibrateTimeout);
-                calibrateTimeout = null;
+      // Three.js meshes and physics references
+      let basketballMesh, hoopMesh, backboardMesh;
+      let ballRigidBody = null, ballCollider = null;
+      let hoopBody = null, boardBody = null;
+
+      // Constants
+      const BALL_RADIUS = 0.12;
+      const HOOP_RADIUS = 0.3;
+      const hoopY = 1.8; // Nominal hoop height above floor
+      // floorOffset is initially 0. We’ll adjust the scene based on calibration.
+      let floorOffset = 0;
+
+      // Ball pickup/throw configuration:
+      let isHoldingBall = false;
+      const PICKUP_THRESHOLD = 0.3; // meters
+
+      // For controller calibration polling
+      let calibrateTimeout = null;
+
+      async function init() {
+        await RAPIER.init();
+        rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
+
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // Request a local-floor session.
+        document.body.appendChild(
+          ARButton.createButton(renderer, { requiredFeatures: ["local-floor"] })
+        );
+
+        // Lighting:
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+        scene.add(hemiLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(0, 4, 2);
+        scene.add(dirLight);
+
+        // Create ground.
+        createGroundPhysics();
+        createGroundVisual();
+
+        // Create basketball.
+        createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
+        createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
+
+        // Create hoop & backboard.
+        createHoopPhysics({ x: 0, y: hoopY + floorOffset, z: -2 });
+        createHoopVisual({ x: 0, y: hoopY + floorOffset, z: -2 });
+
+        // Setup controller for ball pickup/throw.
+        controller = renderer.xr.getController(0);
+        controller.addEventListener("selectstart", onSelectStart);
+        controller.addEventListener("selectend", onSelectEnd);
+        scene.add(controller);
+
+        clock = new THREE.Clock();
+        window.addEventListener("resize", onWindowResize, false);
+
+        renderer.setAnimationLoop(animate);
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      // Calibration function remains the same, but now also changes the ball's color.
+      function calibrateFloor() {
+        const refSpace = renderer.xr.getReferenceSpace();
+        let measuredY = 0;
+        if (refSpace && refSpace.transform && refSpace.transform.position) {
+          measuredY = refSpace.transform.position.y;
+        }
+        const expectedEyeHeight = 1.6;
+        let offset;
+        if (measuredY < 0.1) {
+          console.warn("Measured Y is too low; using expected eye height for calibration.");
+          offset = expectedEyeHeight;
+        } else {
+          offset = measuredY;
+        }
+        // Instead of moving the scene, update the XR reference space:
+        const offsetTransform = new XRRigidTransform({ x: 0, y: -offset, z: 0 });
+        const newRefSpace = refSpace.getOffsetReferenceSpace(offsetTransform);
+        renderer.xr.setReferenceSpace(newRefSpace);
+        floorOffset = offset;
+        console.log("Calibration complete. Measured Y:", measuredY, "Offset applied:", offset);
+        const calibOverlay = document.getElementById("calibration");
+        if (calibOverlay) calibOverlay.style.display = "none";
+        // Change the basketball color to green (0x00ff00)
+        if (basketballMesh && basketballMesh.material) {
+          basketballMesh.material.color.set(0x00ff00);
+          console.log("Basketball color changed to green.");
+        }
+      }
+
+      // Ground creation:
+      function createGroundPhysics() {
+        const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorOffset, 0);
+        const groundBody = rapierWorld.createRigidBody(groundBodyDesc);
+        const groundColliderDesc = RAPIER.ColliderDesc.cuboid(5, 0.1, 5)
+          .setRestitution(0.2)
+          .setFriction(0.8);
+        rapierWorld.createCollider(groundColliderDesc, groundBody);
+      }
+
+      function createGroundVisual() {
+        const groundGeo = new THREE.CircleGeometry(5, 32);
+        const groundMat = new THREE.MeshStandardMaterial({
+          color: 0x333333,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.2,
+        });
+        const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+        groundMesh.name = "ground";
+        groundMesh.rotation.x = -Math.PI / 2;
+        groundMesh.position.y = floorOffset;
+        scene.add(groundMesh);
+      }
+
+      // Basketball creation:
+      function createBallPhysics(pos) {
+        const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
+        ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
+        const colliderDesc = RAPIER.ColliderDesc.ball(BALL_RADIUS)
+          .setRestitution(0.7)
+          .setFriction(0.7);
+        ballCollider = rapierWorld.createCollider(colliderDesc, ballRigidBody);
+      }
+
+      function createBallVisual(pos) {
+        const geometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
+        // Initially set ball color to orange
+        const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
+        basketballMesh = new THREE.Mesh(geometry, material);
+        basketballMesh.position.set(pos.x, pos.y, pos.z);
+        basketballMesh.name = "basketball";
+        scene.add(basketballMesh);
+      }
+
+      // Hoop & backboard creation:
+      function createHoopPhysics(pos) {
+        const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
+        hoopBody = rapierWorld.createRigidBody(hoopBodyDesc);
+
+        const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, HOOP_RADIUS)
+          .setRestitution(0.5)
+          .setFriction(0.8);
+        const euler = new THREE.Euler(Math.PI / 2, 0, 0);
+        const threeQuat = new THREE.Quaternion().setFromEuler(euler);
+        const rapierQuat = { x: threeQuat.x, y: threeQuat.y, z: threeQuat.z, w: threeQuat.w };
+        ringColliderDesc.setRotation(rapierQuat);
+        rapierWorld.createCollider(ringColliderDesc, hoopBody);
+
+        const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
+        boardBody = rapierWorld.createRigidBody(boardBodyDesc);
+        const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.3, 0.2, 0.01)
+          .setRestitution(0.3)
+          .setFriction(0.8);
+        rapierWorld.createCollider(boardColliderDesc, boardBody);
+      }
+
+      function createHoopVisual(pos) {
+        const hoopGeometry = new THREE.TorusGeometry(HOOP_RADIUS, 0.02, 16, 100);
+        const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+        hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
+        hoopMesh.rotation.x = Math.PI / 2;
+        hoopMesh.position.set(pos.x, pos.y, pos.z);
+        hoopMesh.name = "hoop";
+        scene.add(hoopMesh);
+
+        const boardGeometry = new THREE.PlaneGeometry(0.6, 0.4);
+        const boardMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
+        backboardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
+        backboardMesh.position.set(pos.x, pos.y, pos.z - 0.05);
+        scene.add(backboardMesh);
+      }
+
+      // Controller event handlers for ball pickup/throw:
+      function onSelectStart() {
+        if (!isHoldingBall && basketballMesh) {
+          const controllerPos = new THREE.Vector3();
+          controller.getWorldPosition(controllerPos);
+          const ballPos = new THREE.Vector3();
+          basketballMesh.getWorldPosition(ballPos);
+          if (controllerPos.distanceTo(ballPos) < PICKUP_THRESHOLD) {
+            isHoldingBall = true;
+            if (ballRigidBody) {
+              rapierWorld.removeRigidBody(ballRigidBody);
+              ballRigidBody = null;
+              ballCollider = null;
+            }
+            controller.add(basketballMesh);
+            basketballMesh.position.set(0, -0.05, -0.1);
+          }
+        }
+      }
+
+      function onSelectEnd() {
+        if (isHoldingBall) {
+          isHoldingBall = false;
+          basketballMesh.updateMatrixWorld();
+          const worldPos = new THREE.Vector3();
+          basketballMesh.getWorldPosition(worldPos);
+          controller.remove(basketballMesh);
+          basketballMesh.position.copy(worldPos);
+          scene.add(basketballMesh);
+          createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
+        }
+      }
+
+      // Poll the XR session each frame for the left controller's "X" button.
+      // The X button is at index 2 on the left controller.
+      function checkControllerXButton() {
+        const session = renderer.xr.getSession();
+        if (session) {
+          session.inputSources.forEach((source) => {
+            // Look for left-hand controllers (which have the X button)
+            if (source.handedness === "left" && source.gamepad) {
+              // Update debug overlay with controller data
+              updateDebugOverlay(source.gamepad);
+
+              // Changed from index 3 to index 2
+              const xButton = source.gamepad.buttons[2];
+              if (xButton) {
+                if (xButton.pressed) {
+                  if (!calibrateTimeout) {
+                    calibrateTimeout = setTimeout(() => {
+                      calibrateFloor();
+                      calibrateTimeout = null;
+                    }, 3000);
+                  }
+                } else {
+                  if (calibrateTimeout) {
+                    clearTimeout(calibrateTimeout);
+                    calibrateTimeout = null;
+                  }
+                }
+              } else {
+                console.warn("No button at index 2 found on this controller.");
               }
             }
-          } else {
-            console.warn("No button at index 2 found on this controller.");
-          }
-        }
-      });
-    }
-  }
-
-  // Animation loop:
-  function animate() {
-    const delta = clock.getDelta();
-
-    // Poll the controller to check for X button press
-    checkControllerXButton();
-
-    if (!isHoldingBall) {
-      rapierWorld.step();
-      if (ballRigidBody && basketballMesh) {
-        const t = ballRigidBody.translation();
-        basketballMesh.position.set(t.x, t.y, t.z);
-        const r = ballRigidBody.rotation();
-        basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
-        if (basketballMesh.position.y < (hoopY + floorOffset)) {
-          const hoopCenter = new THREE.Vector3(0, hoopY + floorOffset, -2);
-          if (basketballMesh.position.distanceTo(hoopCenter) < HOOP_RADIUS) {
-            score++;
-            scoreEl.innerHTML = "Score: " + score;
-            rapierWorld.removeRigidBody(ballRigidBody);
-            scene.remove(basketballMesh);
-            createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-            createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-          }
+          });
         }
       }
-    }
-    renderer.render(scene, camera);
-  }
 
-  init();
-</script>
-</body>
+      // Update the debug overlay with gamepad state (button and axis values)
+      function updateDebugOverlay(gamepad) {
+        let debugText = "<strong>Left Controller Gamepad State</strong><br/>";
+        debugText += "Buttons:<br/>";
+        gamepad.buttons.forEach((button, index) => {
+          debugText += `Button ${index}: pressed=${button.pressed} value=${button.value.toFixed(2)}<br/>`;
+        });
+        debugText += "Axes:<br/>";
+        gamepad.axes.forEach((axis, index) => {
+          debugText += `Axis ${index}: ${axis.toFixed(2)}<br/>`;
+        });
+        debugEl.innerHTML = debugText;
+      }
+
+      // Animation loop:
+      function animate() {
+        const delta = clock.getDelta();
+
+        // Poll the controller to check for X button press and update debug info
+        checkControllerXButton();
+
+        if (!isHoldingBall) {
+          rapierWorld.step();
+          if (ballRigidBody && basketballMesh) {
+            const t = ballRigidBody.translation();
+            basketballMesh.position.set(t.x, t.y, t.z);
+            const r = ballRigidBody.rotation();
+            basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
+            if (basketballMesh.position.y < (hoopY + floorOffset)) {
+              const hoopCenter = new THREE.Vector3(0, hoopY + floorOffset, -2);
+              if (basketballMesh.position.distanceTo(hoopCenter) < HOOP_RADIUS) {
+                score++;
+                scoreEl.innerHTML = "Score: " + score;
+                rapierWorld.removeRigidBody(ballRigidBody);
+                scene.remove(basketballMesh);
+                createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
+                createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
+              }
+            }
+          }
+        }
+        renderer.render(scene, camera);
+      }
+
+      init();
+    </script>
+  </body>
 </html>

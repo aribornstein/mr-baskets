@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>WebXR Basketball with VR Hands</title>
+    <title>WebXR Basketball with AR Passthrough & VR Hands</title>
     <script type="importmap">
       {
         "imports": {
@@ -56,7 +56,7 @@
     <script type="module">
       import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
       import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/ARButton.js";
-      import { XRHandModelFactory } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/XRHandModelFactory.js";
+      import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/loaders/GLTFLoader.js";
       import * as RAPIER from "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js";
 
       let scene, camera, renderer, clock;
@@ -77,9 +77,8 @@
 
       // Ball pickup/throw configuration:
       let isHoldingBall = false;
-      // Arrays for controllers and corresponding hand objects.
+      // Array for controllers.
       const controllers = [];
-      const hands = [];
 
       // For controller calibration polling (left-hand only)
       let calibrateTimeout = null;
@@ -102,7 +101,7 @@
         renderer.xr.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // Request a local-floor session.
+        // Use ARButton for AR passthrough with local-floor reference.
         document.body.appendChild(
           ARButton.createButton(renderer, { requiredFeatures: ["local-floor"] })
         );
@@ -126,25 +125,40 @@
         createHoopPhysics({ x: 0, y: hoopY + floorOffset, z: -2 });
         createHoopVisual({ x: 0, y: hoopY + floorOffset, z: -2 });
 
-        // Set up controllers and corresponding hand objects.
-        const handModelFactory = new XRHandModelFactory();
+        // Set up controllers and attach virtual hand models.
+        const gltfLoader = new GLTFLoader();
         for (let i = 0; i < 2; i++) {
           // Create controller for input events.
           const controller = renderer.xr.getController(i);
-          controller.userData.index = i; // store index for later reference
-          // Initialize velocity to avoid undefined errors.
+          controller.userData.index = i;
+          // Initialize velocity.
           controller.userData.velocity = new THREE.Vector3();
+
+          // Listen for the "connected" event to get handedness.
+          controller.addEventListener("connected", (event) => {
+            controller.userData.handedness = event.data.handedness;
+          });
+
           controller.addEventListener("selectstart", onSelectStart);
           controller.addEventListener("selectend", onSelectEnd);
           scene.add(controller);
           controllers.push(controller);
 
-          // Create a hand object (for a skinned hand model).
-          const hand = renderer.xr.getHand(i);
-          const handModel = handModelFactory.createHandModel(hand, "mesh");
-          hand.add(handModel);
-          scene.add(hand);
-          hands.push(hand);
+          // Load a virtual hand model and attach it to the controller.
+          gltfLoader.load(
+            "https://cdn.jsdelivr.net/gh/immersive-web/webxr-samples@master/models/hand/hand.gltf",
+            (gltf) => {
+              const handModel = gltf.scene;
+              // Adjust scale and position so it overlays the controller naturally.
+              handModel.scale.set(0.2, 0.2, 0.2);
+              handModel.position.set(0, 0, 0);
+              // If the controller is left-handed, mirror the hand model.
+              if (controller.userData.handedness === "left") {
+                handModel.scale.x *= -1;
+              }
+              controller.add(handModel);
+            }
+          );
         }
 
         clock = new THREE.Clock();
@@ -274,32 +288,27 @@
         scene.add(backboardMesh);
       }
 
-      // Controller event handlers for snapping the ball to the hand.
+      // Controller event handlers for picking up the ball.
       function onSelectStart(event) {
         const controller = event.target;
-        const index = controller.userData.index;
-        const hand = hands[index];
-
-        // Snap the ball to this hand regardless of its current location.
+        // Snap the ball to the controller regardless of its current location.
         if (!isHoldingBall) {
-          // Remove the ball from physics.
           if (ballRigidBody) {
             rapierWorld.removeRigidBody(ballRigidBody);
             ballRigidBody = null;
             ballCollider = null;
           }
-          // Remove the ball from the scene and attach it to the hand.
           scene.remove(basketballMesh);
-          hand.add(basketballMesh);
-          // Position the ball so that it appears naturally in the palm.
+          controller.add(basketballMesh);
+          // Adjust the ball's position relative to the controller so it feels natural.
           basketballMesh.position.set(0, -0.02, -0.1);
           isHoldingBall = true;
         } else {
-          // Transfer the ball if held by the other hand.
+          // Transfer the ball if held by a different controller.
           const currentHolder = basketballMesh.parent;
-          if (currentHolder !== hand) {
+          if (currentHolder !== controller) {
             currentHolder.remove(basketballMesh);
-            hand.add(basketballMesh);
+            controller.add(basketballMesh);
             basketballMesh.position.set(0, -0.02, -0.1);
           }
         }
@@ -307,20 +316,16 @@
 
       function onSelectEnd(event) {
         const controller = event.target;
-        const index = controller.userData.index;
-        const hand = hands[index];
         if (isHoldingBall) {
           isHoldingBall = false;
-          // Detach the ball from the hand and place it in the world.
+          // Detach the ball from the controller and place it in the world.
           basketballMesh.updateMatrixWorld();
           const worldPos = new THREE.Vector3();
           basketballMesh.getWorldPosition(worldPos);
-          hand.remove(basketballMesh);
+          controller.remove(basketballMesh);
           basketballMesh.position.copy(worldPos);
           scene.add(basketballMesh);
-          // Create a new physics body for the ball.
           createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
-          // Apply the controller’s last computed velocity as throw velocity.
           const throwVelocity = controller.userData.velocity || new THREE.Vector3();
           ballRigidBody.setLinvel(
             { x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z },
@@ -370,12 +375,10 @@
             ctrl.userData.prevPos = currentPos.clone();
           }
           const velocity = currentPos.clone().sub(ctrl.userData.prevPos).divideScalar(delta);
-          // Copy computed velocity into the initialized vector.
           ctrl.userData.velocity.copy(velocity);
           ctrl.userData.prevPos.copy(currentPos);
         });
 
-        // Check for calibration (using left-hand controller's "X" button).
         checkControllerXButton();
 
         // Step physics and update ball mesh if not held.

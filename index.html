@@ -87,7 +87,7 @@
           ARButton.createButton(renderer, { requiredFeatures: ["local-floor"] })
         );
 
-        // Instead of waiting for a button click, we use key events for calibration.
+        // Instead of a button, set up key listeners for calibration.
         setupKeyListeners();
 
         // Lighting:
@@ -127,7 +127,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
 
-      // Calibration function remains unchanged.
+      // Calibration function remains the same.
       function calibrateFloor() {
         const refSpace = renderer.xr.getReferenceSpace();
         let measuredY = 0;
@@ -151,20 +151,20 @@
       }
 
       // Setup key listeners to detect holding the "x" key for 3 seconds.
-      let calibrateKeyDownTime = null;
+      let calibrateTimeout = null;
       function setupKeyListeners() {
         window.addEventListener('keydown', (event) => {
-          if (event.key.toLowerCase() === 'x' && calibrateKeyDownTime === null) {
-            calibrateKeyDownTime = performance.now();
+          if (event.key.toLowerCase() === 'x' && calibrateTimeout === null) {
+            calibrateTimeout = setTimeout(() => {
+              calibrateFloor();
+              calibrateTimeout = null;
+            }, 3000);
           }
         });
         window.addEventListener('keyup', (event) => {
-          if (event.key.toLowerCase() === 'x' && calibrateKeyDownTime !== null) {
-            const heldDuration = performance.now() - calibrateKeyDownTime;
-            if (heldDuration >= 3000) {
-              calibrateFloor();
-            }
-            calibrateKeyDownTime = null;
+          if (event.key.toLowerCase() === 'x' && calibrateTimeout !== null) {
+            clearTimeout(calibrateTimeout);
+            calibrateTimeout = null;
           }
         });
       }

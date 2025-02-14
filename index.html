@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>WebXR Basketball with T-Pose Calibration</title>
+    <title>WebXR Basketball with Snap-to-Hand Trigger</title>
     <style>
       body {
         margin: 0;
@@ -66,8 +66,6 @@
 
       // Ball pickup/throw configuration:
       let isHoldingBall = false;
-      const PICKUP_THRESHOLD = 0.3; // meters
-
       // To support two controllers and passing between hands:
       let currentController = null;
       const controllers = [];
@@ -112,7 +110,7 @@
         createHoopPhysics({ x: 0, y: hoopY + floorOffset, z: -2 });
         createHoopVisual({ x: 0, y: hoopY + floorOffset, z: -2 });
 
-        // Setup both controllers for ball pickup/throw.
+        // Setup both controllers for ball snap/pickup and throw.
         const controller0 = renderer.xr.getController(0);
         const controller1 = renderer.xr.getController(1);
         setupController(controller0);
@@ -130,6 +128,7 @@
         controller.userData.prevPos = new THREE.Vector3();
         controller.userData.velocity = new THREE.Vector3();
 
+        // Use the trigger (select) events to snap the ball to the hand.
         controller.addEventListener("selectstart", onSelectStart);
         controller.addEventListener("selectend", onSelectEnd);
         scene.add(controller);
@@ -141,7 +140,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
 
-      // Calibration function remains the same, but now also changes the ball's color.
+      // Calibration function remains the same, but also changes the ball's color.
       function calibrateFloor() {
         const refSpace = renderer.xr.getReferenceSpace();
         let measuredY = 0;
@@ -156,7 +155,7 @@
         } else {
           offset = measuredY;
         }
-        // Instead of moving the scene, update the XR reference space:
+        // Update the XR reference space.
         const offsetTransform = new XRRigidTransform({ x: 0, y: -offset, z: 0 });
         const newRefSpace = refSpace.getOffsetReferenceSpace(offsetTransform);
         renderer.xr.setReferenceSpace(newRefSpace);
@@ -254,39 +253,30 @@
         scene.add(backboardMesh);
       }
 
-      // Controller event handlers for ball pickup/throw and passing between hands:
+      // Controller event handlers for snapping the ball to the hand:
       function onSelectStart(event) {
         const controller = event.target;
-        const controllerPos = new THREE.Vector3();
-        controller.getWorldPosition(controllerPos);
-
-        // If no one is holding the ball, try to pick it up.
+        // Snap the ball to this controller regardless of its current location.
         if (!isHoldingBall) {
-          const ballPos = new THREE.Vector3();
-          basketballMesh.getWorldPosition(ballPos);
-          if (controllerPos.distanceTo(ballPos) < PICKUP_THRESHOLD) {
-            isHoldingBall = true;
-            currentController = controller;
-            if (ballRigidBody) {
-              rapierWorld.removeRigidBody(ballRigidBody);
-              ballRigidBody = null;
-              ballCollider = null;
-            }
-            controller.add(basketballMesh);
-            // Set a fixed offset relative to the controller.
-            basketballMesh.position.set(0, -0.05, -0.1);
+          // If the ball is currently in the physics world, remove it.
+          if (ballRigidBody) {
+            rapierWorld.removeRigidBody(ballRigidBody);
+            ballRigidBody = null;
+            ballCollider = null;
           }
-        }
-        // If another controller is trying to pick up the ball (pass), transfer it if within range.
-        else if (currentController !== controller) {
-          const ballPos = new THREE.Vector3();
-          basketballMesh.getWorldPosition(ballPos);
-          if (controllerPos.distanceTo(ballPos) < PICKUP_THRESHOLD) {
-            currentController.remove(basketballMesh);
-            controller.add(basketballMesh);
-            basketballMesh.position.set(0, -0.05, -0.1);
-            currentController = controller;
-          }
+          // Remove the ball from the scene (if it exists) and attach it to the controller.
+          scene.remove(basketballMesh);
+          controller.add(basketballMesh);
+          // Set a fixed offset relative to the controller.
+          basketballMesh.position.set(0, -0.05, -0.1);
+          isHoldingBall = true;
+          currentController = controller;
+        } else if (currentController !== controller) {
+          // If the ball is held by the other hand, transfer it.
+          currentController.remove(basketballMesh);
+          controller.add(basketballMesh);
+          basketballMesh.position.set(0, -0.05, -0.1);
+          currentController = controller;
         }
       }
 
@@ -295,17 +285,16 @@
         if (isHoldingBall && currentController === controller) {
           isHoldingBall = false;
           currentController = null;
+          // Detach the ball from the controller and place it into the world.
           basketballMesh.updateMatrixWorld();
           const worldPos = new THREE.Vector3();
           basketballMesh.getWorldPosition(worldPos);
           controller.remove(basketballMesh);
           basketballMesh.position.copy(worldPos);
           scene.add(basketballMesh);
-
           // Create a new physics body at the ball's position.
           createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
-
-          // Retrieve the controller's last computed velocity and apply it to the ball.
+          // Apply the controller's last computed velocity as the throw velocity.
           const throwVelocity = controller.userData.velocity || new THREE.Vector3();
           ballRigidBody.setLinvel(
             { x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z },
@@ -362,29 +351,27 @@
           ctrl.userData.prevPos.copy(currentPos);
         });
 
-        // Poll the controller to check for X button press for calibration.
+        // Poll for calibration button press on left-hand controller.
         checkControllerXButton();
 
-        // Step physics and update ball mesh if not held.
-        if (!isHoldingBall) {
+        // Update ball physics if it is not held.
+        if (!isHoldingBall && ballRigidBody && basketballMesh) {
           rapierWorld.step();
-          if (ballRigidBody && basketballMesh) {
-            const t = ballRigidBody.translation();
-            basketballMesh.position.set(t.x, t.y, t.z);
-            const r = ballRigidBody.rotation();
-            basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
+          const t = ballRigidBody.translation();
+          basketballMesh.position.set(t.x, t.y, t.z);
+          const r = ballRigidBody.rotation();
+          basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
 
-            // Check if the ball has passed through the hoop.
-            if (basketballMesh.position.y < hoopY + floorOffset) {
-              const hoopCenter = new THREE.Vector3(0, hoopY + floorOffset, -2);
-              if (basketballMesh.position.distanceTo(hoopCenter) < HOOP_RADIUS) {
-                score++;
-                scoreEl.innerHTML = "Score: " + score;
-                rapierWorld.removeRigidBody(ballRigidBody);
-                scene.remove(basketballMesh);
-                createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-                createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-              }
+          // Check if the ball goes through the hoop.
+          if (basketballMesh.position.y < hoopY + floorOffset) {
+            const hoopCenter = new THREE.Vector3(0, hoopY + floorOffset, -2);
+            if (basketballMesh.position.distanceTo(hoopCenter) < HOOP_RADIUS) {
+              score++;
+              scoreEl.innerHTML = "Score: " + score;
+              rapierWorld.removeRigidBody(ballRigidBody);
+              scene.remove(basketballMesh);
+              createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
+              createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
             }
           }
         }

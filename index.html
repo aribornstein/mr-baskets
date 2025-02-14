@@ -35,20 +35,6 @@
       #calibration p {
         margin: 0;
       }
-      /* Debug overlay to show controller state */
-      #debug {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        background: rgba(0, 0, 0, 0.7);
-        color: #0f0;
-        font-family: monospace;
-        font-size: 14px;
-        padding: 10px;
-        z-index: 4;
-        max-height: 40%;
-        overflow: auto;
-      }
     </style>
   </head>
   <body>
@@ -57,7 +43,6 @@
       <p>Please stand in a T-pose (arms extended) for calibration.</p>
       <p>Hold the left controller's "X" button for 3 seconds to calibrate the floor and change the ball's color.</p>
     </div>
-    <div id="debug">Debug info will appear here</div>
     <script type="module">
       import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
       import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/ARButton.js";
@@ -67,7 +52,6 @@
       let rapierWorld;
       let score = 0;
       const scoreEl = document.getElementById("score");
-      const debugEl = document.getElementById("debug");
 
       // Three.js meshes and physics references
       let basketballMesh, hoopMesh, backboardMesh;
@@ -93,7 +77,7 @@
         rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
 
         scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -138,7 +122,7 @@
       }
 
       function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.aspect = window.innerWidth/window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
@@ -147,12 +131,12 @@
       function calibrateFloor() {
         const refSpace = renderer.xr.getReferenceSpace();
         let measuredY = 0;
-        if (refSpace && refSpace.transform && refSpace.transform.position) {
+        if(refSpace && refSpace.transform && refSpace.transform.position) {
           measuredY = refSpace.transform.position.y;
         }
         const expectedEyeHeight = 1.6;
         let offset;
-        if (measuredY < 0.1) {
+        if(measuredY < 0.1) {
           console.warn("Measured Y is too low; using expected eye height for calibration.");
           offset = expectedEyeHeight;
         } else {
@@ -165,7 +149,7 @@
         floorOffset = offset;
         console.log("Calibration complete. Measured Y:", measuredY, "Offset applied:", offset);
         const calibOverlay = document.getElementById("calibration");
-        if (calibOverlay) calibOverlay.style.display = "none";
+        if(calibOverlay) calibOverlay.style.display = "none";
         // Change the basketball color to green (0x00ff00)
         if (basketballMesh && basketballMesh.material) {
           basketballMesh.material.color.set(0x00ff00);
@@ -193,7 +177,7 @@
         });
         const groundMesh = new THREE.Mesh(groundGeo, groundMat);
         groundMesh.name = "ground";
-        groundMesh.rotation.x = -Math.PI / 2;
+        groundMesh.rotation.x = -Math.PI/2;
         groundMesh.position.y = floorOffset;
         scene.add(groundMesh);
       }
@@ -226,7 +210,7 @@
         const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, HOOP_RADIUS)
           .setRestitution(0.5)
           .setFriction(0.8);
-        const euler = new THREE.Euler(Math.PI / 2, 0, 0);
+        const euler = new THREE.Euler(Math.PI/2, 0, 0);
         const threeQuat = new THREE.Quaternion().setFromEuler(euler);
         const rapierQuat = { x: threeQuat.x, y: threeQuat.y, z: threeQuat.z, w: threeQuat.w };
         ringColliderDesc.setRotation(rapierQuat);
@@ -244,7 +228,7 @@
         const hoopGeometry = new THREE.TorusGeometry(HOOP_RADIUS, 0.02, 16, 100);
         const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
         hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
-        hoopMesh.rotation.x = Math.PI / 2;
+        hoopMesh.rotation.x = Math.PI/2;
         hoopMesh.position.set(pos.x, pos.y, pos.z);
         hoopMesh.name = "hoop";
         scene.add(hoopMesh);
@@ -297,11 +281,7 @@
           session.inputSources.forEach((source) => {
             // Look for left-hand controllers (which have the X button)
             if (source.handedness === "left" && source.gamepad) {
-              // Update debug overlay with controller data
-              updateDebugOverlay(source.gamepad);
-
-              // Changed from index 3 to index 2
-              const xButton = source.gamepad.buttons[2];
+              const xButton = source.gamepad.buttons[4];
               if (xButton) {
                 if (xButton.pressed) {
                   if (!calibrateTimeout) {
@@ -317,32 +297,18 @@
                   }
                 }
               } else {
-                console.warn("No button at index 2 found on this controller.");
+                console.warn("No button at index 4 found on this controller.");
               }
             }
           });
         }
       }
 
-      // Update the debug overlay with gamepad state (button and axis values)
-      function updateDebugOverlay(gamepad) {
-        let debugText = "<strong>Left Controller Gamepad State</strong><br/>";
-        debugText += "Buttons:<br/>";
-        gamepad.buttons.forEach((button, index) => {
-          debugText += `Button ${index}: pressed=${button.pressed} value=${button.value.toFixed(2)}<br/>`;
-        });
-        debugText += "Axes:<br/>";
-        gamepad.axes.forEach((axis, index) => {
-          debugText += `Axis ${index}: ${axis.toFixed(2)}<br/>`;
-        });
-        debugEl.innerHTML = debugText;
-      }
-
       // Animation loop:
       function animate() {
         const delta = clock.getDelta();
 
-        // Poll the controller to check for X button press and update debug info
+        // Poll the controller to check for X button press
         checkControllerXButton();
 
         if (!isHoldingBall) {

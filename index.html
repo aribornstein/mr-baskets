@@ -134,31 +134,32 @@
           // Initialize velocity.
           controller.userData.velocity = new THREE.Vector3();
 
-          // Listen for the "connected" event to get handedness.
+          // When the controller connects, record handedness and load the appropriate hand model.
           controller.addEventListener("connected", (event) => {
             controller.userData.handedness = event.data.handedness;
+            const url = controller.userData.handedness === "left" ?
+              "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/mesh-packs@1.0.4/dist/oculus-touch-hand-left.glb" :
+              "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/mesh-packs@1.0.4/dist/oculus-touch-hand-right.glb";
+            gltfLoader.load(
+              url,
+              (gltf) => {
+                const handModel = gltf.scene;
+                // Adjust scale and position as needed.
+                handModel.scale.set(0.2, 0.2, 0.2);
+                handModel.position.set(0, 0, 0);
+                controller.add(handModel);
+              },
+              undefined,
+              (error) => {
+                console.error("Error loading hand model:", error);
+              }
+            );
           });
 
           controller.addEventListener("selectstart", onSelectStart);
           controller.addEventListener("selectend", onSelectEnd);
           scene.add(controller);
           controllers.push(controller);
-
-          // Load a virtual hand model and attach it to the controller.
-          gltfLoader.load(
-            "https://raw.githubusercontent.com/immersive-web/webxr-samples/master/models/hand/hand.gltf",
-            (gltf) => {
-              const handModel = gltf.scene;
-              // Adjust scale and position so it overlays the controller naturally.
-              handModel.scale.set(0.2, 0.2, 0.2);
-              handModel.position.set(0, 0, 0);
-              // If the controller is left-handed, mirror the hand model.
-              if (controller.userData.handedness === "left") {
-                handModel.scale.x *= -1;
-              }
-              controller.add(handModel);
-            }
-          );
         }
 
         clock = new THREE.Clock();

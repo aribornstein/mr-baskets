@@ -145,8 +145,8 @@
               url,
               (gltf) => {
                 const handModel = gltf.scene;
-                // Adjust scale for proper overlay. You may tweak 0.15 as needed.
-                handModel.scale.set(0.15, 0.15, 0.15);
+                // Scale hand models properly to (0.4, 0.4, 0.4) without mirroring.
+                handModel.scale.set(0.4, 0.4, 0.4);
                 handModel.position.set(0, 0, 0);
                 controller.add(handModel);
               },
@@ -157,8 +157,9 @@
             );
           });
 
-          controller.addEventListener("selectstart", onSelectStart);
-          controller.addEventListener("selectend", onSelectEnd);
+          // Use grip events for grabbing and releasing the ball.
+          controller.addEventListener("squeezestart", onGrab);
+          controller.addEventListener("squeezeend", onRelease);
           scene.add(controller);
           controllers.push(controller);
         }
@@ -290,44 +291,50 @@
         scene.add(backboardMesh);
       }
 
-      // Controller event handlers for picking up the ball.
-      function onSelectStart(event) {
+      // --- Controller event handlers for ball pickup & throw ---
+
+      // onGrab: attach the ball to the hand.
+      function onGrab(event) {
         const controller = event.target;
-        // Snap the ball to the controller regardless of its current location.
         if (!isHoldingBall) {
+          // Remove the ball's physics while held.
           if (ballRigidBody) {
             rapierWorld.removeRigidBody(ballRigidBody);
             ballRigidBody = null;
             ballCollider = null;
           }
+          // Remove the ball from the scene and attach it to the controller.
           scene.remove(basketballMesh);
           controller.add(basketballMesh);
-          // Adjust the ball's position relative to the controller so it feels natural.
-          basketballMesh.position.set(0, -0.02, -0.1);
+          // Position the ball in the palm.
+          basketballMesh.position.set(0, -0.1, -0.15);
           isHoldingBall = true;
         } else {
-          // Transfer the ball if held by a different controller.
+          // If another controller is holding the ball, transfer it.
           const currentHolder = basketballMesh.parent;
           if (currentHolder !== controller) {
             currentHolder.remove(basketballMesh);
             controller.add(basketballMesh);
-            basketballMesh.position.set(0, -0.02, -0.1);
+            basketballMesh.position.set(0, -0.1, -0.15);
           }
         }
       }
 
-      function onSelectEnd(event) {
+      // onRelease: detach the ball and apply throw velocity.
+      function onRelease(event) {
         const controller = event.target;
         if (isHoldingBall) {
           isHoldingBall = false;
-          // Detach the ball from the controller and place it in the world.
+          // Get the ball's world position before detaching.
           basketballMesh.updateMatrixWorld();
           const worldPos = new THREE.Vector3();
           basketballMesh.getWorldPosition(worldPos);
           controller.remove(basketballMesh);
           basketballMesh.position.copy(worldPos);
           scene.add(basketballMesh);
+          // Restore physics by recreating the ball's physics body.
           createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
+          // Apply the controller's velocity as the throw velocity.
           const throwVelocity = controller.userData.velocity || new THREE.Vector3();
           ballRigidBody.setLinvel(
             { x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z },

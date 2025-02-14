@@ -134,17 +134,18 @@
           // Initialize velocity.
           controller.userData.velocity = new THREE.Vector3();
 
-          // When the controller connects, record handedness and load the appropriate hand model.
+          // When the controller connects, store its handedness and load the corresponding hand model.
           controller.addEventListener("connected", (event) => {
             controller.userData.handedness = event.data.handedness;
-            const url = controller.userData.handedness === "left" ?
-              "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/mesh-packs@1.0.4/dist/oculus-touch-hand-left.glb" :
-              "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/mesh-packs@1.0.4/dist/oculus-touch-hand-right.glb";
+            const url =
+              controller.userData.handedness === "left"
+                ? "https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/meta-quest-touch-pro/left.glb"
+                : "https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/meta-quest-touch-pro/right.glb";
             gltfLoader.load(
               url,
               (gltf) => {
                 const handModel = gltf.scene;
-                // Adjust scale and position as needed.
+                // Adjust scale and position so the model overlays the controller naturally.
                 handModel.scale.set(0.2, 0.2, 0.2);
                 handModel.position.set(0, 0, 0);
                 controller.add(handModel);

@@ -157,10 +157,10 @@
                 // ----------------------------
                 if (controller.userData.handedness === "left") {
                   // Example: palm away, back of hand toward the user
-                  handModel.rotation.set(-Math.PI / 2, 0, 0);
+                  handModel.rotation.set(Math.PI / 2, 0, 0);
                 } else {
                   // Right hand, same orientation or slight tweak if needed
-                  handModel.rotation.set(-Math.PI / 2, 0, 0);
+                  handModel.rotation.set(Math.PI / 2, 0, 0);
                 }
                 
                 // Scale the hand model (adjust as needed)

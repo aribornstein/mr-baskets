@@ -141,16 +141,35 @@
               controller.userData.handedness === "left"
                 ? "https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/generic-hand/left.glb"
                 : "https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/generic-hand/right.glb";
+            
             gltfLoader.load(
               url,
               (gltf) => {
+                // Create a wrapper group to allow dynamic offset adjustments.
+                const handWrapper = new THREE.Group();
                 const handModel = gltf.scene;
-                // Scale hand models properly to (0.4, 0.4, 0.4)
+
+                // Apply initial rotation offset.
+                // Adjust these values as needed until the palm points in the desired direction.
+                if (controller.userData.handedness === "left") {
+                  // For left hand, you might need to rotate around Y as well.
+                  handModel.rotation.set(-Math.PI / 2, Math.PI, 0);
+                } else {
+                  handModel.rotation.set(-Math.PI / 2, 0, 0);
+                }
+                
+                // Set the proper scale for your hand model.
                 handModel.scale.set(1, 1, 1);
-                // Set rotation to zero so that the hand points the same direction as the controller.
-                handModel.rotation.set(0, 0, 0);
                 handModel.position.set(0, 0, 0);
-                controller.add(handModel);
+
+                // Add the hand model to the wrapper group.
+                handWrapper.add(handModel);
+
+                // Optionally, if you plan to support dynamic recalibration,
+                // you can update the handWrapper.rotation at runtime.
+
+                // Attach the wrapper (which holds the hand model) to the controller.
+                controller.add(handWrapper);
               },
               undefined,
               (error) => {
@@ -303,7 +322,8 @@
           // Remove the ball from the scene and attach it to the controller.
           scene.remove(basketballMesh);
           controller.add(basketballMesh);
-          // Position the ball in the palm.
+          // Position the ball relative to the controller.
+          // You may adjust this offset if you change the hand model's orientation.
           basketballMesh.position.set(0, -0.1, -0.15);
           isHoldingBall = true;
         } else {

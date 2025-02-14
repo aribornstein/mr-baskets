@@ -145,30 +145,39 @@
             gltfLoader.load(
               url,
               (gltf) => {
-                // Create a wrapper group to allow dynamic offset adjustments.
+                // Create a wrapper group to allow dynamic offset adjustments if needed.
                 const handWrapper = new THREE.Group();
                 const handModel = gltf.scene;
 
-                // Apply initial rotation offset.
-                // Adjust these values as needed until the palm points in the desired direction.
+                // ----------------------------
+                // Adjust the rotation so that the palm faces away from the user
+                // and the back of the hand faces the user. 
+                // If you need a slight flip, try adding or removing Math.PI
+                // from one axis (Y or Z) until it looks correct in your device.
+                // ----------------------------
                 if (controller.userData.handedness === "left") {
-                  // For left hand, you might need to rotate around Y as well.
-                  handModel.rotation.set(-Math.PI / 2, Math.PI, 0);
+                  // Example: palm away, back of hand toward the user
+                  handModel.rotation.set(-Math.PI / 2, 0, 0);
                 } else {
+                  // Right hand, same orientation or slight tweak if needed
                   handModel.rotation.set(-Math.PI / 2, 0, 0);
                 }
                 
-                // Set the proper scale for your hand model.
+                // Scale the hand model (adjust as needed)
                 handModel.scale.set(1, 1, 1);
+
+                // If the hand is still facing you (palm in),
+                // try adding Math.PI on Z:
+                // e.g. handModel.rotation.set(-Math.PI / 2, 0, Math.PI);
+                // or on Y: handModel.rotation.set(-Math.PI / 2, Math.PI, 0);
+
+                // Position the model
                 handModel.position.set(0, 0, 0);
 
-                // Add the hand model to the wrapper group.
+                // Add the hand model to the wrapper group
                 handWrapper.add(handModel);
 
-                // Optionally, if you plan to support dynamic recalibration,
-                // you can update the handWrapper.rotation at runtime.
-
-                // Attach the wrapper (which holds the hand model) to the controller.
+                // Attach the wrapper to the controller
                 controller.add(handWrapper);
               },
               undefined,

@@ -134,7 +134,6 @@
         if(refSpace && refSpace.transform && refSpace.transform.position) {
           measuredY = refSpace.transform.position.y;
         }
-        // Use expected eye height if measured value is too low.
         const expectedEyeHeight = 1.6;
         let offset;
         if(measuredY < 0.1) {
@@ -143,7 +142,10 @@
         } else {
           offset = measuredY;
         }
-        scene.position.y = -offset;
+        // Instead of moving the scene, update the XR reference space:
+        const offsetTransform = new XRRigidTransform({ x: 0, y: -offset, z: 0 });
+        const newRefSpace = refSpace.getOffsetReferenceSpace(offsetTransform);
+        renderer.xr.setReferenceSpace(newRefSpace);
         floorOffset = offset;
         console.log("Calibration complete. Measured Y:", measuredY, "Offset applied:", offset);
         const calibOverlay = document.getElementById("calibration");

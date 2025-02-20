@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>WebXR Basketball Game with Delayed Ball/Hoop Init</title>
+    <title>WebXR Basketball Game with Delayed World Init</title>
     <script type="importmap">
       {
         "imports": {
@@ -55,6 +55,7 @@
       renderer.xr.enabled = true;
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 0);
       document.body.appendChild(renderer.domElement);
 
       // Create scene and camera:
@@ -213,7 +214,7 @@
           rapierWorld.step();
           accumulator -= fixedTimeStep;
         }
-        // Update RealityAccelerator on every frame:
+        // Update RealityAccelerator on every frame.
         if (ratk && typeof ratk.update === "function") {
           ratk.update();
         }
@@ -223,8 +224,6 @@
           const r = ballRigidBody.rotation();
           basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
         }
-        renderer.setClearColor(0x000000, 0);
-
         renderer.render(scene, camera);
       }
 
@@ -236,7 +235,6 @@
         const label = event.semanticLabel.toLowerCase();
         console.log("Surface added:", label);
         if (label === "floor" && !floorConfigured) {
-          debugger;
           const box = new THREE.Box3().setFromObject(surfaceMesh);
           floorOffset = box.min.y;
           floorConfigured = true;
@@ -257,7 +255,7 @@
             console.log("Updated closest wall at distance:", distance);
           }
         }
-        // Once both floor and a wall are detected, create ball and hoop.
+        // Once both floor and a wall are detected, start rendering.
         if (floorConfigured && !ballAndHoopCreated && closestWallMesh) {
           const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
           createBallPhysics(ballPos);
@@ -273,6 +271,8 @@
           createHoopVisual(hoopPos);
           ballAndHoopCreated = true;
           console.log("Ball and hoop created using detected surface.");
+          // Now that surfaces have been detected, start the render loop.
+          renderer.setAnimationLoop(animate);
         }
       }
 
@@ -321,7 +321,7 @@
           scene.add(controller);
           controllers.push(controller);
         }
-        renderer.setAnimationLoop(animate);
+        // Note: We do not start the animation loop here.
       }
 
       // AR Button: Request an immersive-ar session and initialize game logic.

@@ -73,9 +73,11 @@
 
       // Handle window resize:
       window.addEventListener("resize", () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        if (!renderer.xr.getSession()) { // Only resize if XR session is not active.
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
       });
 
       // ---- Game Logic and Feature Functions ----

@@ -41,7 +41,7 @@
       let hoopBody = null, boardBody = null;
       let groundMesh;
       let ratk;
-      let floorConfigured = false;      // Set when a floor plane is detected
+      let floorConfigured = false;      // Set when a floor surface is detected
       let groundCreated = false;        // Ensure ground is created only once
       let ballAndHoopCreated = false;   // Delay ball/hoop creation until conditions met
       let closestWallMesh = null, minWallDistance = Infinity;
@@ -223,64 +223,65 @@
         renderer.render(scene, camera);
       }
 
+      // Named function to handle both plane and mesh added events.
+      function handleSurfaceAdded(event) {
+        // Determine the mesh: check for planeMesh or meshMesh.
+        const surfaceMesh = event.planeMesh || event.meshMesh;
+        if (!surfaceMesh || !event.semanticLabel) return;
+        const label = event.semanticLabel.toLowerCase();
+        if (label === "floor" && !floorConfigured) {
+          const box = new THREE.Box3().setFromObject(surfaceMesh);
+          debugger;
+          floorOffset = box.min.y;
+          floorConfigured = true;
+          console.log("Floor configured at:", floorOffset);
+          if (!groundCreated) {
+            createGroundPhysics();
+            createGroundVisual();
+            groundCreated = true;
+          }
+        }
+        if (label === "wall") {
+          const wallPos = new THREE.Vector3();
+          surfaceMesh.getWorldPosition(wallPos);
+          const distance = wallPos.distanceTo(camera.position);
+          if (distance < minWallDistance) {
+            minWallDistance = distance;
+            closestWallMesh = surfaceMesh;
+            console.log("Updated closest wall at distance:", distance);
+          }
+        }
+        // Once floor and wall are available, create ball and hoop.
+        if (floorConfigured && !ballAndHoopCreated && closestWallMesh) {
+          const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
+          createBallPhysics(ballPos);
+          createBallVisual(ballPos);
+          const wallNormal = new THREE.Vector3(0, 0, 1)
+            .applyQuaternion(closestWallMesh.quaternion)
+            .normalize();
+          const wallPos = new THREE.Vector3();
+          closestWallMesh.getWorldPosition(wallPos);
+          const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.2);
+          hoopPos.y = HOOP_HEIGHT + floorOffset;
+          createHoopPhysics(hoopPos);
+          createHoopVisual(hoopPos);
+          ballAndHoopCreated = true;
+          console.log("Ball and hoop created using detected surface.");
+        }
+      }
+
       // Initialize AR game logic.
       async function initGame() {
         clock = new THREE.Clock();
         await RAPIER.init();
         rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
 
-        // Setup RealityAccelerator for plane detection.
+        // Setup RealityAccelerator for surface detection.
         ratk = new RealityAccelerator(renderer.xr);
         scene.add(ratk.root);
-        ratk.onPlaneAdded = (plane) => {
-          if (plane.semanticLabel && plane.planeMesh) {
-            const label = plane.semanticLabel.toLowerCase();
-            if (label === "floor" && !floorConfigured) {
-              debugger;
-              const box = new THREE.Box3().setFromObject(plane.planeMesh);
-              floorOffset = box.min.y;
-              floorConfigured = true;
-              console.log("Floor configured at:", floorOffset);
-              if (!groundCreated) {
-                createGroundPhysics();
-                createGroundVisual();
-                groundCreated = true;
-              }
-            }
-            if (label === "wall") {
-              debugger;
-              const wallPos = new THREE.Vector3();
-              plane.planeMesh.getWorldPosition(wallPos);
-              const distance = wallPos.distanceTo(camera.position);
-              if (distance < minWallDistance) {
-                minWallDistance = distance;
-                closestWallMesh = plane.planeMesh;
-                console.log("Updated closest wall at distance:", distance);
-              }
-            }
-          }
-          // Once the floor is configured, check if we can create the ball and hoop.
-          if (floorConfigured && !ballAndHoopCreated) {
-            if (closestWallMesh) {
-              // Use detected wall for ball/hoop creation.
-              const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
-              createBallPhysics(ballPos);
-              createBallVisual(ballPos);
-              const wallNormal = new THREE.Vector3(0, 0, 1)
-                .applyQuaternion(closestWallMesh.quaternion)
-                .normalize();
-              const wallPos = new THREE.Vector3();
-              closestWallMesh.getWorldPosition(wallPos);
-              const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.2);
-              hoopPos.y = HOOP_HEIGHT + floorOffset;
-              createHoopPhysics(hoopPos);
-              createHoopVisual(hoopPos);
-              ballAndHoopCreated = true;
-              console.log("Ball and hoop created using detected wall.");
-            } 
-            
-          }
-        };
+        // Check both plane and mesh events.
+        ratk.onPlaneAdded = handleSurfaceAdded;
+        ratk.onMeshAdded = handleSurfaceAdded;
 
         // Setup controllers with hand models:
         const gltfLoader = new GLTFLoader();

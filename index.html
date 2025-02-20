@@ -33,7 +33,7 @@
       import * as RAPIER from "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js";
       import { RealityAccelerator } from "https://unpkg.com/ratk@0.3.0";
 
-      // Global variables for scene and game logic:
+      // Global variables:
       let scene, camera, renderer, clock;
       let rapierWorld;
       let basketballMesh, hoopMesh, backboardMesh;
@@ -41,16 +41,17 @@
       let hoopBody = null, boardBody = null;
       let groundMesh;
       let ratk;
-      let floorConfigured = false; // becomes true when a floor plane is detected
-      let groundCreated = false;   // ensure ground is created only once
-      let ballAndHoopCreated = false; // flag to delay ball/hoop init
+      let floorConfigured = false;      // Set when a floor plane is detected
+      let groundCreated = false;        // Ensure ground is created only once
+      let ballAndHoopCreated = false;   // Delay ball/hoop creation until conditions met
       let closestWallMesh = null, minWallDistance = Infinity;
       let floorOffset = 0;
       let isHoldingBall = false;
       const controllers = [];
       const BALL_RADIUS = 0.12, HOOP_RADIUS = 0.3, HOOP_HEIGHT = 1.8;
+      let fallbackScheduled = false;    // To schedule fallback creation if wall not detected
 
-      // Create renderer with transparent settings for passthrough:
+      // Create renderer with transparency for passthrough:
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.xr.enabled = true;
       renderer.setPixelRatio(window.devicePixelRatio);
@@ -65,7 +66,7 @@
       camera.position.set(0, 1.6, 0);
       scene.add(camera);
 
-      // Global lighting:
+      // Add lighting:
       const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
       scene.add(hemiLight);
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -257,24 +258,47 @@
               }
             }
           }
-          // Once both floor and a wall are detected, initialize ball and hoop if not done yet.
-          if (floorConfigured && closestWallMesh && !ballAndHoopCreated) {
-            // Set ball position relative to floor.
-            const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
-            createBallPhysics(ballPos);
-            createBallVisual(ballPos);
-            // Compute hoop position using the wall's normal:
-            const wallNormal = new THREE.Vector3(0, 0, 1)
-              .applyQuaternion(closestWallMesh.quaternion)
-              .normalize();
-            const wallPos = new THREE.Vector3();
-            closestWallMesh.getWorldPosition(wallPos);
-            const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.2);
-            hoopPos.y = HOOP_HEIGHT + floorOffset;
-            createHoopPhysics(hoopPos);
-            createHoopVisual(hoopPos);
-            ballAndHoopCreated = true;
-            console.log("Ball and hoop created.");
+          // Once the floor is configured, check if we can create the ball and hoop.
+          if (floorConfigured && !ballAndHoopCreated) {
+            if (closestWallMesh) {
+              // Use detected wall for ball/hoop creation.
+              const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
+              createBallPhysics(ballPos);
+              createBallVisual(ballPos);
+              const wallNormal = new THREE.Vector3(0, 0, 1)
+                .applyQuaternion(closestWallMesh.quaternion)
+                .normalize();
+              const wallPos = new THREE.Vector3();
+              closestWallMesh.getWorldPosition(wallPos);
+              const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.2);
+              hoopPos.y = HOOP_HEIGHT + floorOffset;
+              createHoopPhysics(hoopPos);
+              createHoopVisual(hoopPos);
+              ballAndHoopCreated = true;
+              console.log("Ball and hoop created using detected wall.");
+            } else if (!fallbackScheduled) {
+              // If no wall detected, schedule fallback creation after 10 seconds.
+              fallbackScheduled = true;
+              console.log("No wall detected; scheduling fallback creation in 10 seconds.");
+              setTimeout(() => {
+                if (!ballAndHoopCreated) {
+                  const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
+                  createBallPhysics(ballPos);
+                  createBallVisual(ballPos);
+                  // Use default wall values: assume wall normal (0,0,1) and wall 1m ahead of camera.
+                  const defaultWallNormal = new THREE.Vector3(0, 0, 1);
+                  const defaultWallPos = new THREE.Vector3();
+                  camera.getWorldPosition(defaultWallPos);
+                  defaultWallPos.addScaledVector(defaultWallNormal, 1);
+                  const hoopPos = defaultWallPos.clone().addScaledVector(defaultWallNormal, HOOP_RADIUS + 0.2);
+                  hoopPos.y = HOOP_HEIGHT + floorOffset;
+                  createHoopPhysics(hoopPos);
+                  createHoopVisual(hoopPos);
+                  ballAndHoopCreated = true;
+                  console.log("Fallback ball and hoop created.");
+                }
+              }, 10000);
+            }
           }
         };
 
@@ -313,21 +337,9 @@
         renderer.setAnimationLoop(animate);
       }
 
-      // AR Button: Request immersive-ar session and initialize game logic.
+      // AR Button: Request an immersive-ar session and initialize game logic.
       document.getElementById("ar-button").addEventListener("click", async () => {
         try {
           const session = await navigator.xr.requestSession("immersive-ar", {
             requiredFeatures: ["hit-test", "plane-detection", "anchors"],
-            optionalFeatures: ["mesh-detection"],
-          });
-          renderer.xr.setReferenceSpaceType("local");
-          renderer.xr.setSession(session);
-          console.log("AR session started.");
-          initGame();
-        } catch (err) {
-          console.error("Failed to start AR session:", err);
-        }
-      });
-    </script>
-  </body>
-</html>
+            optionalFeatures: ["

@@ -55,7 +55,6 @@
       renderer.xr.enabled = true;
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setClearColor(0x000000, 0);
       document.body.appendChild(renderer.domElement);
 
       // Create scene and camera:
@@ -224,6 +223,8 @@
           const r = ballRigidBody.rotation();
           basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
         }
+        renderer.setClearColor(0x000000, 0);
+
         renderer.render(scene, camera);
       }
 

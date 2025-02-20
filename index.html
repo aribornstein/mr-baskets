@@ -105,17 +105,15 @@
           if (plane.semanticLabel && plane.planeMesh) {
             const label = plane.semanticLabel.toLowerCase();
             if (label === "floor" && !floorConfigured) {
-              // Use the floor mesh's world position (plus its bounding box min) as the floor offset.
-              plane.planeMesh.updateMatrixWorld();
-              plane.planeMesh.geometry.computeBoundingBox();
-              const bbox = plane.planeMesh.geometry.boundingBox;
-              floorOffset = plane.planeMesh.position.y + (bbox ? bbox.min.y : 0);
+              // Compute the world bounding box of the detected floor mesh.
+              const box = new THREE.Box3().setFromObject(plane.planeMesh);
+              floorOffset = box.min.y;
               if (groundMesh) groundMesh.position.y = floorOffset;
               floorConfigured = true;
               console.log("Floor configured at:", floorOffset);
             }
             if (label === "wall") {
-              // Determine if this wall is closer than previously seen.
+              // Determine if this wall is closer than any previously seen.
               const wallPos = new THREE.Vector3();
               plane.planeMesh.getWorldPosition(wallPos);
               const distance = wallPos.distanceTo(camera.position);
@@ -324,7 +322,7 @@
       function animate() {
         const delta = clock.getDelta();
 
-        // Update controllers’ velocity.
+        // Update each controller’s velocity.
         controllers.forEach((ctrl) => {
           const currentPos = new THREE.Vector3();
           ctrl.getWorldPosition(currentPos);
@@ -339,14 +337,14 @@
         // Update RealityAccelerator.
         if (ratk) ratk.update();
 
-        // If floor is configured and we have a closest wall (and the hoop hasn’t been set yet),
-        // compute the hoop position using the wall mesh.
+        // Once the floor is configured and we have a closest wall,
+        // position the hoop relative to that wall.
         if (floorConfigured && !hoopConfigured && closestWallMesh) {
-          // Compute the wall’s normal by transforming the local (0, 0, 1) vector.
+          // Compute the wall's normal by transforming the local (0, 0, 1) vector.
           const wallNormal = new THREE.Vector3(0, 0, 1)
             .applyQuaternion(closestWallMesh.quaternion)
             .normalize();
-          // Get the wall’s world position.
+          // Get the wall's world position.
           const wallPos = new THREE.Vector3();
           closestWallMesh.getWorldPosition(wallPos);
           // Offset the hoop from the wall along its normal.

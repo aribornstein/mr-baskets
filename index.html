@@ -17,6 +17,9 @@
         margin: 0;
         overflow: hidden;
       }
+      canvas {
+        display: block;
+      }
       #score {
         position: absolute;
         top: 10px;
@@ -45,7 +48,7 @@
       let basketballMesh, hoopMesh, backboardMesh;
       let ballRigidBody = null, ballCollider = null;
       let hoopBody = null, boardBody = null;
-      let groundMesh; // keep a reference to the ground mesh
+      let groundMesh; // reference to the ground mesh
 
       // RealityAccelerator for room detection.
       let ratk;
@@ -62,7 +65,6 @@
 
       // Ball pickup/throw configuration.
       let isHoldingBall = false;
-      // Array for controllers.
       const controllers = [];
 
       async function init() {
@@ -70,24 +72,24 @@
         rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
 
         scene = new THREE.Scene();
+        // Set scene background to null for passthrough.
+        scene.background = null;
         camera = new THREE.PerspectiveCamera(
           70,
           window.innerWidth / window.innerHeight,
           0.01,
           20
         );
-        // Set a default camera position (typical eye level).
         camera.position.set(0, 1.6, 0);
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
-        // Fix passthrough: set clear color to transparent.
-        renderer.setClearColor(0x000000, 0);
+        renderer.setClearColor(0x000000, 0); // fully transparent clear color.
         renderer.xr.enabled = true;
         document.body.appendChild(renderer.domElement);
+        renderer.domElement.style.background = "none";
 
-        // Request AR session with additional features.
         document.body.appendChild(
           ARButton.createButton(renderer, {
             requiredFeatures: [
@@ -100,24 +102,20 @@
           })
         );
 
-        // Initialize RealityAccelerator to detect room geometry.
         ratk = new RealityAccelerator(renderer.xr);
         scene.add(ratk.root);
 
-        // onPlaneAdded: check for floors and walls.
+        // onPlaneAdded: simply store floorOffset from the detected floor mesh.
         ratk.onPlaneAdded = (plane) => {
           if (plane.semanticLabel && plane.planeMesh) {
             const label = plane.semanticLabel.toLowerCase();
             if (label === "floor" && !floorConfigured) {
-              // Use the detected floor mesh's world bounding box.
               const box = new THREE.Box3().setFromObject(plane.planeMesh);
               floorOffset = box.min.y;
-              if (groundMesh) groundMesh.position.y = floorOffset;
               floorConfigured = true;
               console.log("Floor configured at:", floorOffset);
             }
             if (label === "wall") {
-              // Determine if this wall is closer than any previously seen.
               const wallPos = new THREE.Vector3();
               plane.planeMesh.getWorldPosition(wallPos);
               const distance = wallPos.distanceTo(camera.position);
@@ -130,26 +128,21 @@
           }
         };
 
-        // Lighting.
         const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
         scene.add(hemiLight);
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(0, 4, 2);
         scene.add(dirLight);
 
-        // Create ground.
         createGroundPhysics();
         createGroundVisual();
 
-        // Create basketball.
         createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
         createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
 
-        // Create hoop & backboard at an initial location.
         createHoopPhysics({ x: 0, y: HOOP_HEIGHT + floorOffset, z: -2 });
         createHoopVisual({ x: 0, y: HOOP_HEIGHT + floorOffset, z: -2 });
 
-        // Set up controllers and attach virtual hand models.
         const gltfLoader = new GLTFLoader();
         for (let i = 0; i < 2; i++) {
           const controller = renderer.xr.getController(i);
@@ -198,7 +191,6 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
 
-      // Ground creation.
       function createGroundPhysics() {
         const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorOffset, 0);
         const groundBody = rapierWorld.createRigidBody(groundBodyDesc);
@@ -219,11 +211,11 @@
         groundMesh = new THREE.Mesh(groundGeo, groundMat);
         groundMesh.name = "ground";
         groundMesh.rotation.x = -Math.PI / 2;
+        // Initially, groundMesh will use the current floorOffset.
         groundMesh.position.y = floorOffset;
         scene.add(groundMesh);
       }
 
-      // Basketball creation.
       function createBallPhysics(pos) {
         const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
         ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
@@ -242,7 +234,6 @@
         scene.add(basketballMesh);
       }
 
-      // Hoop & backboard creation.
       function createHoopPhysics(pos) {
         const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
         hoopBody = rapierWorld.createRigidBody(hoopBodyDesc);
@@ -280,7 +271,6 @@
         scene.add(backboardMesh);
       }
 
-      // --- Controller event handlers for ball pickup & throw ---
       function onGrab(event) {
         const controller = event.target;
         if (!isHoldingBall) {
@@ -322,7 +312,6 @@
         }
       }
 
-      // Animation loop.
       function animate() {
         const delta = clock.getDelta();
 
@@ -338,23 +327,22 @@
           ctrl.userData.prevPos.copy(currentPos);
         });
 
-        // Update RealityAccelerator.
         if (ratk) ratk.update();
 
-        // Once the floor is configured and a closest wall is found,
-        // position the hoop relative to that wall.
+        // In the animation loop, update the ground mesh's position once it exists.
+        if (floorConfigured && groundMesh) {
+          groundMesh.position.y = floorOffset;
+        }
+
+        // Position the hoop relative to the closest wall if not already configured.
         if (floorConfigured && !hoopConfigured && closestWallMesh) {
-          // Compute the wall's normal by transforming the local (0, 0, 1) vector.
           const wallNormal = new THREE.Vector3(0, 0, 1)
             .applyQuaternion(closestWallMesh.quaternion)
             .normalize();
-          // Get the wall's world position.
           const wallPos = new THREE.Vector3();
           closestWallMesh.getWorldPosition(wallPos);
-          // Offset the hoop from the wall along its normal.
           const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.2);
           hoopPos.y = floorOffset + HOOP_HEIGHT;
-          // Remove any previous hoop.
           if (hoopMesh) scene.remove(hoopMesh);
           if (backboardMesh) scene.remove(backboardMesh);
           createHoopPhysics({ x: hoopPos.x, y: hoopPos.y, z: hoopPos.z });
@@ -363,7 +351,6 @@
           console.log("Hoop placed at:", hoopPos);
         }
 
-        // Step physics and update the ball if it's not held.
         if (!isHoldingBall && ballRigidBody && basketballMesh) {
           rapierWorld.step();
           const t = ballRigidBody.translation();
@@ -371,7 +358,6 @@
           const r = ballRigidBody.rotation();
           basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
 
-          // Check if the ball passes through the hoop.
           if (basketballMesh.position.y < HOOP_HEIGHT + floorOffset) {
             const hoopCenter = new THREE.Vector3(hoopMesh.position.x, hoopMesh.position.y, hoopMesh.position.z);
             if (basketballMesh.position.distanceTo(hoopCenter) < HOOP_RADIUS) {

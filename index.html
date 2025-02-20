@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta http-equiv="origin-trial" content="Ahfj+MLeL6bh+LNmpnSdepftxoDHHwjUG2KWZ4jjCb1WoZxtBlzF3cDHuJNVqnhr3HXJwQ+kLaw57NO15S0mRwwAAABkeyJvcmlnaW4iOiJodHRwczovL2ltbWVyc2l2ZS13ZWIuZ2l0aHViLmlvOjQ0MyIsImZlYXR1cmUiOiJXZWJYUlBsYW5lRGV0ZWN0aW9uIiwiZXhwaXJ5IjoxNjI5ODQ5NTk5fQ==">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="UTF-8" />
-    <title>WebXR Basketball with AR Passthrough & VR Hands</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebXR Passthrough AR Example</title>
     <script type="importmap">
       {
         "imports": {
@@ -13,8 +12,15 @@
       }
     </script>
     <style>
-      body { margin: 0; overflow: hidden; background: none; }
-      canvas { display: block; background: none; }
+      body { 
+        margin: 0; 
+        overflow: hidden; 
+        background: none; 
+      }
+      canvas { 
+        display: block; 
+        background: none; 
+      }
       #ar-button {
         position: absolute;
         bottom: 20px;
@@ -29,325 +35,70 @@
   <body>
     <button id="ar-button">Enter AR</button>
     <script type="module">
-      import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
-      import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/loaders/GLTFLoader.js";
-      import * as RAPIER from "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js";
-      import { RealityAccelerator } from "https://unpkg.com/ratk@0.3.0";
+      import * as THREE from "three";
 
-      let scene, camera, renderer, clock;
-      let rapierWorld;
-      
-      // Three.js meshes and physics references.
-      let basketballMesh, hoopMesh, backboardMesh;
-      let ballRigidBody = null, ballCollider = null;
-      let hoopBody = null, boardBody = null;
-      let groundMesh;
-
-      // RealityAccelerator for room detection.
-      let ratk;
-      let floorConfigured = false;
-      let hoopConfigured = false;
-      let closestWallMesh = null;
-      let minWallDistance = Infinity;
-
-      // Constants.
-      const BALL_RADIUS = 0.12;
-      const HOOP_RADIUS = 0.3;
-      const HOOP_HEIGHT = 1.8;
-      let floorOffset = 0;
-
-      // Ball pickup/throw configuration.
-      let isHoldingBall = false;
-      const controllers = [];
-
-      // Custom AR session creation method.
-      async function startARSession() {
-        const config = {
-          requiredFeatures: ["hit-test", "plane-detection", "anchors"],
-          optionalFeatures: ["mesh-detection"]
-        };
-        try {
-          const session = await navigator.xr.requestSession("immersive-ar", config);
-          console.log("AR session started with configuration:", config);
-          return session;
-        } catch (err) {
-          console.error("Failed to start AR session.", err);
-          throw err;
-        }
-      }
-
-      // -------------------------------
-      // Global Initialization (Option A)
-      // -------------------------------
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      // Global Renderer Setup with transparency for passthrough:
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.xr.enabled = true;
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(window.innerWidth, window.innerHeight);
+      // Set clear color to transparent so that the passthrough camera shows
+      renderer.setClearColor(0x000000, 0);
       document.body.appendChild(renderer.domElement);
 
-      // Set up the scene and camera.
-      scene = new THREE.Scene();
-      scene.background = null;
-      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+      // Create Scene and Camera:
+      const scene = new THREE.Scene();
+      scene.background = null; // Ensure the scene background is transparent
+      const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
       camera.position.set(0, 1.6, 0);
       scene.add(camera);
 
-      // AR session button event.
-      document.getElementById("ar-button").addEventListener("click", async () => {
+      // Add some basic lighting for visibility:
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+      scene.add(hemiLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(0, 4, 2);
+      scene.add(dirLight);
+
+      // Optional: add a simple test object to verify rendering:
+      const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+      const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+      const cube = new THREE.Mesh(geometry, material);
+      cube.position.set(0, 1.6, -1); // position in front of the camera
+      scene.add(cube);
+
+      // Handle window resizes:
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // AR Button: Request immersive-ar session when clicked
+      document.getElementById('ar-button').addEventListener('click', async () => {
         try {
-          const session = await startARSession();
-          renderer.xr.setReferenceSpaceType("local");
+          const session = await navigator.xr.requestSession('immersive-ar', {
+            requiredFeatures: ['hit-test', 'plane-detection', 'anchors'],
+            optionalFeatures: ['mesh-detection']
+          });
+          renderer.xr.setReferenceSpaceType('local');
           renderer.xr.setSession(session);
+          console.log("AR session started.");
         } catch (err) {
-          console.error("Could not create an AR session.", err);
+          console.error("Failed to start AR session:", err);
         }
       });
 
-      // -------------------------------
-      // Functions for Physics & Visuals
-      // -------------------------------
-      function createGroundPhysics() {
-        const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorOffset, 0);
-        const groundBody = rapierWorld.createRigidBody(groundBodyDesc);
-        const groundColliderDesc = RAPIER.ColliderDesc.cuboid(5, 0.1, 5)
-          .setRestitution(0.2)
-          .setFriction(0.8);
-        rapierWorld.createCollider(groundColliderDesc, groundBody);
-      }
-      function createGroundVisual() {
-        const groundGeo = new THREE.CircleGeometry(5, 32);
-        const groundMat = new THREE.MeshStandardMaterial({
-          color: 0x333333,
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: 0.2,
-        });
-        groundMesh = new THREE.Mesh(groundGeo, groundMat);
-        groundMesh.name = "ground";
-        groundMesh.rotation.x = -Math.PI / 2;
-        groundMesh.position.y = floorOffset;
-        scene.add(groundMesh);
-      }
-      function createBallPhysics(pos) {
-        const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
-        ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
-        const colliderDesc = RAPIER.ColliderDesc.ball(BALL_RADIUS)
-          .setRestitution(0.7)
-          .setFriction(0.7);
-        ballCollider = rapierWorld.createCollider(colliderDesc, ballRigidBody);
-      }
-      function createBallVisual(pos) {
-        const geometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
-        const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
-        basketballMesh = new THREE.Mesh(geometry, material);
-        basketballMesh.position.set(pos.x, pos.y, pos.z);
-        basketballMesh.name = "basketball";
-        scene.add(basketballMesh);
-      }
-      function createHoopPhysics(pos) {
-        const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
-        hoopBody = rapierWorld.createRigidBody(hoopBodyDesc);
-        const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, HOOP_RADIUS)
-          .setRestitution(0.5)
-          .setFriction(0.8);
-        const euler = new THREE.Euler(Math.PI / 2, 0, 0);
-        const threeQuat = new THREE.Quaternion().setFromEuler(euler);
-        const rapierQuat = { x: threeQuat.x, y: threeQuat.y, z: threeQuat.z, w: threeQuat.w };
-        ringColliderDesc.setRotation(rapierQuat);
-        rapierWorld.createCollider(ringColliderDesc, hoopBody);
-        const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
-        boardBody = rapierWorld.createRigidBody(boardBodyDesc);
-        const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.3, 0.2, 0.01)
-          .setRestitution(0.3)
-          .setFriction(0.8);
-        rapierWorld.createCollider(boardColliderDesc, boardBody);
-      }
-      function createHoopVisual(pos) {
-        const hoopGeometry = new THREE.TorusGeometry(HOOP_RADIUS, 0.02, 16, 100);
-        const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-        hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
-        hoopMesh.rotation.x = Math.PI / 2;
-        hoopMesh.position.set(pos.x, pos.y, pos.z);
-        hoopMesh.name = "hoop";
-        scene.add(hoopMesh);
-        const boardGeometry = new THREE.PlaneGeometry(0.6, 0.4);
-        const boardMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-        backboardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
-        backboardMesh.position.set(pos.x, pos.y, pos.z - 0.05);
-        scene.add(backboardMesh);
-      }
-
-      // Ball interaction.
-      function onGrab(event) {
-        const controller = event.target;
-        if (!isHoldingBall) {
-          if (ballRigidBody) {
-            rapierWorld.removeRigidBody(ballRigidBody);
-            ballRigidBody = null;
-            ballCollider = null;
-          }
-          scene.remove(basketballMesh);
-          controller.add(basketballMesh);
-          basketballMesh.position.set(0, -0.1, -0.15);
-          isHoldingBall = true;
-        } else {
-          const currentHolder = basketballMesh.parent;
-          if (currentHolder !== controller) {
-            currentHolder.remove(basketballMesh);
-            controller.add(basketballMesh);
-            basketballMesh.position.set(0, -0.1, -0.15);
-          }
-        }
-      }
-      function onRelease(event) {
-        const controller = event.target;
-        if (isHoldingBall) {
-          isHoldingBall = false;
-          basketballMesh.updateMatrixWorld();
-          const worldPos = new THREE.Vector3();
-          basketballMesh.getWorldPosition(worldPos);
-          controller.remove(basketballMesh);
-          basketballMesh.position.copy(worldPos);
-          scene.add(basketballMesh);
-          createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
-          const throwVelocity = controller.userData.velocity || new THREE.Vector3();
-          ballRigidBody.setLinvel(
-            { x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z },
-            true
-          );
-        }
-      }
-
-      // Animation loop.
+      // Animation loop:
+      const clock = new THREE.Clock();
       function animate() {
         const delta = clock.getDelta();
-        controllers.forEach((ctrl) => {
-          const currentPos = new THREE.Vector3();
-          ctrl.getWorldPosition(currentPos);
-          if (!ctrl.userData.prevPos) {
-            ctrl.userData.prevPos = currentPos.clone();
-          }
-          const velocity = currentPos.clone().sub(ctrl.userData.prevPos).divideScalar(delta);
-          ctrl.userData.velocity.copy(velocity);
-          ctrl.userData.prevPos.copy(currentPos);
-        });
-        if (ratk) ratk.update();
-        if (floorConfigured && groundMesh) {
-          groundMesh.position.y = floorOffset;
-        }
-        if (floorConfigured && !hoopConfigured && closestWallMesh) {
-          const wallNormal = new THREE.Vector3(0, 0, 1)
-            .applyQuaternion(closestWallMesh.quaternion)
-            .normalize();
-          const wallPos = new THREE.Vector3();
-          closestWallMesh.getWorldPosition(wallPos);
-          const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.2);
-          hoopPos.y = floorOffset + HOOP_HEIGHT;
-          if (hoopMesh) scene.remove(hoopMesh);
-          if (backboardMesh) scene.remove(backboardMesh);
-          createHoopPhysics({ x: hoopPos.x, y: hoopPos.y, z: hoopPos.z });
-          createHoopVisual({ x: hoopPos.x, y: hoopPos.y, z: hoopPos.z });
-          hoopConfigured = true;
-          console.log("Hoop placed at:", hoopPos);
-        }
-        if (!isHoldingBall && ballRigidBody && basketballMesh) {
-          rapierWorld.step();
-          const t = ballRigidBody.translation();
-          basketballMesh.position.set(t.x, t.y, t.z);
-          const r = ballRigidBody.rotation();
-          basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
-        }
+        // Rotate the cube for a simple animation effect:
+        cube.rotation.x += delta;
+        cube.rotation.y += delta;
         renderer.render(scene, camera);
       }
-
-      // -------------------------------
-      // init Function – AR & Physics Setup Only
-      // -------------------------------
-      async function init() {
-        clock = new THREE.Clock();
-        await RAPIER.init();
-        rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
-
-        // Ensure the AR button is visible.
-        document.getElementById("ar-button").style.display = "block";
-
-        // Initialize RealityAccelerator.
-        ratk = new RealityAccelerator(renderer.xr);
-        scene.add(ratk.root);
-        ratk.onPlaneAdded = (plane) => {
-          if (plane.semanticLabel && plane.planeMesh) {
-            const label = plane.semanticLabel.toLowerCase();
-            if (label === "floor" && !floorConfigured) {
-              const box = new THREE.Box3().setFromObject(plane.planeMesh);
-              floorOffset = box.min.y;
-              floorConfigured = true;
-              console.log("Floor configured at:", floorOffset);
-            }
-            if (label === "wall") {
-              const wallPos = new THREE.Vector3();
-              plane.planeMesh.getWorldPosition(wallPos);
-              const distance = wallPos.distanceTo(camera.position);
-              if (distance < minWallDistance) {
-                minWallDistance = distance;
-                closestWallMesh = plane.planeMesh;
-                console.log("Updated closest wall at distance:", distance);
-              }
-            }
-          }
-        };
-
-        // Lights.
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
-        scene.add(hemiLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(0, 4, 2);
-        scene.add(dirLight);
-
-        // Create ground, ball, and hoop.
-        createGroundPhysics();
-        createGroundVisual();
-        createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-        createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-        createHoopPhysics({ x: 0, y: HOOP_HEIGHT + floorOffset, z: -2 });
-        createHoopVisual({ x: 0, y: HOOP_HEIGHT + floorOffset, z: -2 });
-
-        // Set up controllers and hand models.
-        const gltfLoader = new GLTFLoader();
-        for (let i = 0; i < 2; i++) {
-          const controller = renderer.xr.getController(i);
-          controller.userData.index = i;
-          controller.userData.velocity = new THREE.Vector3();
-          controller.addEventListener("connected", (event) => {
-            controller.userData.handedness = event.data.handedness;
-            const url =
-              controller.userData.handedness === "left"
-                ? "https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/generic-hand/left.glb"
-                : "https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/generic-hand/right.glb";
-            gltfLoader.load(
-              url,
-              (gltf) => {
-                const handWrapper = new THREE.Group();
-                const handModel = gltf.scene;
-                handModel.rotation.set(Math.PI / 2, 0, 0);
-                handModel.scale.set(1, 1, 1);
-                handModel.position.set(0, 0, 0);
-                handWrapper.add(handModel);
-                controller.add(handWrapper);
-              },
-              undefined,
-              (error) => {
-                console.error("Error loading hand model:", error);
-              }
-            );
-          });
-          controller.addEventListener("squeezestart", onGrab);
-          controller.addEventListener("squeezeend", onRelease);
-          scene.add(controller);
-          controllers.push(controller);
-        }
-        renderer.setAnimationLoop(animate);
-      }
-      window.addEventListener("load", init);
+      renderer.setAnimationLoop(animate);
     </script>
   </body>
 </html>

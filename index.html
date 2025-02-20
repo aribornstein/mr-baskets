@@ -342,4 +342,16 @@
         try {
           const session = await navigator.xr.requestSession("immersive-ar", {
             requiredFeatures: ["hit-test", "plane-detection", "anchors"],
-            optionalFeatures: ["
+            optionalFeatures: ["mesh-detection"],
+          });
+          renderer.xr.setReferenceSpaceType("local");
+          renderer.xr.setSession(session);
+          console.log("AR session started.");
+          initGame();
+        } catch (err) {
+          console.error("Failed to start AR session:", err);
+        }
+      });
+    </script>
+  </body>
+</html>

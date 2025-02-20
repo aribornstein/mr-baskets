@@ -23,65 +23,45 @@
         color: white;
         z-index: 2;
       }
-      /* Calibration overlay instructs the user to hold the "X" button on the left controller */
-      #calibration {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        font-size: 24px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 3;
-      }
-      #calibration p {
-        margin: 0;
-      }
     </style>
   </head>
   <body>
     <div id="score">Score: 0</div>
-    <div id="calibration">
-      <p>Please stand in a T-pose (arms extended) for calibration.</p>
-      <p>
-        Hold the left controller's "X" button for 3 seconds to calibrate the
-        floor.
-      </p>
-    </div>
     <script type="module">
       import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
       import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/ARButton.js";
       import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/loaders/GLTFLoader.js";
       import * as RAPIER from "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js";
+      import { RealityAccelerator } from "https://unpkg.com/ratk@0.3.0";
 
       let scene, camera, renderer, clock;
       let rapierWorld;
       let score = 0;
       const scoreEl = document.getElementById("score");
 
-      // Three.js meshes and physics references
+      // Three.js meshes and physics references.
       let basketballMesh, hoopMesh, backboardMesh;
       let ballRigidBody = null, ballCollider = null;
       let hoopBody = null, boardBody = null;
+      let groundMesh; // keep a reference to the ground mesh
 
-      // Constants
+      // RealityAccelerator for room detection.
+      let ratk;
+      let floorConfigured = false;
+      let hoopConfigured = false;
+      let closestWallMesh = null;
+      let minWallDistance = Infinity;
+
+      // Constants.
       const BALL_RADIUS = 0.12;
       const HOOP_RADIUS = 0.3;
-      const hoopY = 1.8; // Nominal hoop height above floor
-      let floorOffset = 0;
+      const HOOP_HEIGHT = 1.8; // nominal hoop height above floor.
+      let floorOffset = 0; // updated from detected floor mesh.
 
-      // Ball pickup/throw configuration:
+      // Ball pickup/throw configuration.
       let isHoldingBall = false;
       // Array for controllers.
       const controllers = [];
-
-      // For controller calibration polling (left-hand only)
-      let calibrateTimeout = null;
 
       async function init() {
         await RAPIER.init();
@@ -94,6 +74,8 @@
           0.01,
           20
         );
+        // Set a default camera position (typical eye level).
+        camera.position.set(0, 1.6, 0);
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -101,12 +83,52 @@
         renderer.xr.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // Use ARButton for AR passthrough with local-floor reference.
+        // Request AR session with additional features.
         document.body.appendChild(
-          ARButton.createButton(renderer, { requiredFeatures: ["local-floor"] })
+          ARButton.createButton(renderer, {
+            requiredFeatures: [
+              "local-floor",
+              "hit-test",
+              "plane-detection",
+              "mesh-detection",
+              "anchors"
+            ]
+          })
         );
 
-        // Lighting:
+        // Initialize RealityAccelerator to detect room geometry.
+        ratk = new RealityAccelerator(renderer.xr);
+        scene.add(ratk.root);
+
+        // Use onPlaneAdded to check for floors and walls.
+        ratk.onPlaneAdded = (plane) => {
+          if (plane.semanticLabel && plane.planeMesh) {
+            const label = plane.semanticLabel.toLowerCase();
+            if (label === "floor" && !floorConfigured) {
+              // Use the floor mesh's world position (plus its bounding box min) as the floor offset.
+              plane.planeMesh.updateMatrixWorld();
+              plane.planeMesh.geometry.computeBoundingBox();
+              const bbox = plane.planeMesh.geometry.boundingBox;
+              floorOffset = plane.planeMesh.position.y + (bbox ? bbox.min.y : 0);
+              if (groundMesh) groundMesh.position.y = floorOffset;
+              floorConfigured = true;
+              console.log("Floor configured at:", floorOffset);
+            }
+            if (label === "wall") {
+              // Determine if this wall is closer than previously seen.
+              const wallPos = new THREE.Vector3();
+              plane.planeMesh.getWorldPosition(wallPos);
+              const distance = wallPos.distanceTo(camera.position);
+              if (distance < minWallDistance) {
+                minWallDistance = distance;
+                closestWallMesh = plane.planeMesh;
+                console.log("Updated closest wall at distance:", distance);
+              }
+            }
+          }
+        };
+
+        // Lighting.
         const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
         scene.add(hemiLight);
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -121,63 +143,32 @@
         createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
         createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
 
-        // Create hoop & backboard.
-        createHoopPhysics({ x: 0, y: hoopY + floorOffset, z: -2 });
-        createHoopVisual({ x: 0, y: hoopY + floorOffset, z: -2 });
+        // Create hoop & backboard at an initial location.
+        createHoopPhysics({ x: 0, y: HOOP_HEIGHT + floorOffset, z: -2 });
+        createHoopVisual({ x: 0, y: HOOP_HEIGHT + floorOffset, z: -2 });
 
         // Set up controllers and attach virtual hand models.
         const gltfLoader = new GLTFLoader();
         for (let i = 0; i < 2; i++) {
-          // Create controller for input events.
           const controller = renderer.xr.getController(i);
           controller.userData.index = i;
-          // Initialize velocity.
           controller.userData.velocity = new THREE.Vector3();
 
-          // When the controller connects, store its handedness and load the generic hand model.
           controller.addEventListener("connected", (event) => {
             controller.userData.handedness = event.data.handedness;
             const url =
               controller.userData.handedness === "left"
                 ? "https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/generic-hand/left.glb"
                 : "https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/generic-hand/right.glb";
-            
             gltfLoader.load(
               url,
               (gltf) => {
-                // Create a wrapper group to allow dynamic offset adjustments if needed.
                 const handWrapper = new THREE.Group();
                 const handModel = gltf.scene;
-
-                // ----------------------------
-                // Adjust the rotation so that the palm faces away from the user
-                // and the back of the hand faces the user. 
-                // If you need a slight flip, try adding or removing Math.PI
-                // from one axis (Y or Z) until it looks correct in your device.
-                // ----------------------------
-                if (controller.userData.handedness === "left") {
-                  // Example: palm away, back of hand toward the user
-                  handModel.rotation.set(Math.PI / 2, 0, 0);
-                } else {
-                  // Right hand, same orientation or slight tweak if needed
-                  handModel.rotation.set(Math.PI / 2, 0, 0);
-                }
-                
-                // Scale the hand model (adjust as needed)
+                handModel.rotation.set(Math.PI / 2, 0, 0);
                 handModel.scale.set(1, 1, 1);
-
-                // If the hand is still facing you (palm in),
-                // try adding Math.PI on Z:
-                // e.g. handModel.rotation.set(-Math.PI / 2, 0, Math.PI);
-                // or on Y: handModel.rotation.set(-Math.PI / 2, Math.PI, 0);
-
-                // Position the model
                 handModel.position.set(0, 0, 0);
-
-                // Add the hand model to the wrapper group
                 handWrapper.add(handModel);
-
-                // Attach the wrapper to the controller
                 controller.add(handWrapper);
               },
               undefined,
@@ -187,7 +178,6 @@
             );
           });
 
-          // Use grip events for grabbing and releasing the ball.
           controller.addEventListener("squeezestart", onGrab);
           controller.addEventListener("squeezeend", onRelease);
           scene.add(controller);
@@ -206,34 +196,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
 
-      // Calibration function: calibrates floor and changes ball color.
-      function calibrateFloor() {
-        const refSpace = renderer.xr.getReferenceSpace();
-        let measuredY = 0;
-        if (refSpace && refSpace.transform && refSpace.transform.position) {
-          measuredY = refSpace.transform.position.y;
-        }
-        const expectedEyeHeight = 1.6;
-        let offset;
-        if (measuredY < 0.1) {
-          console.warn(
-            "Measured Y is too low; using expected eye height for calibration."
-          );
-          offset = expectedEyeHeight;
-        } else {
-          offset = measuredY;
-        }
-        // Update the XR reference space.
-        const offsetTransform = new XRRigidTransform({ x: 0, y: -offset, z: 0 });
-        const newRefSpace = refSpace.getOffsetReferenceSpace(offsetTransform);
-        renderer.xr.setReferenceSpace(newRefSpace);
-        floorOffset = offset;
-        console.log("Calibration complete. Measured Y:", measuredY, "Offset applied:", offset);
-        const calibOverlay = document.getElementById("calibration");
-        if (calibOverlay) calibOverlay.style.display = "none";
-      }
-
-      // Ground creation:
+      // Ground creation.
       function createGroundPhysics() {
         const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorOffset, 0);
         const groundBody = rapierWorld.createRigidBody(groundBodyDesc);
@@ -251,14 +214,14 @@
           transparent: true,
           opacity: 0.2,
         });
-        const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+        groundMesh = new THREE.Mesh(groundGeo, groundMat);
         groundMesh.name = "ground";
         groundMesh.rotation.x = -Math.PI / 2;
         groundMesh.position.y = floorOffset;
         scene.add(groundMesh);
       }
 
-      // Basketball creation:
+      // Basketball creation.
       function createBallPhysics(pos) {
         const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
         ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
@@ -270,7 +233,6 @@
 
       function createBallVisual(pos) {
         const geometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
-        // Initially set ball color to orange.
         const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
         basketballMesh = new THREE.Mesh(geometry, material);
         basketballMesh.position.set(pos.x, pos.y, pos.z);
@@ -278,7 +240,7 @@
         scene.add(basketballMesh);
       }
 
-      // Hoop & backboard creation:
+      // Hoop & backboard creation.
       function createHoopPhysics(pos) {
         const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
         hoopBody = rapierWorld.createRigidBody(hoopBodyDesc);
@@ -317,26 +279,19 @@
       }
 
       // --- Controller event handlers for ball pickup & throw ---
-
-      // onGrab: attach the ball to the hand.
       function onGrab(event) {
         const controller = event.target;
         if (!isHoldingBall) {
-          // Remove the ball's physics while held.
           if (ballRigidBody) {
             rapierWorld.removeRigidBody(ballRigidBody);
             ballRigidBody = null;
             ballCollider = null;
           }
-          // Remove the ball from the scene and attach it to the controller.
           scene.remove(basketballMesh);
           controller.add(basketballMesh);
-          // Position the ball relative to the controller.
-          // You may adjust this offset if you change the hand model's orientation.
           basketballMesh.position.set(0, -0.1, -0.15);
           isHoldingBall = true;
         } else {
-          // If another controller is holding the ball, transfer it.
           const currentHolder = basketballMesh.parent;
           if (currentHolder !== controller) {
             currentHolder.remove(basketballMesh);
@@ -346,21 +301,17 @@
         }
       }
 
-      // onRelease: detach the ball and apply throw velocity.
       function onRelease(event) {
         const controller = event.target;
         if (isHoldingBall) {
           isHoldingBall = false;
-          // Get the ball's world position before detaching.
           basketballMesh.updateMatrixWorld();
           const worldPos = new THREE.Vector3();
           basketballMesh.getWorldPosition(worldPos);
           controller.remove(basketballMesh);
           basketballMesh.position.copy(worldPos);
           scene.add(basketballMesh);
-          // Restore physics by recreating the ball's physics body.
           createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
-          // Apply the controller's velocity as the throw velocity.
           const throwVelocity = controller.userData.velocity || new THREE.Vector3();
           ballRigidBody.setLinvel(
             { x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z },
@@ -369,40 +320,11 @@
         }
       }
 
-      // Poll the XR session each frame for the left controller's "X" button.
-      function checkControllerXButton() {
-        const session = renderer.xr.getSession();
-        if (session) {
-          session.inputSources.forEach((source) => {
-            if (source.handedness === "left" && source.gamepad) {
-              const xButton = source.gamepad.buttons[4];
-              if (xButton) {
-                if (xButton.pressed) {
-                  if (!calibrateTimeout) {
-                    calibrateTimeout = setTimeout(() => {
-                      calibrateFloor();
-                      calibrateTimeout = null;
-                    }, 3000);
-                  }
-                } else {
-                  if (calibrateTimeout) {
-                    clearTimeout(calibrateTimeout);
-                    calibrateTimeout = null;
-                  }
-                }
-              } else {
-                console.warn("No button at index 4 found on this controller.");
-              }
-            }
-          });
-        }
-      }
-
       // Animation loop.
       function animate() {
         const delta = clock.getDelta();
 
-        // Update each controller's velocity.
+        // Update controllers’ velocity.
         controllers.forEach((ctrl) => {
           const currentPos = new THREE.Vector3();
           ctrl.getWorldPosition(currentPos);
@@ -414,9 +336,32 @@
           ctrl.userData.prevPos.copy(currentPos);
         });
 
-        checkControllerXButton();
+        // Update RealityAccelerator.
+        if (ratk) ratk.update();
 
-        // Step physics and update ball mesh if not held.
+        // If floor is configured and we have a closest wall (and the hoop hasn’t been set yet),
+        // compute the hoop position using the wall mesh.
+        if (floorConfigured && !hoopConfigured && closestWallMesh) {
+          // Compute the wall’s normal by transforming the local (0, 0, 1) vector.
+          const wallNormal = new THREE.Vector3(0, 0, 1)
+            .applyQuaternion(closestWallMesh.quaternion)
+            .normalize();
+          // Get the wall’s world position.
+          const wallPos = new THREE.Vector3();
+          closestWallMesh.getWorldPosition(wallPos);
+          // Offset the hoop from the wall along its normal.
+          const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.2);
+          hoopPos.y = floorOffset + HOOP_HEIGHT;
+          // Remove any previous hoop.
+          if (hoopMesh) scene.remove(hoopMesh);
+          if (backboardMesh) scene.remove(backboardMesh);
+          createHoopPhysics({ x: hoopPos.x, y: hoopPos.y, z: hoopPos.z });
+          createHoopVisual({ x: hoopPos.x, y: hoopPos.y, z: hoopPos.z });
+          hoopConfigured = true;
+          console.log("Hoop placed at:", hoopPos);
+        }
+
+        // Step physics and update the ball if it’s not held.
         if (!isHoldingBall && ballRigidBody && basketballMesh) {
           rapierWorld.step();
           const t = ballRigidBody.translation();
@@ -424,9 +369,9 @@
           const r = ballRigidBody.rotation();
           basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
 
-          // Check if the ball goes through the hoop.
-          if (basketballMesh.position.y < hoopY + floorOffset) {
-            const hoopCenter = new THREE.Vector3(0, hoopY + floorOffset, -2);
+          // Check if the ball passes through the hoop.
+          if (basketballMesh.position.y < HOOP_HEIGHT + floorOffset) {
+            const hoopCenter = new THREE.Vector3(hoopMesh.position.x, hoopMesh.position.y, hoopMesh.position.z);
             if (basketballMesh.position.distanceTo(hoopCenter) < HOOP_RADIUS) {
               score++;
               scoreEl.innerHTML = "Score: " + score;

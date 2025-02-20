@@ -214,6 +214,10 @@
           rapierWorld.step();
           accumulator -= fixedTimeStep;
         }
+        // Update RealityAccelerator on every frame:
+        if (ratk && typeof ratk.update === "function") {
+          ratk.update();
+        }
         if (!isHoldingBall && ballRigidBody && basketballMesh) {
           const t = ballRigidBody.translation();
           basketballMesh.position.set(t.x, t.y, t.z);
@@ -223,13 +227,13 @@
         renderer.render(scene, camera);
       }
 
-      // Named function to handle both plane and mesh added events.
+      // Named function to handle both plane and mesh surface events.
       function handleSurfaceAdded(event) {
-        // Determine the mesh: check for planeMesh or meshMesh.
-        debugger;
+        // Determine the surface mesh: check for planeMesh or meshMesh.
         const surfaceMesh = event.planeMesh || event.meshMesh;
         if (!surfaceMesh || !event.semanticLabel) return;
         const label = event.semanticLabel.toLowerCase();
+        console.log("Surface added:", label);
         if (label === "floor" && !floorConfigured) {
           const box = new THREE.Box3().setFromObject(surfaceMesh);
           floorOffset = box.min.y;
@@ -251,7 +255,7 @@
             console.log("Updated closest wall at distance:", distance);
           }
         }
-        // Once floor and wall are available, create ball and hoop.
+        // Once both floor and a wall are detected, create ball and hoop.
         if (floorConfigured && !ballAndHoopCreated && closestWallMesh) {
           const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
           createBallPhysics(ballPos);
@@ -279,11 +283,11 @@
         // Setup RealityAccelerator for surface detection.
         ratk = new RealityAccelerator(renderer.xr);
         scene.add(ratk.root);
-        // Check both plane and mesh events.
+        // Register callbacks for both plane and mesh surfaces.
         ratk.onPlaneAdded = handleSurfaceAdded;
         ratk.onMeshAdded = handleSurfaceAdded;
 
-        // Setup controllers with hand models:
+        // Setup controllers with hand models.
         const gltfLoader = new GLTFLoader();
         for (let i = 0; i < 2; i++) {
           const controller = renderer.xr.getController(i);

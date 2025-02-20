@@ -281,6 +281,7 @@
         // Setup RealityAccelerator for surface detection.
         ratk = new RealityAccelerator(renderer.xr);
         scene.add(ratk.root);
+        ratk.root.visible = false;
         ratk.onPlaneAdded = handleSurfaceAdded;
         ratk.onMeshAdded = handleSurfaceAdded;
 

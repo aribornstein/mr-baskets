@@ -230,13 +230,13 @@
 
       // Named function to handle both plane and mesh surface events.
       function handleSurfaceAdded(event) {
-        debugger;
         // Determine the surface mesh: check for planeMesh or meshMesh.
         const surfaceMesh = event.planeMesh || event.meshMesh;
         if (!surfaceMesh || !event.semanticLabel) return;
         const label = event.semanticLabel.toLowerCase();
         console.log("Surface added:", label);
         if (label === "floor" && !floorConfigured) {
+          debugger;
           const box = new THREE.Box3().setFromObject(surfaceMesh);
           floorOffset = box.min.y;
           floorConfigured = true;

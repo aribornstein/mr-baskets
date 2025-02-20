@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>WebXR Basketball Game with Passthrough AR</title>
+    <title>WebXR Basketball Game with Delayed Ball/Hoop Init</title>
     <script type="importmap">
       {
         "imports": {
@@ -41,7 +41,9 @@
       let hoopBody = null, boardBody = null;
       let groundMesh;
       let ratk;
-      let floorConfigured = false, hoopConfigured = false;
+      let floorConfigured = false; // becomes true when a floor plane is detected
+      let groundCreated = false;   // ensure ground is created only once
+      let ballAndHoopCreated = false; // flag to delay ball/hoop init
       let closestWallMesh = null, minWallDistance = Infinity;
       let floorOffset = 0;
       let isHoldingBall = false;
@@ -53,34 +55,33 @@
       renderer.xr.enabled = true;
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(window.innerWidth, window.innerHeight);
-      // Ensure the clear color is transparent
       renderer.setClearColor(0x000000, 0);
       document.body.appendChild(renderer.domElement);
 
-      // Create the scene and camera:
+      // Create scene and camera:
       scene = new THREE.Scene();
       scene.background = null;
       camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
       camera.position.set(0, 1.6, 0);
       scene.add(camera);
 
-      // Add global lighting:
+      // Global lighting:
       const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
       scene.add(hemiLight);
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       dirLight.position.set(0, 4, 2);
       scene.add(dirLight);
 
-      // Handle window resize:
+      // Handle window resize (only if XR session is not active):
       window.addEventListener("resize", () => {
-        if (!renderer.xr.getSession()) { // Only resize if XR session is not active.
+        if (!renderer.xr.getSession()) {
           camera.aspect = window.innerWidth / window.innerHeight;
           camera.updateProjectionMatrix();
           renderer.setSize(window.innerWidth, window.innerHeight);
         }
       });
 
-      // ---- Game Logic and Feature Functions ----
+      // ---- Game Logic Functions ----
 
       function createGroundPhysics() {
         const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorOffset, 0);
@@ -186,7 +187,7 @@
         }
       }
 
-      // Use a fixed timestep for physics:
+      // Fixed timestep physics:
       const fixedTimeStep = 1 / 60;
       let accumulator = 0;
       const clockGame = new THREE.Clock();
@@ -197,7 +198,6 @@
           rapierWorld.step();
           accumulator -= fixedTimeStep;
         }
-        // If ball is not held, update its position from physics:
         if (!isHoldingBall && ballRigidBody && basketballMesh) {
           const t = ballRigidBody.translation();
           basketballMesh.position.set(t.x, t.y, t.z);
@@ -207,13 +207,13 @@
         renderer.render(scene, camera);
       }
 
-      // Initialize game logic and AR-specific components
+      // Initialize AR game logic.
       async function initGame() {
         clock = new THREE.Clock();
         await RAPIER.init();
         rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
 
-        // Setup RealityAccelerator for plane detection:
+        // Setup RealityAccelerator for plane detection.
         ratk = new RealityAccelerator(renderer.xr);
         scene.add(ratk.root);
         ratk.onPlaneAdded = (plane) => {
@@ -224,6 +224,11 @@
               floorOffset = box.min.y;
               floorConfigured = true;
               console.log("Floor configured at:", floorOffset);
+              if (!groundCreated) {
+                createGroundPhysics();
+                createGroundVisual();
+                groundCreated = true;
+              }
             }
             if (label === "wall") {
               const wallPos = new THREE.Vector3();
@@ -236,15 +241,26 @@
               }
             }
           }
+          // Once both floor and a wall are detected, initialize ball and hoop.
+          if (floorConfigured && closestWallMesh && !ballAndHoopCreated) {
+            // Set ball position relative to floor.
+            const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
+            createBallPhysics(ballPos);
+            createBallVisual(ballPos);
+            // Compute hoop position using wall data:
+            const wallNormal = new THREE.Vector3(0, 0, 1)
+              .applyQuaternion(closestWallMesh.quaternion)
+              .normalize();
+            const wallPos = new THREE.Vector3();
+            closestWallMesh.getWorldPosition(wallPos);
+            const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.2);
+            hoopPos.y = HOOP_HEIGHT + floorOffset;
+            createHoopPhysics(hoopPos);
+            createHoopVisual(hoopPos);
+            ballAndHoopCreated = true;
+            console.log("Ball and hoop created.");
+          }
         };
-
-        // Create ground, ball, and hoop objects:
-        createGroundPhysics();
-        createGroundVisual();
-        createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-        createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-        createHoopPhysics({ x: 0, y: HOOP_HEIGHT + floorOffset, z: -2 });
-        createHoopVisual({ x: 0, y: HOOP_HEIGHT + floorOffset, z: -2 });
 
         // Setup controllers with hand models:
         const gltfLoader = new GLTFLoader();
@@ -281,7 +297,7 @@
         renderer.setAnimationLoop(animate);
       }
 
-      // AR Button: When clicked, request an immersive-ar session and initialize game logic.
+      // AR Button: Request immersive-ar session and initialize game logic.
       document.getElementById("ar-button").addEventListener("click", async () => {
         try {
           const session = await navigator.xr.requestSession("immersive-ar", {
@@ -291,7 +307,6 @@
           renderer.xr.setReferenceSpaceType("local");
           renderer.xr.setSession(session);
           console.log("AR session started.");
-          // Initialize the game logic and features after session starts.
           initGame();
         } catch (err) {
           console.error("Failed to start AR session:", err);

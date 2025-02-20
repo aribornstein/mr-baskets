@@ -80,6 +80,8 @@
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
+        // Fix passthrough: make sure clear color is transparent.
+        renderer.setClearColor(0x000000, 0);
         renderer.xr.enabled = true;
         document.body.appendChild(renderer.domElement);
 

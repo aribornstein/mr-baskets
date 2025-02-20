@@ -13,19 +13,11 @@
       }
     </script>
     <style>
-      body { margin: 0; overflow: hidden; background: none; }
-      canvas { display: block; background: none; }
-      #score {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        font-size: 24px;
-        z-index: 2;
-      }
+      body { margin: 0; }
+      canvas { display: block;  }
     </style>
   </head>
   <body>
-    <div id="score">Score: 0</div>
     <script type="module">
       import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js";
       import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/webxr/ARButton.js";
@@ -35,8 +27,9 @@
 
       let scene, camera, renderer, clock;
       let rapierWorld;
-      let score = 0;
-      const scoreEl = document.getElementById("score");
+      // Remove score variable and scoreEl
+      // let score = 0;
+      // const scoreEl = document.getElementById("score");
 
       // Three.js meshes and physics references.
       let basketballMesh, hoopMesh, backboardMesh;
@@ -86,12 +79,12 @@
         renderer.domElement.style.background = "none";
 
         // ARButton: request immersive-ar with these features.
-        // Note: "local-floor" has been removed because it may not be supported with
-        // the combination of other features on Quest 3.
+        // dom-overlay is not used.
         document.body.appendChild(
           ARButton.createButton(renderer, {
             requiredFeatures: ["hit-test", "plane-detection", "anchors"],
-            optionalFeatures: ["mesh-detection"]
+            optionalFeatures: ["mesh-detection"],
+            domOverlay: undefined
           })
         );
 
@@ -345,18 +338,6 @@
           basketballMesh.position.set(t.x, t.y, t.z);
           const r = ballRigidBody.rotation();
           basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
-
-          if (basketballMesh.position.y < HOOP_HEIGHT + floorOffset) {
-            const hoopCenter = new THREE.Vector3(hoopMesh.position.x, hoopMesh.position.y, hoopMesh.position.z);
-            if (basketballMesh.position.distanceTo(hoopCenter) < HOOP_RADIUS) {
-              score++;
-              scoreEl.innerHTML = "Score: " + score;
-              rapierWorld.removeRigidBody(ballRigidBody);
-              scene.remove(basketballMesh);
-              createBallPhysics({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-              createBallVisual({ x: 0, y: BALL_RADIUS + floorOffset, z: -1 });
-            }
-          }
         }
 
         renderer.render(scene, camera);

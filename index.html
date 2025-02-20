@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>WebXR Basketball Game with Delayed World Init</title>
+    <title>Passthrough Basketball Game for Quest 3</title>
     <script type="importmap">
       {
         "imports": {
@@ -33,7 +33,7 @@
       import * as RAPIER from "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js";
       import { RealityAccelerator } from "https://unpkg.com/ratk@0.3.0";
 
-      // Global variables:
+      // Global variables
       let scene, camera, renderer, clock;
       let rapierWorld;
       let basketballMesh, hoopMesh, backboardMesh;
@@ -41,16 +41,16 @@
       let hoopBody = null, boardBody = null;
       let groundMesh;
       let ratk;
-      let floorConfigured = false;      // Set when a floor surface is detected
-      let groundCreated = false;        // Ensure ground is created only once
-      let ballAndHoopCreated = false;   // Delay ball/hoop creation until conditions met
+      let floorConfigured = false;      // Set when a valid floor surface is detected
+      let groundCreated = false;        // Create ground only once
+      let ballAndHoopCreated = false;   // Only create ball and hoop when conditions are met
       let closestWallMesh = null, minWallDistance = Infinity;
       let floorOffset = 0;
       let isHoldingBall = false;
       const controllers = [];
       const BALL_RADIUS = 0.12, HOOP_RADIUS = 0.3, HOOP_HEIGHT = 1.8;
 
-      // Create renderer with transparency for passthrough:
+      // Create renderer with transparency (for passthrough)
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.xr.enabled = true;
       renderer.setPixelRatio(window.devicePixelRatio);
@@ -58,21 +58,21 @@
       renderer.setClearColor(0x000000, 0);
       document.body.appendChild(renderer.domElement);
 
-      // Create scene and camera:
+      // Create scene and camera
       scene = new THREE.Scene();
       scene.background = null;
       camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
       camera.position.set(0, 1.6, 0);
       scene.add(camera);
 
-      // Add lighting:
+      // Add lighting
       const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
       scene.add(hemiLight);
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       dirLight.position.set(0, 4, 2);
       scene.add(dirLight);
 
-      // Handle window resize (only if XR session is not active):
+      // Resize handler (only if XR session is not active)
       window.addEventListener("resize", () => {
         if (!renderer.xr.getSession()) {
           camera.aspect = window.innerWidth / window.innerHeight;
@@ -81,8 +81,7 @@
         }
       });
 
-      // ---- Game Logic Functions ----
-
+      // --- Game Logic Functions ---
       function createGroundPhysics() {
         const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorOffset, 0);
         const groundBody = rapierWorld.createRigidBody(groundBodyDesc);
@@ -150,8 +149,8 @@
         backboardMesh.position.set(pos.x, pos.y, pos.z - 0.05);
         scene.add(backboardMesh);
       }
-      
-      // Updated onGrab with guard checks.
+
+      // onGrab and onRelease (with guard checks)
       function onGrab(event) {
         const controller = event.target;
         if (!basketballMesh) {
@@ -179,8 +178,6 @@
           }
         }
       }
-      
-      // Updated onRelease with guard checks.
       function onRelease(event) {
         const controller = event.target;
         if (!basketballMesh) {
@@ -203,7 +200,7 @@
         }
       }
 
-      // Fixed timestep physics:
+      // Fixed timestep physics loop
       const fixedTimeStep = 1 / 60;
       let accumulator = 0;
       const clockGame = new THREE.Clock();
@@ -211,14 +208,14 @@
         const delta = clockGame.getDelta();
         accumulator += delta;
         while (accumulator >= fixedTimeStep) {
-          if(rapierWorld) rapierWorld.step();
+          if (rapierWorld) rapierWorld.step();
           accumulator -= fixedTimeStep;
         }
-        // Always update RealityAccelerator so surfaces are detected.
+        // Continuously update RealityAccelerator to process surfaces.
         if (ratk && typeof ratk.update === "function") {
           ratk.update();
         }
-        // If ball and hoop are created, update ball physics
+        // Update ball position if physics is active and not held.
         if (ballAndHoopCreated && ballRigidBody && basketballMesh && !isHoldingBall) {
           const t = ballRigidBody.translation();
           basketballMesh.position.set(t.x, t.y, t.z);
@@ -230,7 +227,7 @@
 
       // Named function to handle both plane and mesh surface events.
       function handleSurfaceAdded(event) {
-        // Check for a valid surface mesh: either event.planeMesh or event.meshMesh.
+        // Get the surface mesh (either planeMesh or meshMesh)
         const surfaceMesh = event.planeMesh || event.meshMesh;
         if (!surfaceMesh || !event.semanticLabel) return;
         const label = event.semanticLabel.toLowerCase();
@@ -256,7 +253,7 @@
             console.log("Updated closest wall at distance:", distance);
           }
         }
-        // Once both floor and a wall are detected, create ball and hoop.
+        // Once a valid floor and wall are detected, create the ball and hoop.
         if (floorConfigured && !ballAndHoopCreated && closestWallMesh) {
           const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
           createBallPhysics(ballPos);
@@ -271,7 +268,7 @@
           createHoopPhysics(hoopPos);
           createHoopVisual(hoopPos);
           ballAndHoopCreated = true;
-          console.log("Ball and hoop created using detected surface.");
+          console.log("Ball and hoop created using detected surfaces.");
         }
       }
 
@@ -284,11 +281,10 @@
         // Setup RealityAccelerator for surface detection.
         ratk = new RealityAccelerator(renderer.xr);
         scene.add(ratk.root);
-        // Register callbacks for both plane and mesh surfaces.
         ratk.onPlaneAdded = handleSurfaceAdded;
         ratk.onMeshAdded = handleSurfaceAdded;
 
-        // Setup controllers with hand models.
+        // Setup controllers with virtual hand models.
         const gltfLoader = new GLTFLoader();
         for (let i = 0; i < 2; i++) {
           const controller = renderer.xr.getController(i);
@@ -320,7 +316,7 @@
           scene.add(controller);
           controllers.push(controller);
         }
-        // Start the animation loop immediately so ratk.update() runs.
+        // Start the animation loop immediately so surfaces are continuously detected.
         renderer.setAnimationLoop(animate);
       }
 
@@ -328,10 +324,10 @@
       document.getElementById("ar-button").addEventListener("click", async () => {
         try {
           const session = await navigator.xr.requestSession("immersive-ar", {
-            requiredFeatures: ["hit-test", "plane-detection", "anchors"],
+            requiredFeatures: ["local-floor","hit-test", "plane-detection", "anchors"],
             optionalFeatures: ["mesh-detection"],
           });
-          renderer.xr.setReferenceSpaceType("local");
+          renderer.xr.setReferenceSpaceType("local-floor");
           renderer.xr.setSession(session);
           console.log("AR session started.");
           initGame();

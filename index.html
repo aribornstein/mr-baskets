@@ -16,9 +16,11 @@
       body {
         margin: 0;
         overflow: hidden;
+        background: none;
       }
       canvas {
         display: block;
+        background: none;
       }
       #score {
         position: absolute;
@@ -84,11 +86,13 @@
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0x000000, 0); // fully transparent clear color.
+        // Fully transparent clear color.
+        renderer.setClearColor(0x000000, 0);
         renderer.xr.enabled = true;
         document.body.appendChild(renderer.domElement);
         renderer.domElement.style.background = "none";
 
+        // Pass an empty optionalFeatures array to prevent ARButton from requesting "dom-overlay".
         document.body.appendChild(
           ARButton.createButton(renderer, {
             requiredFeatures: [
@@ -97,14 +101,14 @@
               "plane-detection",
               "mesh-detection",
               "anchors"
-            ]
+            ],
+            optionalFeatures: []
           })
         );
 
         ratk = new RealityAccelerator(renderer.xr);
         scene.add(ratk.root);
 
-        // onPlaneAdded: simply store floorOffset from the detected floor mesh.
         ratk.onPlaneAdded = (plane) => {
           if (plane.semanticLabel && plane.planeMesh) {
             const label = plane.semanticLabel.toLowerCase();
@@ -210,7 +214,6 @@
         groundMesh = new THREE.Mesh(groundGeo, groundMat);
         groundMesh.name = "ground";
         groundMesh.rotation.x = -Math.PI / 2;
-        // Initially, groundMesh will use the current floorOffset.
         groundMesh.position.y = floorOffset;
         scene.add(groundMesh);
       }
@@ -314,7 +317,6 @@
       function animate() {
         const delta = clock.getDelta();
 
-        // Update each controller's velocity.
         controllers.forEach((ctrl) => {
           const currentPos = new THREE.Vector3();
           ctrl.getWorldPosition(currentPos);
@@ -328,12 +330,10 @@
 
         if (ratk) ratk.update();
 
-        // In the animation loop, update the ground mesh's position once it exists.
         if (floorConfigured && groundMesh) {
           groundMesh.position.y = floorOffset;
         }
 
-        // Position the hoop relative to the closest wall if not already configured.
         if (floorConfigured && !hoopConfigured && closestWallMesh) {
           const wallNormal = new THREE.Vector3(0, 0, 1)
             .applyQuaternion(closestWallMesh.quaternion)

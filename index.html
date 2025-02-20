@@ -49,7 +49,6 @@
       let isHoldingBall = false;
       const controllers = [];
       const BALL_RADIUS = 0.12, HOOP_RADIUS = 0.3, HOOP_HEIGHT = 1.8;
-      let fallbackScheduled = false;    // To schedule fallback creation if wall not detected
 
       // Create renderer with transparency for passthrough:
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -237,6 +236,7 @@
           if (plane.semanticLabel && plane.planeMesh) {
             const label = plane.semanticLabel.toLowerCase();
             if (label === "floor" && !floorConfigured) {
+              debugger;
               const box = new THREE.Box3().setFromObject(plane.planeMesh);
               floorOffset = box.min.y;
               floorConfigured = true;
@@ -248,6 +248,7 @@
               }
             }
             if (label === "wall") {
+              debugger;
               const wallPos = new THREE.Vector3();
               plane.planeMesh.getWorldPosition(wallPos);
               const distance = wallPos.distanceTo(camera.position);
@@ -276,29 +277,8 @@
               createHoopVisual(hoopPos);
               ballAndHoopCreated = true;
               console.log("Ball and hoop created using detected wall.");
-            } else if (!fallbackScheduled) {
-              // If no wall detected, schedule fallback creation after 10 seconds.
-              fallbackScheduled = true;
-              console.log("No wall detected; scheduling fallback creation in 10 seconds.");
-              setTimeout(() => {
-                if (!ballAndHoopCreated) {
-                  const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
-                  createBallPhysics(ballPos);
-                  createBallVisual(ballPos);
-                  // Use default wall values: assume wall normal (0,0,1) and wall 1m ahead of camera.
-                  const defaultWallNormal = new THREE.Vector3(0, 0, 1);
-                  const defaultWallPos = new THREE.Vector3();
-                  camera.getWorldPosition(defaultWallPos);
-                  defaultWallPos.addScaledVector(defaultWallNormal, 1);
-                  const hoopPos = defaultWallPos.clone().addScaledVector(defaultWallNormal, HOOP_RADIUS + 0.2);
-                  hoopPos.y = HOOP_HEIGHT + floorOffset;
-                  createHoopPhysics(hoopPos);
-                  createHoopVisual(hoopPos);
-                  ballAndHoopCreated = true;
-                  console.log("Fallback ball and hoop created.");
-                }
-              }, 10000);
-            }
+            } 
+            
           }
         };
 

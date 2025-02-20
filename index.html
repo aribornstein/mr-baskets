@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <meta http-equiv="origin-trial" content="Ahfj+MLeL6bh+LNmpnSdepftxoDHHwjUG2KWZ4jjCb1WoZxtBlzF3cDHuJNVqnhr3HXJwQ+kLaw57NO15S0mRwwAAABkeyJvcmlnaW4iOiJodHRwczovL2ltbWVyc2l2ZS13ZWIuZ2l0aHViLmlvOjQ0MyIsImZlYXR1cmUiOiJXZWJYUlBsYW5lRGV0ZWN0aW9uIiwiZXhwaXJ5IjoxNjI5ODQ5NTk5fQ==">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="UTF-8" />
     <title>WebXR Basketball with AR Passthrough & VR Hands</title>
     <script type="importmap">
@@ -80,7 +82,7 @@
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
-        // Fix passthrough: make sure clear color is transparent.
+        // Fix passthrough: set clear color to transparent.
         renderer.setClearColor(0x000000, 0);
         renderer.xr.enabled = true;
         document.body.appendChild(renderer.domElement);
@@ -102,12 +104,12 @@
         ratk = new RealityAccelerator(renderer.xr);
         scene.add(ratk.root);
 
-        // Use onPlaneAdded to check for floors and walls.
+        // onPlaneAdded: check for floors and walls.
         ratk.onPlaneAdded = (plane) => {
           if (plane.semanticLabel && plane.planeMesh) {
             const label = plane.semanticLabel.toLowerCase();
             if (label === "floor" && !floorConfigured) {
-              // Compute the world bounding box of the detected floor mesh.
+              // Use the detected floor mesh's world bounding box.
               const box = new THREE.Box3().setFromObject(plane.planeMesh);
               floorOffset = box.min.y;
               if (groundMesh) groundMesh.position.y = floorOffset;
@@ -324,7 +326,7 @@
       function animate() {
         const delta = clock.getDelta();
 
-        // Update each controller’s velocity.
+        // Update each controller's velocity.
         controllers.forEach((ctrl) => {
           const currentPos = new THREE.Vector3();
           ctrl.getWorldPosition(currentPos);
@@ -339,7 +341,7 @@
         // Update RealityAccelerator.
         if (ratk) ratk.update();
 
-        // Once the floor is configured and we have a closest wall,
+        // Once the floor is configured and a closest wall is found,
         // position the hoop relative to that wall.
         if (floorConfigured && !hoopConfigured && closestWallMesh) {
           // Compute the wall's normal by transforming the local (0, 0, 1) vector.
@@ -361,7 +363,7 @@
           console.log("Hoop placed at:", hoopPos);
         }
 
-        // Step physics and update the ball if it’s not held.
+        // Step physics and update the ball if it's not held.
         if (!isHoldingBall && ballRigidBody && basketballMesh) {
           rapierWorld.step();
           const t = ballRigidBody.translation();

@@ -211,14 +211,15 @@
         const delta = clockGame.getDelta();
         accumulator += delta;
         while (accumulator >= fixedTimeStep) {
-          rapierWorld.step();
+          if(rapierWorld) rapierWorld.step();
           accumulator -= fixedTimeStep;
         }
-        // Update RealityAccelerator on every frame.
+        // Always update RealityAccelerator so surfaces are detected.
         if (ratk && typeof ratk.update === "function") {
           ratk.update();
         }
-        if (!isHoldingBall && ballRigidBody && basketballMesh) {
+        // If ball and hoop are created, update ball physics
+        if (ballAndHoopCreated && ballRigidBody && basketballMesh && !isHoldingBall) {
           const t = ballRigidBody.translation();
           basketballMesh.position.set(t.x, t.y, t.z);
           const r = ballRigidBody.rotation();
@@ -229,7 +230,7 @@
 
       // Named function to handle both plane and mesh surface events.
       function handleSurfaceAdded(event) {
-        // Determine the surface mesh: check for planeMesh or meshMesh.
+        // Check for a valid surface mesh: either event.planeMesh or event.meshMesh.
         const surfaceMesh = event.planeMesh || event.meshMesh;
         if (!surfaceMesh || !event.semanticLabel) return;
         const label = event.semanticLabel.toLowerCase();
@@ -255,7 +256,7 @@
             console.log("Updated closest wall at distance:", distance);
           }
         }
-        // Once both floor and a wall are detected, start rendering.
+        // Once both floor and a wall are detected, create ball and hoop.
         if (floorConfigured && !ballAndHoopCreated && closestWallMesh) {
           const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
           createBallPhysics(ballPos);
@@ -271,8 +272,6 @@
           createHoopVisual(hoopPos);
           ballAndHoopCreated = true;
           console.log("Ball and hoop created using detected surface.");
-          // Now that surfaces have been detected, start the render loop.
-          renderer.setAnimationLoop(animate);
         }
       }
 
@@ -321,7 +320,8 @@
           scene.add(controller);
           controllers.push(controller);
         }
-        // Note: We do not start the animation loop here.
+        // Start the animation loop immediately so ratk.update() runs.
+        renderer.setAnimationLoop(animate);
       }
 
       // AR Button: Request an immersive-ar session and initialize game logic.

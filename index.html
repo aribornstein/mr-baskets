@@ -150,37 +150,53 @@
         backboardMesh.position.set(pos.x, pos.y, pos.z - 0.05);
         scene.add(backboardMesh);
       }
+      
+      // Updated onGrab with guard checks.
       function onGrab(event) {
         const controller = event.target;
+        if (!basketballMesh) {
+          console.warn("No basketballMesh available to grab.");
+          return;
+        }
         if (!isHoldingBall) {
           if (ballRigidBody) {
             rapierWorld.removeRigidBody(ballRigidBody);
             ballRigidBody = null;
             ballCollider = null;
           }
-          scene.remove(basketballMesh);
+          if (basketballMesh.parent) {
+            basketballMesh.parent.remove(basketballMesh);
+          }
           controller.add(basketballMesh);
           basketballMesh.position.set(0, -0.1, -0.15);
           isHoldingBall = true;
         } else {
           const currentHolder = basketballMesh.parent;
           if (currentHolder !== controller) {
-            currentHolder.remove(basketballMesh);
+            if (currentHolder) currentHolder.remove(basketballMesh);
             controller.add(basketballMesh);
             basketballMesh.position.set(0, -0.1, -0.15);
           }
         }
       }
+      
+      // Updated onRelease with guard checks.
       function onRelease(event) {
         const controller = event.target;
+        if (!basketballMesh) {
+          console.warn("No basketballMesh available to release.");
+          return;
+        }
         if (isHoldingBall) {
           isHoldingBall = false;
           basketballMesh.updateMatrixWorld();
           const worldPos = new THREE.Vector3();
           basketballMesh.getWorldPosition(worldPos);
-          controller.remove(basketballMesh);
-          basketballMesh.position.copy(worldPos);
+          if (basketballMesh.parent) {
+            basketballMesh.parent.remove(basketballMesh);
+          }
           scene.add(basketballMesh);
+          basketballMesh.position.copy(worldPos);
           createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
           const throwVelocity = controller.userData.velocity || new THREE.Vector3();
           ballRigidBody.setLinvel({ x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z }, true);
@@ -241,13 +257,13 @@
               }
             }
           }
-          // Once both floor and a wall are detected, initialize ball and hoop.
+          // Once both floor and a wall are detected, initialize ball and hoop if not done yet.
           if (floorConfigured && closestWallMesh && !ballAndHoopCreated) {
             // Set ball position relative to floor.
             const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
             createBallPhysics(ballPos);
             createBallVisual(ballPos);
-            // Compute hoop position using wall data:
+            // Compute hoop position using the wall's normal:
             const wallNormal = new THREE.Vector3(0, 0, 1)
               .applyQuaternion(closestWallMesh.quaternion)
               .normalize();

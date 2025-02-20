@@ -92,17 +92,12 @@
         document.body.appendChild(renderer.domElement);
         renderer.domElement.style.background = "none";
 
-        // Pass an empty optionalFeatures array to prevent ARButton from requesting "dom-overlay".
+        // Request only the essential features as required,
+        // while requesting mesh-detection as an optional feature.
         document.body.appendChild(
           ARButton.createButton(renderer, {
-            requiredFeatures: [
-              "local-floor",
-              "hit-test",
-              "plane-detection",
-              "mesh-detection",
-              "anchors"
-            ],
-            optionalFeatures: []
+            requiredFeatures: ["local-floor", "hit-test", "plane-detection", "anchors"],
+            optionalFeatures: ["mesh-detection"]
           })
         );
 

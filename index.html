@@ -61,6 +61,8 @@
     const BALL_RADIUS = 0.12, HOOP_RADIUS = 0.3, HOOP_HEIGHT = 1.8;
     // Global room boundary computed from detected walls.
     let roomBoundary = null;
+    // Flag to ensure walls are only created once.
+    let wallsCreated = false;
 
     // Create renderer with transparency (for passthrough)
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -193,6 +195,53 @@
       scene.add(backboardMesh);
     }
 
+    // Create invisible room boundary walls with padding so the ball doesn't leave the room.
+    function createRoomWalls(rapierWorld, roomBoundary) {
+      const padding = 0.2; // Additional padding (in meters)
+      const thickness = 0.01; // Wall thickness
+
+      // Compute room dimensions
+      const centerX = (roomBoundary.min.x + roomBoundary.max.x) / 2;
+      const centerY = (roomBoundary.min.y + roomBoundary.max.y) / 2;
+      const centerZ = (roomBoundary.min.z + roomBoundary.max.z) / 2;
+      const halfWidth = (roomBoundary.max.x - roomBoundary.min.x) / 2;
+      const halfHeight = (roomBoundary.max.y - roomBoundary.min.y) / 2;
+      const halfDepth = (roomBoundary.max.z - roomBoundary.min.z) / 2;
+
+      // Left wall (x = min - padding)
+      {
+        const xPos = roomBoundary.min.x - padding;
+        const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(xPos, centerY, centerZ);
+        const wallBody = rapierWorld.createRigidBody(wallBodyDesc);
+        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(thickness, halfHeight, halfDepth);
+        rapierWorld.createCollider(wallColliderDesc, wallBody);
+      }
+      // Right wall (x = max + padding)
+      {
+        const xPos = roomBoundary.max.x + padding;
+        const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(xPos, centerY, centerZ);
+        const wallBody = rapierWorld.createRigidBody(wallBodyDesc);
+        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(thickness, halfHeight, halfDepth);
+        rapierWorld.createCollider(wallColliderDesc, wallBody);
+      }
+      // Front wall (z = min - padding)
+      {
+        const zPos = roomBoundary.min.z - padding;
+        const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(centerX, centerY, zPos);
+        const wallBody = rapierWorld.createRigidBody(wallBodyDesc);
+        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfWidth, halfHeight, thickness);
+        rapierWorld.createCollider(wallColliderDesc, wallBody);
+      }
+      // Back wall (z = max + padding)
+      {
+        const zPos = roomBoundary.max.z + padding;
+        const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(centerX, centerY, zPos);
+        const wallBody = rapierWorld.createRigidBody(wallBodyDesc);
+        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfWidth, halfHeight, thickness);
+        rapierWorld.createCollider(wallColliderDesc, wallBody);
+      }
+      console.log("Room boundary walls created with padding:", padding);
+    }
 
     // onGrab and onRelease (with guard checks)
     function onGrab(event) {
@@ -211,7 +260,8 @@
           basketballMesh.parent.remove(basketballMesh);
         }
         controller.add(basketballMesh);
-        basketballMesh.position.set(0, -0.05, -0.05); // Adjust to hand model 
+        // Adjust the ball’s local position so it appears in the palm
+        basketballMesh.position.set(0, 0, -0.08);
         isHoldingBall = true;
       } else {
         const currentHolder = basketballMesh.parent;
@@ -245,12 +295,10 @@
       }
     }
 
-
     // Fixed timestep physics loop
     const fixedTimeStep = 1 / 60;
     let accumulator = 0;
     const clockGame = new THREE.Clock();
-    // In your animation loop, after obtaining delta:
     function animate() {
       const delta = clockGame.getDelta();
       accumulator += delta;
@@ -266,10 +314,8 @@
         if (controller.userData.prevPos) {
           // Compute velocity = (currentPos - prevPos) / delta
           const velocity = new THREE.Vector3().subVectors(currentPos, controller.userData.prevPos).divideScalar(delta);
-          // Store computed velocity
           controller.userData.velocity.copy(velocity);
         }
-        // Update previous position for next frame
         controller.userData.prevPos = currentPos.clone();
       });
 
@@ -285,7 +331,6 @@
       }
       renderer.render(scene, camera);
     }
-
 
     // Handler for detected surfaces.
     function handleSurfaceAdded(event) {
@@ -313,6 +358,11 @@
           roomBoundary.union(wallBox);
         }
         console.log("Updated room boundary:", roomBoundary);
+        // Once a room boundary is established and walls haven't been created, create them with padding.
+        if (!wallsCreated && roomBoundary && rapierWorld) {
+          createRoomWalls(rapierWorld, roomBoundary);
+          wallsCreated = true;
+        }
       }
       // Once the floor is detected, create the ball and hoop relative to the camera.
       if (floorConfigured && !ballAndHoopCreated) {

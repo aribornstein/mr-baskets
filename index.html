@@ -18,10 +18,12 @@
       overflow: hidden;
       background: none;
     }
+
     canvas {
       display: block;
       background: none;
     }
+
     #ar-button {
       position: absolute;
       bottom: 20px;
@@ -217,25 +219,22 @@
         const linvel = ballRigidBody.linvel();
         const speed = Math.hypot(linvel.x, linvel.y, linvel.z);
         if (speed > 0) {
-          // Compute normalized direction.
+          // Normalize velocity to obtain direction.
           const direction = { x: linvel.x / speed, y: linvel.y / speed, z: linvel.z / speed };
-          // Predict how far the ball will travel in this fixed timestep.
           const maxDistance = speed * fixedTimeStep;
           const rayOrigin = { x: t.x, y: t.y, z: t.z };
           const ray = new RAPIER.Ray(rayOrigin, direction);
-          // IMPORTANT: Use the correct collections from the world.
-          queryPipeline.update(rapierWorld.bodies, rapierWorld.colliders);
-          // Perform the raycast:
+          // <-- Updated to use the proper properties:
+          queryPipeline.update(rapierWorld.rigidBodySet, rapierWorld.colliderSet);
           const result = queryPipeline.castRay(
-            rapierWorld.bodies,
-            rapierWorld.colliders,
+            rapierWorld.rigidBodySet,
+            rapierWorld.colliderSet,
             ray,
             maxDistance,
             true,
             RAPIER.QueryFilter.default()
           );
           if (result) {
-            // Clamp the ball to the hit point and zero its velocity.
             const hitPoint = ray.pointAt(result.toi);
             ballRigidBody.setTranslation(hitPoint, true);
             ballRigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -243,6 +242,7 @@
         }
       }
     }
+
 
     // onGrab and onRelease functions (unchanged)
     function onGrab(event) {

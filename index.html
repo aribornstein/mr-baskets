@@ -59,6 +59,8 @@
     let isHoldingBall = false;
     const controllers = [];
     const BALL_RADIUS = 0.12, HOOP_RADIUS = 0.3, HOOP_HEIGHT = 1.8;
+    // Global room boundary computed from detected walls.
+    let roomBoundary = null;
 
     // Create renderer with transparency (for passthrough)
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -166,7 +168,7 @@
       // Initially set a rotation so the ring is horizontal.
       hoopMesh.rotation.x = Math.PI / 2;
       hoopMesh.position.set(pos.x, pos.y, pos.z);
-      // Optionally, you can make the hoop face the camera:
+      // Make the hoop face the camera.
       hoopMesh.lookAt(camera.position);
       scene.add(hoopMesh);
 
@@ -255,8 +257,7 @@
       renderer.render(scene, camera);
     }
 
-    // Instead of anchoring to a detected wall, we now spawn objects relative to the camera.
-    // This handler is still used for floor detection.
+    // Handler for detected surfaces.
     function handleSurfaceAdded(event) {
       const surfaceMesh = event.planeMesh || event.meshMesh;
       if (!surfaceMesh || !event.semanticLabel) return;
@@ -273,7 +274,17 @@
           groundCreated = true;
         }
       }
-      // Once a valid floor is detected, create the ball and hoop relative to the camera.
+      // Collect wall surfaces to compute the room boundary.
+      if (label === "wall") {
+        const wallBox = new THREE.Box3().setFromObject(surfaceMesh);
+        if (roomBoundary === null) {
+          roomBoundary = wallBox;
+        } else {
+          roomBoundary.union(wallBox);
+        }
+        console.log("Updated room boundary:", roomBoundary);
+      }
+      // Once the floor is detected, create the ball and hoop relative to the camera.
       if (floorConfigured && !ballAndHoopCreated) {
         // Compute ball position: 1 meter in front of the camera.
         const ballOffset = new THREE.Vector3(0, 0, -1);
@@ -288,11 +299,18 @@
         hoopOffset.applyQuaternion(camera.quaternion);
         const hoopPos = camera.position.clone().add(hoopOffset);
         hoopPos.y = HOOP_HEIGHT + floorOffset;
+
+        // If a room boundary is defined, clamp the hoop position so it stays within the room.
+        if (roomBoundary) {
+          hoopPos.x = THREE.MathUtils.clamp(hoopPos.x, roomBoundary.min.x + HOOP_RADIUS, roomBoundary.max.x - HOOP_RADIUS);
+          hoopPos.z = THREE.MathUtils.clamp(hoopPos.z, roomBoundary.min.z + HOOP_RADIUS, roomBoundary.max.z - HOOP_RADIUS);
+        }
+
         createHoopPhysics(hoopPos);
         createHoopVisual(hoopPos);
 
         ballAndHoopCreated = true;
-        console.log("Ball and hoop created relative to the camera.");
+        console.log("Ball and hoop created relative to the camera within room bounds.");
       }
     }
 

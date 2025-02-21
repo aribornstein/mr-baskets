@@ -1,29 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Passthrough Basketball Game for Quest 3</title>
   <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js"
-        }
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js"
       }
-    </script>
+    }
+  </script>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: none;
-    }
-
-    canvas {
-      display: block;
-      background: none;
-    }
-
+    body { margin: 0; overflow: hidden; background: none; }
+    canvas { display: block; background: none; }
     #ar-button {
       position: absolute;
       bottom: 20px;
@@ -35,7 +25,6 @@
     }
   </style>
 </head>
-
 <body>
   <button id="ar-button">Enter AR</button>
   <script type="module">
@@ -61,7 +50,6 @@
     const BALL_RADIUS = 0.12, HOOP_RADIUS = 0.3, HOOP_HEIGHT = 1.8;
     // Global room boundary computed from detected walls.
     let roomBoundary = null;
-    // Flag to ensure walls are only created once.
     let wallsCreated = false;
 
     // Create renderer with transparency (for passthrough)
@@ -86,7 +74,7 @@
     dirLight.position.set(0, 4, 2);
     scene.add(dirLight);
 
-    // Resize handler (only if XR session is not active)
+    // Resize handler
     window.addEventListener("resize", () => {
       if (!renderer.xr.getSession()) {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -118,18 +106,14 @@
       groundMesh.position.y = floorOffset;
       scene.add(groundMesh);
     }
-
     function createBallPhysics(pos) {
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(pos.x, pos.y, pos.z)
-
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
       ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
       const colliderDesc = RAPIER.ColliderDesc.ball(BALL_RADIUS)
         .setRestitution(0.7)
         .setFriction(0.7);
       ballCollider = rapierWorld.createCollider(colliderDesc, ballRigidBody);
     }
-
     function createBallVisual(pos) {
       const geometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
       const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
@@ -138,27 +122,19 @@
       scene.add(basketballMesh);
     }
     function createHoopPhysics(pos) {
-      // Create the hoop rigid body at the given position.
       const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
       hoopBody = rapierWorld.createRigidBody(hoopBodyDesc);
-
-      // Create a collider for the hoop ring.
       const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, HOOP_RADIUS)
         .setRestitution(0.5)
         .setFriction(0.8);
-
-      // Compute a quaternion so the hoop faces the camera.
       const dummy = new THREE.Object3D();
       dummy.position.set(pos.x, pos.y, pos.z);
       dummy.lookAt(camera.position);
-      // Apply a correction so that the torus (which is rotated by π/2 in the visual) aligns.
       const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
       const hoopQuat = dummy.quaternion.clone().multiply(correction);
       ringColliderDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
-
       rapierWorld.createCollider(ringColliderDesc, hoopBody);
 
-      // Create the backboard physics.
       const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
       boardBody = rapierWorld.createRigidBody(boardBodyDesc);
       const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.3, 0.2, 0.01)
@@ -168,53 +144,33 @@
     }
     function createHoopVisual(pos) {
       console.log("Creating hoop at:", pos);
-
-      // 1) Create the hoop (torus).
       const hoopGeometry = new THREE.TorusGeometry(HOOP_RADIUS, 0.02, 16, 100);
       const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
       hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
-
-      // Rotate the ring so it's facing outward.
       hoopMesh.rotation.x = Math.PI / 2;
-      // Position the ring at the desired anchor point.
       hoopMesh.position.set(pos.x, pos.y, pos.z);
       scene.add(hoopMesh);
-
-      // 2) Create the backboard (plane).
       const boardGeometry = new THREE.PlaneGeometry(0.6, 0.4);
       const boardMaterial = new THREE.MeshStandardMaterial({
         color: 0x0000ff,
-        side: THREE.DoubleSide  // So it's visible from both sides
+        side: THREE.DoubleSide
       });
       backboardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
-
-      // Start by placing the board at the same spot as the hoop.
       backboardMesh.position.set(pos.x, pos.y, pos.z);
-
-      // 3) Translate the board behind and above the hoop:
-      // Move it backward in local -Z to place it behind the ring:
-      backboardMesh.translateZ(-0.1);   // Adjust to taste (e.g. -0.15)
-      // Move it upward in local +Y so the hoop is near the board's lower edge:
-      backboardMesh.translateY(0.1);    // Adjust as needed
-
+      backboardMesh.translateZ(-0.1);
+      backboardMesh.translateY(0.1);
       scene.add(backboardMesh);
     }
-
-    // Create invisible room boundary walls with padding so the ball doesn't leave the room.
     function createRoomWalls(rapierWorld, roomBoundary) {
-      const padding = 0.2; // Additional padding (in meters)
-      const wallThickness = 0.1; // Total wall thickness in meters
-      const halfThickness = wallThickness / 2; // 0.05
-
-      // Compute room dimensions
+      const padding = 0.2;
+      const wallThickness = 0.1;
+      const halfThickness = wallThickness / 2;
       const centerX = (roomBoundary.min.x + roomBoundary.max.x) / 2;
       const centerY = (roomBoundary.min.y + roomBoundary.max.y) / 2;
       const centerZ = (roomBoundary.min.z + roomBoundary.max.z) / 2;
       const halfWidth = (roomBoundary.max.x - roomBoundary.min.x) / 2;
       const halfHeight = (roomBoundary.max.y - roomBoundary.min.y) / 2;
       const halfDepth = (roomBoundary.max.z - roomBoundary.min.z) / 2;
-
-      // Left wall (x = min - padding)
       {
         const xPos = roomBoundary.min.x - padding;
         const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(xPos, centerY, centerZ);
@@ -222,7 +178,6 @@
         const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfThickness, halfHeight, halfDepth);
         rapierWorld.createCollider(wallColliderDesc, wallBody);
       }
-      // Right wall (x = max + padding)
       {
         const xPos = roomBoundary.max.x + padding;
         const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(xPos, centerY, centerZ);
@@ -230,7 +185,6 @@
         const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfThickness, halfHeight, halfDepth);
         rapierWorld.createCollider(wallColliderDesc, wallBody);
       }
-      // Front wall (z = min - padding)
       {
         const zPos = roomBoundary.min.z - padding;
         const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(centerX, centerY, zPos);
@@ -238,7 +192,6 @@
         const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfWidth, halfHeight, halfThickness);
         rapierWorld.createCollider(wallColliderDesc, wallBody);
       }
-      // Back wall (z = max + padding)
       {
         const zPos = roomBoundary.max.z + padding;
         const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(centerX, centerY, zPos);
@@ -249,7 +202,19 @@
       console.log("Room boundary walls created with padding:", padding);
     }
 
-    // onGrab and onRelease (with guard checks)
+    // Instead of QueryPipeline-based raycasting, we clamp the ball’s position directly.
+    function clampBallPosition() {
+      if (ballRigidBody && roomBoundary) {
+        const t = ballRigidBody.translation();
+        const clampedX = THREE.MathUtils.clamp(t.x, roomBoundary.min.x + BALL_RADIUS, roomBoundary.max.x - BALL_RADIUS);
+        const clampedZ = THREE.MathUtils.clamp(t.z, roomBoundary.min.z + BALL_RADIUS, roomBoundary.max.z - BALL_RADIUS);
+        if (t.x !== clampedX || t.z !== clampedZ) {
+          ballRigidBody.setTranslation({ x: clampedX, y: t.y, z: clampedZ }, true);
+          ballRigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        }
+      }
+    }
+
     function onGrab(event) {
       const controller = event.target;
       if (!basketballMesh) {
@@ -267,10 +232,8 @@
         }
         controller.add(basketballMesh);
         if (controller.userData.handedness === "left") {
-          // Positive X offset might place the ball in the left palm
           basketballMesh.position.set(0.1, 0.0, -0.08);
         } else {
-          // Negative X offset for the right palm
           basketballMesh.position.set(-0.1, 0.0, -0.08);
         }
         isHoldingBall = true;
@@ -280,10 +243,8 @@
           if (currentHolder) currentHolder.remove(basketballMesh);
           controller.add(basketballMesh);
           if (controller.userData.handedness === "left") {
-            // Positive X offset might place the ball in the left palm
             basketballMesh.position.set(0.1, 0.0, -0.08);
           } else {
-            // Negative X offset for the right palm
             basketballMesh.position.set(-0.1, 0.0, -0.08);
           }
         }
@@ -306,7 +267,6 @@
         scene.add(basketballMesh);
         basketballMesh.position.copy(worldPos);
         createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
-        // Use the computed velocity from the controller
         const throwVelocity = controller.userData.velocity || new THREE.Vector3();
         ballRigidBody.setLinvel({ x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z }, true);
       }
@@ -323,33 +283,28 @@
         if (rapierWorld) rapierWorld.step();
         accumulator -= fixedTimeStep;
       }
-
-      // Update each controller's velocity:
       controllers.forEach(controller => {
-        // Get current world position
         const currentPos = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
         if (controller.userData.prevPos) {
-          // Compute velocity = (currentPos - prevPos) / delta
           const velocity = new THREE.Vector3().subVectors(currentPos, controller.userData.prevPos).divideScalar(delta);
           controller.userData.velocity.copy(velocity);
         }
         controller.userData.prevPos = currentPos.clone();
       });
-
       if (ratk && typeof ratk.update === "function") {
         ratk.update();
       }
-
       if (ballAndHoopCreated && ballRigidBody && basketballMesh && !isHoldingBall) {
         const t = ballRigidBody.translation();
         basketballMesh.position.set(t.x, t.y, t.z);
         const r = ballRigidBody.rotation();
         basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
+        // Instead of using QueryPipeline, we simply clamp the ball's position.
+        clampBallPosition();
       }
       renderer.render(scene, camera);
     }
 
-    // Handler for detected surfaces.
     function handleSurfaceAdded(event) {
       const surfaceMesh = event.planeMesh || event.meshMesh;
       if (!surfaceMesh || !event.semanticLabel) return;
@@ -366,7 +321,6 @@
           groundCreated = true;
         }
       }
-      // Collect wall surfaces to compute the room boundary.
       if (label === "wall") {
         const wallBox = new THREE.Box3().setFromObject(surfaceMesh);
         if (roomBoundary === null) {
@@ -375,59 +329,49 @@
           roomBoundary.union(wallBox);
         }
         console.log("Updated room boundary:", roomBoundary);
-        // Once a room boundary is established and walls haven't been created, create them with padding.
         if (!wallsCreated && roomBoundary && rapierWorld) {
           createRoomWalls(rapierWorld, roomBoundary);
           wallsCreated = true;
         }
       }
-      // Once the floor is detected, create the ball and hoop relative to the camera.
       if (floorConfigured && !ballAndHoopCreated) {
-        // Compute ball position: 1 meter in front of the camera.
         const ballOffset = new THREE.Vector3(0, 0, -1);
         ballOffset.applyQuaternion(camera.quaternion);
         const ballPos = camera.position.clone().add(ballOffset);
         ballPos.y = BALL_RADIUS + floorOffset;
-        // Clamp the ball's position within the room boundary if available.
         if (roomBoundary) {
           ballPos.x = THREE.MathUtils.clamp(ballPos.x, roomBoundary.min.x + BALL_RADIUS, roomBoundary.max.x - BALL_RADIUS);
           ballPos.z = THREE.MathUtils.clamp(ballPos.z, roomBoundary.min.z + BALL_RADIUS, roomBoundary.max.z - BALL_RADIUS);
         }
         createBallPhysics(ballPos);
         createBallVisual(ballPos);
-
-        // Compute hoop position: 2.5 meters in front of the camera.
         const hoopOffset = new THREE.Vector3(0, 0, -2.5);
         hoopOffset.applyQuaternion(camera.quaternion);
         const hoopPos = camera.position.clone().add(hoopOffset);
         hoopPos.y = HOOP_HEIGHT + floorOffset;
-        // Clamp the hoop's position within the room boundary if available.
         if (roomBoundary) {
           hoopPos.x = THREE.MathUtils.clamp(hoopPos.x, roomBoundary.min.x + HOOP_RADIUS, roomBoundary.max.x - HOOP_RADIUS);
           hoopPos.z = THREE.MathUtils.clamp(hoopPos.z, roomBoundary.min.z + HOOP_RADIUS, roomBoundary.max.z - HOOP_RADIUS);
         }
         createHoopPhysics(hoopPos);
         createHoopVisual(hoopPos);
-
         ballAndHoopCreated = true;
         console.log("Ball and hoop created relative to the camera within room bounds.");
       }
     }
 
-    // Initialize AR game logic.
     async function initGame() {
       clock = new THREE.Clock();
       await RAPIER.init();
       rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
-
-      // Setup RealityAccelerator for surface detection.
+      // Initialize QueryPipeline if needed in future.
+      // For now we use clamping so we don't call QueryPipeline methods.
+      // queryPipeline = new RAPIER.QueryPipeline();
       ratk = new RealityAccelerator(renderer.xr);
       scene.add(ratk.root);
       ratk.root.visible = false;
       ratk.onPlaneAdded = handleSurfaceAdded;
       ratk.onMeshAdded = handleSurfaceAdded;
-
-      // Setup controllers with virtual hand models.
       const gltfLoader = new GLTFLoader();
       for (let i = 0; i < 2; i++) {
         const controller = renderer.xr.getController(i);
@@ -459,11 +403,9 @@
         scene.add(controller);
         controllers.push(controller);
       }
-      // Start the animation loop immediately so surfaces are continuously detected.
       renderer.setAnimationLoop(animate);
     }
 
-    // AR Button: Request an immersive-ar session and initialize game logic.
     document.getElementById("ar-button").addEventListener("click", async () => {
       try {
         const session = await navigator.xr.requestSession("immersive-ar", {
@@ -480,5 +422,4 @@
     });
   </script>
 </body>
-
 </html>

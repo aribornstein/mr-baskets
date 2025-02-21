@@ -54,8 +54,7 @@
     let ratk;
     let floorConfigured = false;      // Set when a valid floor surface is detected
     let groundCreated = false;        // Create ground only once
-    let ballAndHoopCreated = false;   // Only create ball and hoop when conditions are met
-    let closestWallMesh = null, minWallDistance = Infinity;
+    let ballAndHoopCreated = false;   // Only create ball and hoop once
     let floorOffset = 0;
     let isHoldingBall = false;
     const controllers = [];
@@ -130,16 +129,27 @@
       scene.add(basketballMesh);
     }
     function createHoopPhysics(pos) {
+      // Create the hoop rigid body at the given position.
       const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
       hoopBody = rapierWorld.createRigidBody(hoopBodyDesc);
+      
+      // Create a collider for the hoop ring.
       const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, HOOP_RADIUS)
         .setRestitution(0.5)
         .setFriction(0.8);
-      const euler = new THREE.Euler(Math.PI / 2, 0, 0);
-      const threeQuat = new THREE.Quaternion().setFromEuler(euler);
-      const rapierQuat = { x: threeQuat.x, y: threeQuat.y, z: threeQuat.z, w: threeQuat.w };
-      ringColliderDesc.setRotation(rapierQuat);
+      
+      // Compute a quaternion so the hoop faces the camera.
+      const dummy = new THREE.Object3D();
+      dummy.position.set(pos.x, pos.y, pos.z);
+      dummy.lookAt(camera.position);
+      // Apply a correction so that the torus (which is rotated by π/2 in the visual) aligns.
+      const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+      const hoopQuat = dummy.quaternion.clone().multiply(correction);
+      ringColliderDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
+      
       rapierWorld.createCollider(ringColliderDesc, hoopBody);
+      
+      // Create the backboard physics.
       const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
       boardBody = rapierWorld.createRigidBody(boardBodyDesc);
       const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.3, 0.2, 0.01)
@@ -153,31 +163,24 @@
       const hoopGeometry = new THREE.TorusGeometry(HOOP_RADIUS, 0.02, 16, 100);
       const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
       hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
+      // Initially set a rotation so the ring is horizontal.
       hoopMesh.rotation.x = Math.PI / 2;
       hoopMesh.position.set(pos.x, pos.y, pos.z);
+      // Optionally, you can make the hoop face the camera:
+      hoopMesh.lookAt(camera.position);
       scene.add(hoopMesh);
 
       // Create the backboard.
       const boardGeometry = new THREE.PlaneGeometry(0.6, 0.4);
-      // Make it double sided so it's visible regardless of which way it's facing.
       const boardMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff, side: THREE.DoubleSide });
       backboardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
-
-      // If a wall was detected, align the backboard to that wall.
-      if (closestWallMesh) {
-        // Copy the wall's orientation.
-        backboardMesh.quaternion.copy(closestWallMesh.quaternion);
-        // Start by placing the backboard at the hoop's position.
-        backboardMesh.position.copy(pos);
-        // Then translate the backboard along its local -Z axis to push it out from the wall.
-        backboardMesh.translateZ(-0.15);  // Adjust this offset as needed.
-      } else {
-        // Fallback: use a fixed offset.
-        backboardMesh.position.set(pos.x, pos.y, pos.z - 0.15);
-      }
+      // Position the backboard at the hoop position and orient it toward the camera.
+      backboardMesh.position.copy(pos);
+      backboardMesh.lookAt(camera.position);
+      // Then translate the board slightly backwards (local -Z) so it sits behind the hoop.
+      backboardMesh.translateZ(-0.15);
       scene.add(backboardMesh);
     }
-
 
     // onGrab and onRelease (with guard checks)
     function onGrab(event) {
@@ -240,11 +243,9 @@
         if (rapierWorld) rapierWorld.step();
         accumulator -= fixedTimeStep;
       }
-      // Continuously update RealityAccelerator to process surfaces.
       if (ratk && typeof ratk.update === "function") {
         ratk.update();
       }
-      // Update ball position if physics is active and not held.
       if (ballAndHoopCreated && ballRigidBody && basketballMesh && !isHoldingBall) {
         const t = ballRigidBody.translation();
         basketballMesh.position.set(t.x, t.y, t.z);
@@ -254,9 +255,9 @@
       renderer.render(scene, camera);
     }
 
-    // Named function to handle both plane and mesh surface events.
+    // Instead of anchoring to a detected wall, we now spawn objects relative to the camera.
+    // This handler is still used for floor detection.
     function handleSurfaceAdded(event) {
-      // Get the surface mesh (either planeMesh or meshMesh)
       const surfaceMesh = event.planeMesh || event.meshMesh;
       if (!surfaceMesh || !event.semanticLabel) return;
       const label = event.semanticLabel.toLowerCase();
@@ -272,33 +273,26 @@
           groundCreated = true;
         }
       }
-      if (label === "wall") {
-        const wallPos = new THREE.Vector3();
-        surfaceMesh.getWorldPosition(wallPos);
-        const distance = wallPos.distanceTo(camera.position);
-        if (distance < minWallDistance) {
-          minWallDistance = distance;
-          closestWallMesh = surfaceMesh;
-          console.log("Updated closest wall at distance:", distance);
-        }
-      }
-      // Once a valid floor and wall are detected, create the ball and hoop.
-      if (floorConfigured && !ballAndHoopCreated && closestWallMesh) {
-        const ballPos = { x: 0, y: BALL_RADIUS + floorOffset, z: -1 };
+      // Once a valid floor is detected, create the ball and hoop relative to the camera.
+      if (floorConfigured && !ballAndHoopCreated) {
+        // Compute ball position: 1 meter in front of the camera.
+        const ballOffset = new THREE.Vector3(0, 0, -1);
+        ballOffset.applyQuaternion(camera.quaternion);
+        const ballPos = camera.position.clone().add(ballOffset);
+        ballPos.y = BALL_RADIUS + floorOffset;
         createBallPhysics(ballPos);
         createBallVisual(ballPos);
-        const wallNormal = new THREE.Vector3(0, 0, 1)
-          .applyQuaternion(closestWallMesh.quaternion)
-          .normalize();
-        const wallPos = new THREE.Vector3();
-        closestWallMesh.getWorldPosition(wallPos);
-        console.log("Wall normal and position:", wallNormal, wallPos);
-        const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.6);
+
+        // Compute hoop position: 2.5 meters in front of the camera.
+        const hoopOffset = new THREE.Vector3(0, 0, -2.5);
+        hoopOffset.applyQuaternion(camera.quaternion);
+        const hoopPos = camera.position.clone().add(hoopOffset);
         hoopPos.y = HOOP_HEIGHT + floorOffset;
         createHoopPhysics(hoopPos);
         createHoopVisual(hoopPos);
+
         ballAndHoopCreated = true;
-        console.log("Ball and hoop created using detected surfaces.");
+        console.log("Ball and hoop created relative to the camera.");
       }
     }
 

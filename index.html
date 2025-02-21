@@ -6,22 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Passthrough Basketball Game for Quest 3</title>
   <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js"
-        }
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js"
       }
-    </script>
+    }
+  </script>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       background: none;
     }
+
     canvas {
       display: block;
       background: none;
     }
+
     #ar-button {
       position: absolute;
       bottom: 20px;
@@ -45,7 +47,7 @@
     // Global variables
     let scene, camera, renderer, clock;
     let rapierWorld;
-    let queryPipeline; // For raycasting.
+    let queryPipeline; // QueryPipeline for raycasting.
     let basketballMesh, hoopMesh, backboardMesh;
     let ballRigidBody = null, ballCollider = null;
     let hoopBody = null, boardBody = null;
@@ -93,6 +95,7 @@
     });
 
     // --- Game Logic Functions ---
+
     function createGroundPhysics() {
       const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorOffset, 0);
       const groundBody = rapierWorld.createRigidBody(groundBodyDesc);
@@ -210,7 +213,7 @@
       console.log("Room boundary walls created with padding:", padding);
     }
 
-    // --- Raycasting to prevent ball from leaving the room ---
+    // --- Raycasting to Prevent Ball from Leaving the Room ---
     function updateBallRaycast(delta) {
       if (ballRigidBody && basketballMesh && !isHoldingBall) {
         const t = ballRigidBody.translation();
@@ -221,7 +224,9 @@
           const maxDistance = speed * fixedTimeStep;
           const rayOrigin = { x: t.x, y: t.y, z: t.z };
           const ray = new RAPIER.Ray(rayOrigin, direction);
-          // Update the query pipeline using the world’s sets.
+          // Create a new query filter.
+          const filter = new RAPIER.QueryFilter();
+          // Update the query pipeline using the world's bodies and colliders.
           queryPipeline.update(rapierWorld.bodies, rapierWorld.colliders);
           const result = queryPipeline.castRay(
             rapierWorld.bodies,
@@ -229,7 +234,7 @@
             ray,
             maxDistance,
             true,
-            RAPIER.QueryFilter.default()
+            filter
           );
           if (result) {
             const hitPoint = ray.pointAt(result.toi);
@@ -324,6 +329,7 @@
         basketballMesh.position.set(t.x, t.y, t.z);
         const r = ballRigidBody.rotation();
         basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
+        // Run the raycast check to prevent the ball from leaving the room.
         updateBallRaycast(fixedTimeStep);
       }
       renderer.render(scene, camera);

@@ -1,5 +1,6 @@
 // src/gameplay/hoopManager.js
 import * as THREE from "three";
+import * as RAPIER from "rapier"; // Import RAPIER
 import { getScene, getCamera } from "../core/engine.js";
 import { getWorld } from "../core/physics.js";
 import { addObject } from "../managers/sceneManager.js";

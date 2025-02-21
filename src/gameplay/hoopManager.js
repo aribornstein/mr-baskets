@@ -9,6 +9,7 @@ import { state } from "../managers/stateManager.js";
 let hoopMesh = null;
 let backboardMesh = null;
 let hoopBody = null, boardBody = null;
+let sensor; // Add this line
 
 export function createHoopPhysics(pos) {
   const world = getWorld();
@@ -33,6 +34,12 @@ export function createHoopPhysics(pos) {
     .setRestitution(0.3)
     .setFriction(0.8);
   world.createCollider(boardColliderDesc, boardBody);
+
+  // Add a sensor inside the hoop
+  const sensorColliderDesc = RAPIER.ColliderDesc.ball(state.BALL_RADIUS * 1.1) // Slightly larger than the ball
+    .setTranslation(0, 0, 0) // Adjust position as needed
+    .setSensor(true);
+  sensor = world.createCollider(sensorColliderDesc, hoopBody); // Assign the sensor
 }
 
 export function createHoopVisual(pos) {
@@ -55,4 +62,12 @@ export function createHoopVisual(pos) {
   backboardMesh.translateZ(-0.1);
   backboardMesh.translateY(0.1);
   addObject(backboardMesh);
+}
+
+export function isBasket(collider1, collider2) {
+    // Check if the sensor is involved in the collision
+    if ((collider1 === sensor || collider2 === sensor)) {
+        return true;
+    }
+    return false;
 }

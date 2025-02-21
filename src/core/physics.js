@@ -1,15 +1,24 @@
-// src/core/physics.js
 import * as RAPIER from "rapier";
 
 let world;
+let eventQueue; // Add this line
 
 export async function initPhysics() {
   await RAPIER.init();
   world = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
+  eventQueue = new RAPIER.EventQueue(true); // Add this line
 }
 
 export function getWorld() {
   return world;
+}
+
+export function getEventQueue() { // Add this function
+    return eventQueue;
+}
+
+export function stepPhysics() { // Add this function
+    world.step(eventQueue);
 }
 
 export function createGroundPhysics(floorOffset) {

@@ -1,16 +1,19 @@
 // src/main.js
 import * as THREE from "three";
 import { initEngine, getRenderer, getScene, getCamera } from "./core/engine.js";
-import { initPhysics, getWorld } from "./core/physics.js";
+import { initPhysics, getWorld, getEventQueue, stepPhysics } from "./core/physics.js";
 import { initSceneManager } from "./managers/sceneManager.js";
 import { initInputManager, getControllers } from "./managers/inputManager.js";
 import { handleSurfaceAdded } from "./managers/surfaceManager.js";
 import { state } from "./managers/stateManager.js";
 import { registerBallInput, updateBall } from "./gameplay/ballManager.js";
 import { RealityAccelerator } from "https://unpkg.com/ratk@0.3.0";
+import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
+import { isBasket } from "./gameplay/hoopManager.js";
 
 let clockGame, accumulator = 0, fixedTimeStep = 1/60;
 let ratk;
+let scoreboardManager; // Add this line
 
 async function initGame() {
   clockGame = new THREE.Clock();
@@ -18,6 +21,8 @@ async function initGame() {
   initSceneManager();
   registerBallInput(state);
   initInputManager(state);
+  scoreboardManager = new ScoreboardManager(state); // Add this line
+  scoreboardManager.placeScoreboard(); // Add this line
   
   // Setup RealityAccelerator for plane/mesh detection
   ratk = new RealityAccelerator(getRenderer().xr);
@@ -34,7 +39,18 @@ function animate() {
   const delta = clockGame.getDelta();
   accumulator += delta;
   while (accumulator >= fixedTimeStep) {
-    if (getWorld()) getWorld().step();
+    stepPhysics(); // Use the new stepPhysics function
+    const eventQueue = getEventQueue(); // Get the event queue
+    eventQueue.drainCollisionEvents((event) => {
+        // console.log("Received collision event", event);
+        let collider1 = event.collider1();
+        let collider2 = event.collider2();
+
+        if (isBasket(collider1, collider2)) {
+            console.log("Basket made!");
+            scoreboardManager.incrementScore();
+        }
+    });
     accumulator -= fixedTimeStep;
   }
   

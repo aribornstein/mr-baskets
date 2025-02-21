@@ -98,8 +98,4 @@ export class ScoreboardManager {
     incrementScore() {
         this.scoreboard.increment();
     }
-
-    update() {
-        this.placeScoreboard(); // Update the scoreboard's position every frame
-    }
 }

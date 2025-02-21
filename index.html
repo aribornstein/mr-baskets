@@ -47,7 +47,6 @@
     // Global variables
     let scene, camera, renderer, clock;
     let rapierWorld;
-    let queryPipeline; // <-- Added QueryPipeline for manual raycasting.
     let basketballMesh, hoopMesh, backboardMesh;
     let ballRigidBody = null, ballCollider = null;
     let hoopBody = null, boardBody = null;
@@ -122,7 +121,8 @@
 
     function createBallPhysics(pos) {
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(pos.x, pos.y, pos.z);
+        .setTranslation(pos.x, pos.y, pos.z)
+
       ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
       const colliderDesc = RAPIER.ColliderDesc.ball(BALL_RADIUS)
         .setRestitution(0.7)
@@ -168,15 +168,18 @@
     }
     function createHoopVisual(pos) {
       console.log("Creating hoop at:", pos);
+
       // 1) Create the hoop (torus).
       const hoopGeometry = new THREE.TorusGeometry(HOOP_RADIUS, 0.02, 16, 100);
       const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
       hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
+
       // Rotate the ring so it's facing outward.
       hoopMesh.rotation.x = Math.PI / 2;
       // Position the ring at the desired anchor point.
       hoopMesh.position.set(pos.x, pos.y, pos.z);
       scene.add(hoopMesh);
+
       // 2) Create the backboard (plane).
       const boardGeometry = new THREE.PlaneGeometry(0.6, 0.4);
       const boardMaterial = new THREE.MeshStandardMaterial({
@@ -184,11 +187,16 @@
         side: THREE.DoubleSide  // So it's visible from both sides
       });
       backboardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
+
       // Start by placing the board at the same spot as the hoop.
       backboardMesh.position.set(pos.x, pos.y, pos.z);
+
       // 3) Translate the board behind and above the hoop:
+      // Move it backward in local -Z to place it behind the ring:
       backboardMesh.translateZ(-0.1);   // Adjust to taste (e.g. -0.15)
+      // Move it upward in local +Y so the hoop is near the board's lower edge:
       backboardMesh.translateY(0.1);    // Adjust as needed
+
       scene.add(backboardMesh);
     }
 
@@ -241,44 +249,6 @@
       console.log("Room boundary walls created with padding:", padding);
     }
 
-    // --- Raycasting helper for ball boundaries ---
-    function updateBallRaycast(delta) {
-      if (ballRigidBody && basketballMesh && !isHoldingBall) {
-        // Get the current translation and linear velocity from the physics body.
-        const t = ballRigidBody.translation();
-        const linvel = ballRigidBody.linvel();
-        // Compute speed
-        const speed = Math.sqrt(linvel.x * linvel.x + linvel.y * linvel.y + linvel.z * linvel.z);
-        if (speed > 0) {
-          // Normalize velocity to obtain the ray direction.
-          const direction = { x: linvel.x / speed, y: linvel.y / speed, z: linvel.z / speed };
-          // Use fixedTimeStep as the prediction window.
-          const maxDistance = speed * fixedTimeStep;
-          // Create a ray from the current position.
-          const rayOrigin = { x: t.x, y: t.y, z: t.z };
-          const ray = new RAPIER.Ray(rayOrigin, direction);
-          // Update the query pipeline so it has the latest world state.
-          // (Assumes rapierWorld exposes rigidBodySet and colliderSet)
-          queryPipeline.update(rapierWorld.rigidBodySet, rapierWorld.colliderSet);
-          // Perform the raycast. The 'true' parameter indicates we treat colliders as solid.
-          const result = queryPipeline.castRay(
-            rapierWorld.rigidBodySet,
-            rapierWorld.colliderSet,
-            ray,
-            maxDistance,
-            true,
-            RAPIER.QueryFilter.default()
-          );
-          if (result) {
-            // If a collision is predicted ahead, clamp the ball to the hit point.
-            const hitPoint = ray.pointAt(result.toi);
-            ballRigidBody.setTranslation(hitPoint, true);
-            ballRigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-          }
-        }
-      }
-    }
-
     // onGrab and onRelease (with guard checks)
     function onGrab(event) {
       const controller = event.target;
@@ -297,8 +267,10 @@
         }
         controller.add(basketballMesh);
         if (controller.userData.handedness === "left") {
+          // Positive X offset might place the ball in the left palm
           basketballMesh.position.set(0.1, 0.0, -0.08);
         } else {
+          // Negative X offset for the right palm
           basketballMesh.position.set(-0.1, 0.0, -0.08);
         }
         isHoldingBall = true;
@@ -308,8 +280,10 @@
           if (currentHolder) currentHolder.remove(basketballMesh);
           controller.add(basketballMesh);
           if (controller.userData.handedness === "left") {
+            // Positive X offset might place the ball in the left palm
             basketballMesh.position.set(0.1, 0.0, -0.08);
           } else {
+            // Negative X offset for the right palm
             basketballMesh.position.set(-0.1, 0.0, -0.08);
           }
         }
@@ -332,6 +306,7 @@
         scene.add(basketballMesh);
         basketballMesh.position.copy(worldPos);
         createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
+        // Use the computed velocity from the controller
         const throwVelocity = controller.userData.velocity || new THREE.Vector3();
         ballRigidBody.setLinvel({ x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z }, true);
       }
@@ -349,10 +324,12 @@
         accumulator -= fixedTimeStep;
       }
 
-      // Update controllers' velocity:
+      // Update each controller's velocity:
       controllers.forEach(controller => {
+        // Get current world position
         const currentPos = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
         if (controller.userData.prevPos) {
+          // Compute velocity = (currentPos - prevPos) / delta
           const velocity = new THREE.Vector3().subVectors(currentPos, controller.userData.prevPos).divideScalar(delta);
           controller.userData.velocity.copy(velocity);
         }
@@ -363,15 +340,11 @@
         ratk.update();
       }
 
-      // Update ball visual from physics simulation and run raycast check:
       if (ballAndHoopCreated && ballRigidBody && basketballMesh && !isHoldingBall) {
         const t = ballRigidBody.translation();
         basketballMesh.position.set(t.x, t.y, t.z);
         const r = ballRigidBody.rotation();
         basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
-
-        // Apply manual raycast to prevent ball from leaving the room.
-        updateBallRaycast(fixedTimeStep);
       }
       renderer.render(scene, camera);
     }
@@ -393,6 +366,7 @@
           groundCreated = true;
         }
       }
+      // Collect wall surfaces to compute the room boundary.
       if (label === "wall") {
         const wallBox = new THREE.Box3().setFromObject(surfaceMesh);
         if (roomBoundary === null) {
@@ -401,16 +375,20 @@
           roomBoundary.union(wallBox);
         }
         console.log("Updated room boundary:", roomBoundary);
+        // Once a room boundary is established and walls haven't been created, create them with padding.
         if (!wallsCreated && roomBoundary && rapierWorld) {
           createRoomWalls(rapierWorld, roomBoundary);
           wallsCreated = true;
         }
       }
+      // Once the floor is detected, create the ball and hoop relative to the camera.
       if (floorConfigured && !ballAndHoopCreated) {
+        // Compute ball position: 1 meter in front of the camera.
         const ballOffset = new THREE.Vector3(0, 0, -1);
         ballOffset.applyQuaternion(camera.quaternion);
         const ballPos = camera.position.clone().add(ballOffset);
         ballPos.y = BALL_RADIUS + floorOffset;
+        // Clamp the ball's position within the room boundary if available.
         if (roomBoundary) {
           ballPos.x = THREE.MathUtils.clamp(ballPos.x, roomBoundary.min.x + BALL_RADIUS, roomBoundary.max.x - BALL_RADIUS);
           ballPos.z = THREE.MathUtils.clamp(ballPos.z, roomBoundary.min.z + BALL_RADIUS, roomBoundary.max.z - BALL_RADIUS);
@@ -418,10 +396,12 @@
         createBallPhysics(ballPos);
         createBallVisual(ballPos);
 
+        // Compute hoop position: 2.5 meters in front of the camera.
         const hoopOffset = new THREE.Vector3(0, 0, -2.5);
         hoopOffset.applyQuaternion(camera.quaternion);
         const hoopPos = camera.position.clone().add(hoopOffset);
         hoopPos.y = HOOP_HEIGHT + floorOffset;
+        // Clamp the hoop's position within the room boundary if available.
         if (roomBoundary) {
           hoopPos.x = THREE.MathUtils.clamp(hoopPos.x, roomBoundary.min.x + HOOP_RADIUS, roomBoundary.max.x - HOOP_RADIUS);
           hoopPos.z = THREE.MathUtils.clamp(hoopPos.z, roomBoundary.min.z + HOOP_RADIUS, roomBoundary.max.z - HOOP_RADIUS);
@@ -439,8 +419,6 @@
       clock = new THREE.Clock();
       await RAPIER.init();
       rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
-      // Initialize the QueryPipeline for manual raycasting.
-      queryPipeline = new RAPIER.QueryPipeline();
 
       // Setup RealityAccelerator for surface detection.
       ratk = new RealityAccelerator(renderer.xr);
@@ -481,6 +459,7 @@
         scene.add(controller);
         controllers.push(controller);
       }
+      // Start the animation loop immediately so surfaces are continuously detected.
       renderer.setAnimationLoop(animate);
     }
 

@@ -74,11 +74,10 @@ function animate() {
         updateBall(delta, state.roomBoundary);
     }
 
-    scoreboardManager.update(); // Add this line
-     // Debugging code
-     console.log("Scoreboard Opacity:", scoreboardManager.scoreboard.mesh.material.opacity);
-     console.log("Scoreboard Scale:", scoreboardManager.scoreboard.mesh.scale);
-     console.log("Scoreboard Position:", scoreboardManager.scoreboard.mesh.position);
+    // Debugging code
+    console.log("Scoreboard Opacity:", scoreboardManager.scoreboard.mesh.material.opacity);
+    console.log("Scoreboard Scale:", scoreboardManager.scoreboard.mesh.scale);
+    console.log("Scoreboard Position:", scoreboardManager.scoreboard.mesh.position);
  
     getRenderer().render(getScene(), getCamera());
 }

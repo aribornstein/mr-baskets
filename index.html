@@ -134,12 +134,12 @@
       // Create the hoop rigid body at the given position.
       const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
       hoopBody = rapierWorld.createRigidBody(hoopBodyDesc);
-      
+
       // Create a collider for the hoop ring.
       const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, HOOP_RADIUS)
         .setRestitution(0.5)
         .setFriction(0.8);
-      
+
       // Compute a quaternion so the hoop faces the camera.
       const dummy = new THREE.Object3D();
       dummy.position.set(pos.x, pos.y, pos.z);
@@ -148,9 +148,9 @@
       const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
       const hoopQuat = dummy.quaternion.clone().multiply(correction);
       ringColliderDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
-      
+
       rapierWorld.createCollider(ringColliderDesc, hoopBody);
-      
+
       // Create the backboard physics.
       const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
       boardBody = rapierWorld.createRigidBody(boardBodyDesc);
@@ -161,28 +161,41 @@
     }
     function createHoopVisual(pos) {
       console.log("Creating hoop at:", pos);
-      // Create the hoop ring.
+
+      // 1) Create the hoop (torus).
       const hoopGeometry = new THREE.TorusGeometry(HOOP_RADIUS, 0.02, 16, 100);
       const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
       hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
-      // Initially set a rotation so the ring is horizontal.
+
+      // Rotate the ring so it's facing outward.
       hoopMesh.rotation.x = Math.PI / 2;
+      // Position the ring at the desired anchor point.
       hoopMesh.position.set(pos.x, pos.y, pos.z);
-      // Make the hoop face the camera.
-      hoopMesh.lookAt(camera.position);
       scene.add(hoopMesh);
 
-      // Create the backboard.
+      // 2) Create the backboard (plane).
       const boardGeometry = new THREE.PlaneGeometry(0.6, 0.4);
-      const boardMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff, side: THREE.DoubleSide });
+      const boardMaterial = new THREE.MeshStandardMaterial({
+        color: 0x0000ff,
+        side: THREE.DoubleSide  // So it's visible from both sides
+      });
       backboardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
-      // Position the backboard at the hoop position and orient it toward the camera.
-      backboardMesh.position.copy(pos);
-      backboardMesh.lookAt(camera.position);
-      // Then translate the board slightly backwards (local -Z) so it sits behind the hoop.
-      backboardMesh.translateZ(-0.15);
+
+      // Rotate the backboard the same way as the hoop (π/2 around x).
+      backboardMesh.rotation.x = Math.PI / 2;
+
+      // Start by placing the board at the same spot as the hoop.
+      backboardMesh.position.set(pos.x, pos.y, pos.z);
+
+      // 3) Translate the board behind and above the hoop:
+      // Move it backward in local -Z to place it behind the ring:
+      backboardMesh.translateZ(-0.1);   // Adjust to taste (e.g. -0.15)
+      // Move it upward in local +Y so the hoop is near the board's lower edge:
+      backboardMesh.translateY(0.1);    // Adjust as needed
+
       scene.add(backboardMesh);
     }
+
 
     // onGrab and onRelease (with guard checks)
     function onGrab(event) {

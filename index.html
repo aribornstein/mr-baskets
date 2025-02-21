@@ -120,12 +120,15 @@
     }
 
     function createBallPhysics(pos) {
-      // Create a dynamic rigid body descriptor and enable CCD
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(pos.x, pos.y, pos.z)
-        // .enableCcd(true); // Enables CCD in version 0.14.0
 
       ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
+      if (typeof ballRigidBody.enable_ccd === "function") {
+        ballRigidBody.enable_ccd(true);
+      } else {
+        console.warn("CCD is not supported on this rigid body instance.");
+      }
 
       const colliderDesc = RAPIER.ColliderDesc.ball(BALL_RADIUS)
         .setRestitution(0.7)

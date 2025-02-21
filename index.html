@@ -291,6 +291,11 @@
         ballOffset.applyQuaternion(camera.quaternion);
         const ballPos = camera.position.clone().add(ballOffset);
         ballPos.y = BALL_RADIUS + floorOffset;
+        // Clamp the ball's position within the room boundary if available.
+        if (roomBoundary) {
+          ballPos.x = THREE.MathUtils.clamp(ballPos.x, roomBoundary.min.x + BALL_RADIUS, roomBoundary.max.x - BALL_RADIUS);
+          ballPos.z = THREE.MathUtils.clamp(ballPos.z, roomBoundary.min.z + BALL_RADIUS, roomBoundary.max.z - BALL_RADIUS);
+        }
         createBallPhysics(ballPos);
         createBallVisual(ballPos);
 
@@ -299,13 +304,11 @@
         hoopOffset.applyQuaternion(camera.quaternion);
         const hoopPos = camera.position.clone().add(hoopOffset);
         hoopPos.y = HOOP_HEIGHT + floorOffset;
-
-        // If a room boundary is defined, clamp the hoop position so it stays within the room.
+        // Clamp the hoop's position within the room boundary if available.
         if (roomBoundary) {
           hoopPos.x = THREE.MathUtils.clamp(hoopPos.x, roomBoundary.min.x + HOOP_RADIUS, roomBoundary.max.x - HOOP_RADIUS);
           hoopPos.z = THREE.MathUtils.clamp(hoopPos.z, roomBoundary.min.z + HOOP_RADIUS, roomBoundary.max.z - HOOP_RADIUS);
         }
-
         createHoopPhysics(hoopPos);
         createHoopVisual(hoopPos);
 

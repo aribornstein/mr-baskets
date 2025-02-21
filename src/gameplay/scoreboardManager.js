@@ -11,12 +11,12 @@ export class Scoreboard {
         this.canvas.height = 128;
         this.context = this.canvas.getContext("2d");
         this.texture = new THREE.CanvasTexture(this.canvas);
-        const material = new THREE.SpriteMaterial({ map: this.texture });
-        this.sprite = new THREE.Sprite(material);
+        const material = new THREE.MeshStandardMaterial({ map: this.texture, side: THREE.DoubleSide });
+        const geometry = new THREE.PlaneGeometry(1.5, 0.75);
+        this.mesh = new THREE.Mesh(geometry, material);
         // Adjust scale – tweak as needed
-        this.sprite.scale.set(1.5, 0.75, 1);
         this.updateTexture();
-        addObject(this.sprite);
+        addObject(this.mesh);
     }
 
     updateTexture() {
@@ -37,8 +37,8 @@ export class Scoreboard {
     // Places the scoreboard on a wall.
     // pos is a THREE.Vector3 and quat a THREE.Quaternion representing the wall's orientation.
     setPosition(pos, quat) {
-        this.sprite.position.copy(pos);
-        this.sprite.quaternion.copy(quat);
+        this.mesh.position.copy(pos);
+        this.mesh.quaternion.copy(quat);
     }
 }
 
@@ -52,30 +52,41 @@ export class ScoreboardManager {
         if (!this.state.roomBoundary) return;
 
         const camPos = getCamera().position;
-        const camDir = new THREE.Vector3(0, 0, -1).applyQuaternion(getCamera().quaternion);
 
-        let minDist = Infinity;
         let nearestWall = null;
+        let minDist = Infinity;
         let pos = new THREE.Vector3();
         let quat = new THREE.Quaternion();
 
-        // Simplified wall detection logic
-        if (camDir.z > 0) { // Camera is looking towards +Z (maxZ wall)
-            nearestWall = "maxZ";
-            pos.set(camPos.x, camPos.y + 1.5, this.state.roomBoundary.max.z + 0.1);
-            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-        } else if (camDir.z < 0) { // Camera is looking towards -Z (minZ wall)
-            nearestWall = "minZ";
-            pos.set(camPos.x, camPos.y + 1.5, this.state.roomBoundary.min.z - 0.1);
-            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
-        } else if (camDir.x > 0) { // Camera is looking towards +X (maxX wall)
-            nearestWall = "maxX";
-            pos.set(this.state.roomBoundary.max.x + 0.1, camPos.y + 1.5, camPos.z);
-            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
-        } else if (camDir.x < 0) { // Camera is looking towards -X (minX wall)
+        // Check distances to each wall
+        const distMinX = Math.abs(camPos.x - this.state.roomBoundary.min.x);
+        const distMaxX = Math.abs(camPos.x - this.state.roomBoundary.max.x);
+        const distMinZ = Math.abs(camPos.z - this.state.roomBoundary.min.z);
+        const distMaxZ = Math.abs(camPos.z - this.state.roomBoundary.max.z);
+
+        if (distMinX < minDist) {
+            minDist = distMinX;
             nearestWall = "minX";
             pos.set(this.state.roomBoundary.min.x - 0.1, camPos.y + 1.5, camPos.z);
             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+        }
+        if (distMaxX < minDist) {
+            minDist = distMaxX;
+            nearestWall = "maxX";
+            pos.set(this.state.roomBoundary.max.x + 0.1, camPos.y + 1.5, camPos.z);
+            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+        }
+        if (distMinZ < minDist) {
+            minDist = distMinZ;
+            nearestWall = "minZ";
+            pos.set(camPos.x, camPos.y + 1.5, this.state.roomBoundary.min.z - 0.1);
+            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
+        }
+        if (distMaxZ < minDist) {
+            minDist = distMaxZ;
+            nearestWall = "maxZ";
+            pos.set(camPos.x, camPos.y + 1.5, this.state.roomBoundary.max.z + 0.1);
+            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
         }
 
         if (nearestWall) {
@@ -87,7 +98,7 @@ export class ScoreboardManager {
         this.scoreboard.increment();
     }
 
-     update() {
-         this.placeScoreboard(); // Update the scoreboard's position every frame
-     }
+    update() {
+        this.placeScoreboard(); // Update the scoreboard's position every frame
+    }
 }

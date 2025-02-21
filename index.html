@@ -123,7 +123,7 @@
       // Create a dynamic rigid body descriptor and enable CCD
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(pos.x, pos.y, pos.z)
-        .enableCcd(true); // Enables CCD in version 0.14.0
+        // .enableCcd(true); // Enables CCD in version 0.14.0
 
       ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
 

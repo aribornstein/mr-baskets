@@ -181,9 +181,6 @@
       });
       backboardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
 
-      // Rotate the backboard the same way as the hoop (π/2 around x).
-      // backboardMesh.rotation.x = Math.PI / 2;
-
       // Start by placing the board at the same spot as the hoop.
       backboardMesh.position.set(pos.x, pos.y, pos.z);
 
@@ -214,7 +211,7 @@
           basketballMesh.parent.remove(basketballMesh);
         }
         controller.add(basketballMesh);
-        basketballMesh.position.set(0, -0.05, -0.05);
+        basketballMesh.position.set(0, -0.05, -0.05); // Adjust to hand model 
         isHoldingBall = true;
       } else {
         const currentHolder = basketballMesh.parent;

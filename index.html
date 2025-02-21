@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -32,6 +33,7 @@
     }
   </style>
 </head>
+
 <body>
   <button id="ar-button">Enter AR</button>
   <script type="module">
@@ -43,22 +45,20 @@
     // Global variables
     let scene, camera, renderer, clock;
     let rapierWorld;
-    let queryPipeline; // QueryPipeline instance for manual raycasting.
+    let queryPipeline; // For raycasting.
     let basketballMesh, hoopMesh, backboardMesh;
     let ballRigidBody = null, ballCollider = null;
     let hoopBody = null, boardBody = null;
     let groundMesh;
     let ratk;
-    let floorConfigured = false;      // Set when a valid floor surface is detected
-    let groundCreated = false;        // Create ground only once
-    let ballAndHoopCreated = false;   // Only create ball and hoop once
+    let floorConfigured = false;
+    let groundCreated = false;
+    let ballAndHoopCreated = false;
     let floorOffset = 0;
     let isHoldingBall = false;
     const controllers = [];
     const BALL_RADIUS = 0.12, HOOP_RADIUS = 0.3, HOOP_HEIGHT = 1.8;
-    // Global room boundary computed from detected walls.
     let roomBoundary = null;
-    // Flag to ensure walls are only created once.
     let wallsCreated = false;
 
     // Create renderer with transparency (for passthrough)
@@ -221,11 +221,11 @@
           const maxDistance = speed * fixedTimeStep;
           const rayOrigin = { x: t.x, y: t.y, z: t.z };
           const ray = new RAPIER.Ray(rayOrigin, direction);
-          // Use getter functions to obtain the proper rigid body and collider sets.
-          queryPipeline.update(rapierWorld.rigidBodySet(), rapierWorld.colliderSet());
+          // Update the query pipeline using the world’s sets.
+          queryPipeline.update(rapierWorld.bodies, rapierWorld.colliders);
           const result = queryPipeline.castRay(
-            rapierWorld.rigidBodySet(),
-            rapierWorld.colliderSet(),
+            rapierWorld.bodies,
+            rapierWorld.colliders,
             ray,
             maxDistance,
             true,
@@ -240,7 +240,6 @@
       }
     }
 
-    // onGrab and onRelease functions remain unchanged.
     function onGrab(event) {
       const controller = event.target;
       if (!basketballMesh) {
@@ -325,7 +324,6 @@
         basketballMesh.position.set(t.x, t.y, t.z);
         const r = ballRigidBody.rotation();
         basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
-        // Run the raycast check to prevent tunneling.
         updateBallRaycast(fixedTimeStep);
       }
       renderer.render(scene, camera);

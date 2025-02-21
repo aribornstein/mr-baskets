@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { addObject } from "../managers/sceneManager.js";
 import { getCamera } from "../core/engine.js";
+import { eventBus } from "../core/eventBus.js";
 
 export class Scoreboard {
     constructor() {
@@ -47,6 +48,9 @@ export class ScoreboardManager {
     constructor(state) {
         this.state = state;
         this.scoreboard = new Scoreboard();
+        eventBus.on("roomBoundaryReady", (roomBoundary) => {
+            this.placeScoreboard(roomBoundary);
+        });
     }
 
     placeScoreboard() {

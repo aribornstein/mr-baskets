@@ -1,5 +1,6 @@
 // src/managers/surfaceManager.js
 import * as THREE from "three";
+import { eventBus } from "../core/eventBus.js";
 import { createGroundPhysics, createRoomWalls } from "../core/physics.js";
 import { createBallPhysics, createBallVisual } from "../gameplay/ballManager.js";
 import { createHoopPhysics, createHoopVisual } from "../gameplay/hoopManager.js";
@@ -34,6 +35,8 @@ export function handleSurfaceAdded(event, state) {
     if (!state.wallsCreated && state.roomBoundary) {
       createRoomWalls(state.roomBoundary);
       state.wallsCreated = true;
+            // Notify that room boundaries are available.
+            eventBus.emit("roomBoundaryReady", state.roomBoundary);
     }
   }
   // Create ball and hoop after floor is configured

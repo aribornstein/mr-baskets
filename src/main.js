@@ -22,7 +22,6 @@ async function initGame() {
     registerBallInput(state);
     initInputManager(state);
     scoreboardManager = new ScoreboardManager(state); // Add this line
-    scoreboardManager.placeScoreboard(); // Add this line
 
     // Setup RealityAccelerator for plane/mesh detection
     ratk = new RealityAccelerator(getRenderer().xr);

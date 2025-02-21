@@ -35,8 +35,8 @@ export function handleSurfaceAdded(event, state) {
     if (!state.wallsCreated && state.roomBoundary) {
       createRoomWalls(state.roomBoundary);
       state.wallsCreated = true;
-            // Notify that room boundaries are available.
-            eventBus.emit("roomBoundaryReady", state.roomBoundary);
+      // Notify that room boundaries are available.
+      eventBus.emit("roomBoundaryReady", state.roomBoundary);
     }
   }
   // Create ball and hoop after floor is configured

@@ -18,12 +18,10 @@
       overflow: hidden;
       background: none;
     }
-
     canvas {
       display: block;
       background: none;
     }
-
     #ar-button {
       position: absolute;
       bottom: 20px;
@@ -95,7 +93,6 @@
     });
 
     // --- Game Logic Functions ---
-
     function createGroundPhysics() {
       const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorOffset, 0);
       const groundBody = rapierWorld.createRigidBody(groundBodyDesc);
@@ -224,9 +221,8 @@
           const maxDistance = speed * fixedTimeStep;
           const rayOrigin = { x: t.x, y: t.y, z: t.z };
           const ray = new RAPIER.Ray(rayOrigin, direction);
-          // Create a new query filter.
-          const filter = new RAPIER.QueryFilter();
-          // Update the query pipeline using the world's bodies and colliders.
+          // Instead of constructing a QueryFilter, simply pass an empty object.
+          const filter = {};
           queryPipeline.update(rapierWorld.bodies, rapierWorld.colliders);
           const result = queryPipeline.castRay(
             rapierWorld.bodies,
@@ -329,7 +325,7 @@
         basketballMesh.position.set(t.x, t.y, t.z);
         const r = ballRigidBody.rotation();
         basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
-        // Run the raycast check to prevent the ball from leaving the room.
+        // Run the raycast check to keep the ball within the room.
         updateBallRaycast(fixedTimeStep);
       }
       renderer.render(scene, camera);
@@ -394,7 +390,7 @@
       clock = new THREE.Clock();
       await RAPIER.init();
       rapierWorld = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
-      // Initialize the QueryPipeline.
+      // Initialize the QueryPipeline using the world's bodies and colliders.
       queryPipeline = new RAPIER.QueryPipeline();
       ratk = new RealityAccelerator(renderer.xr);
       scene.add(ratk.root);

@@ -34,6 +34,8 @@ function animate() {
   world.step();
 
   // Update ball & hoop managers as needed…
+  updateBall();
+  
   // e.g., updateBall(), updateHoop(), etc.
 
   // Render the scene

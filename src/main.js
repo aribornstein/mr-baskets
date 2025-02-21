@@ -1,4 +1,5 @@
 // src/main.js
+import * as THREE from "three";
 import { initEngine, getRenderer, getScene, getCamera } from "./core/engine.js";
 import { initPhysics, getWorld } from "./core/physics.js";
 import { initSceneManager } from "./managers/sceneManager.js";

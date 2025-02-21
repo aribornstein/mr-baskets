@@ -1,20 +1,18 @@
 // src/managers/inputManager.js
 import * as THREE from "three";
-import { getScene, getCamera, getRenderer } from "../core/engine.js";
+import { getScene, getRenderer } from "../core/engine.js";
 import { loadHandModel } from "../effects/graphics.js";
 
 const controllers = [];
 
 export function initInputManager(state) {
-  const gltfLoader = loadHandModel; // reference to hand model loader
+  const gltfLoader = loadHandModel;
   for (let i = 0; i < 2; i++) {
-    // Instead of using getScene().userData.renderer, use getRenderer()
     const controller = getRenderer().xr.getController(i);
     controller.userData.index = i;
     controller.userData.velocity = new THREE.Vector3();
     controller.addEventListener("connected", (event) => {
       controller.userData.handedness = event.data.handedness;
-      // Load hand model
       gltfLoader(controller.userData.handedness)
         .then((handModel) => {
           const handWrapper = new THREE.Group();
@@ -24,17 +22,13 @@ export function initInputManager(state) {
         })
         .catch((error) => console.error("Error loading hand model:", error));
     });
-
-    // Listen to controller events (delegate to ball/hoop managers via state/events)
+    // Forward squeeze events to state callbacks
     controller.addEventListener("squeezestart", (e) => {
-      // Dispatch grab event
       state.onGrab && state.onGrab(e, controller);
     });
     controller.addEventListener("squeezeend", (e) => {
-      // Dispatch release event
       state.onRelease && state.onRelease(e, controller);
     });
-
     getScene().add(controller);
     controllers.push(controller);
   }

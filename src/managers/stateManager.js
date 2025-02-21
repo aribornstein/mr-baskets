@@ -1,13 +1,18 @@
 // src/managers/stateManager.js
 export const state = {
     floorOffset: 0,
+    floorConfigured: false,
+    groundCreated: false,
+    ballCreated: false,
+    hoopCreated: false,
+    wallsCreated: false,
     roomBoundary: null,
-    ballAndHoopCreated: false,
     isHoldingBall: false,
-    score: 0,
-    // Event callbacks can be registered by gameplay modules:
+    BALL_RADIUS: 0.12,
+    HOOP_RADIUS: 0.3,
+    HOOP_HEIGHT: 1.8,
+    // Callbacks for input events
     onGrab: null,
-    onRelease: null,
-    onScore: null,
+    onRelease: null
   };
   

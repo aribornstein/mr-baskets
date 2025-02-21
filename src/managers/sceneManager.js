@@ -4,7 +4,6 @@ import { getScene } from "../core/engine.js";
 const objects = [];
 
 export function initSceneManager() {
-  // Optionally initialize debugging tools or overlays here.
   console.log("Scene Manager initialized.");
 }
 

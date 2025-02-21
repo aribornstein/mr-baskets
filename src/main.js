@@ -2,54 +2,71 @@
 import { initEngine, getRenderer, getScene, getCamera } from "./core/engine.js";
 import { initPhysics, getWorld } from "./core/physics.js";
 import { initSceneManager } from "./managers/sceneManager.js";
-import { initInputManager } from "./managers/inputManager.js";
-import { initBallManager } from "./gameplay/ballManager.js";
-import { initHoopManager } from "./gameplay/hoopManager.js";
-import { initShotClock } from "./gameplay/shotClock.js";
+import { initInputManager, getControllers } from "./managers/inputManager.js";
+import { handleSurfaceAdded } from "./managers/surfaceManager.js";
+import { state } from "./managers/stateManager.js";
+import { registerBallInput, updateBall } from "./gameplay/ballManager.js";
+import { RealityAccelerator } from "https://unpkg.com/ratk@0.3.0";
 
-// Global shared state (could be extended or use a proper state manager)
-const state = {
-  floorOffset: 0,
-  roomBoundary: null,
-  ballAndHoopCreated: false,
-  isHoldingBall: false,
-};
+let clockGame, accumulator = 0, fixedTimeStep = 1/60;
+let ratk;
 
 async function initGame() {
-  await initPhysics(); // Wait for RAPIER.init() inside
+  clockGame = new THREE.Clock();
+  await initPhysics();  // Wait for Rapier to initialize
   initSceneManager();
+  registerBallInput(state);
   initInputManager(state);
-  initBallManager(state);
-  initHoopManager(state);
-  initShotClock(state);
+  
+  // Setup RealityAccelerator for plane/mesh detection
+  ratk = new RealityAccelerator(getRenderer().xr);
+  ratk.onPlaneAdded = (event) => handleSurfaceAdded(event, state);
+  ratk.onMeshAdded = (event) => handleSurfaceAdded(event, state);
+  getScene().add(ratk.root);
+  ratk.root.visible = false;
 
-  // Start render loop
-  const renderer = getRenderer();
-  renderer.setAnimationLoop(animate);
+  // Start the render loop
+  getRenderer().setAnimationLoop(animate);
 }
 
 function animate() {
-  const world = getWorld();
-  // Fixed timestep physics step (you may refine this further)
-  world.step();
-
-  // Update ball & hoop managers as needed…
-  updateBall();
+  const delta = clockGame.getDelta();
+  accumulator += delta;
+  while (accumulator >= fixedTimeStep) {
+    if (getWorld()) getWorld().step();
+    accumulator -= fixedTimeStep;
+  }
   
-  // e.g., updateBall(), updateHoop(), etc.
+  // Update controller velocities
+  getControllers().forEach(controller => {
+    const currentPos = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
+    if (controller.userData.prevPos) {
+      const velocity = new THREE.Vector3().subVectors(currentPos, controller.userData.prevPos).divideScalar(delta);
+      controller.userData.velocity.copy(velocity);
+    }
+    controller.userData.prevPos = currentPos.clone();
+  });
 
-  // Render the scene
+  // Update RealityAccelerator
+  if (ratk && typeof ratk.update === "function") {
+    ratk.update();
+  }
+  
+  // Update ball position based on physics if not held
+  if (state.ballCreated && !state.isHoldingBall) {
+    updateBall(delta, state.roomBoundary);
+  }
+  
   getRenderer().render(getScene(), getCamera());
 }
 
 document.getElementById("ar-button").addEventListener("click", async () => {
   try {
+    initEngine();
     const session = await navigator.xr.requestSession("immersive-ar", {
       requiredFeatures: ["local-floor", "hit-test", "plane-detection", "anchors"],
       optionalFeatures: ["mesh-detection"],
     });
-    initEngine();
-
     getRenderer().xr.setReferenceSpaceType("local-floor");
     getRenderer().xr.setSession(session);
     console.log("AR session started.");

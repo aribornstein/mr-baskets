@@ -1,33 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Passthrough Basketball Game for Quest 3</title>
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js",
-          "rapier": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js"
-        }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Passthrough Basketball Game for Quest 3</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js",
+        "rapier": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js"
       }
-    </script>
-    <style>
-      body { margin: 0; overflow: hidden; background: none; }
-      canvas { display: block; background: none; }
-      #ar-button {
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 12px 24px;
-        font-size: 16px;
-        z-index: 100;
-      }
-    </style>
-  </head>
-  <body>
-    <button id="ar-button">Enter AR</button>
-    <script type="module" src="./src/main.js"></script>
-  </body>
+    }
+  </script>
+  <style>
+    body { margin: 0; overflow: hidden; background: none; }
+    canvas { display: block; background: none; }
+    #ar-button {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      font-size: 16px;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <button id="ar-button">Enter AR</button>
+  <script type="module" src="./src/main.js"></script>
+</body>
 </html>

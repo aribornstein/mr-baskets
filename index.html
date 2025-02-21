@@ -96,7 +96,7 @@
           color: 0x333333,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.2,
+          opacity: 0.1,
         });
         groundMesh = new THREE.Mesh(groundGeo, groundMat);
         groundMesh.rotation.x = -Math.PI / 2;
@@ -137,6 +137,7 @@
         rapierWorld.createCollider(boardColliderDesc, boardBody);
       }
       function createHoopVisual(pos) {
+        console.log("Creating hoop at:", pos);
         const hoopGeometry = new THREE.TorusGeometry(HOOP_RADIUS, 0.02, 16, 100);
         const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
         hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
@@ -263,7 +264,8 @@
             .normalize();
           const wallPos = new THREE.Vector3();
           closestWallMesh.getWorldPosition(wallPos);
-          const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.2);
+          console.log("Wall normal and position:", wallNormal, wallPos);
+          const hoopPos = wallPos.clone().addScaledVector(wallNormal, HOOP_RADIUS + 0.6);
           hoopPos.y = HOOP_HEIGHT + floorOffset;
           createHoopPhysics(hoopPos);
           createHoopVisual(hoopPos);

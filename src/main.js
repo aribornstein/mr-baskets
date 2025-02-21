@@ -16,7 +16,6 @@ const state = {
 };
 
 async function initGame() {
-  initEngine();
   await initPhysics(); // Wait for RAPIER.init() inside
   initSceneManager();
   initInputManager(state);
@@ -47,6 +46,8 @@ document.getElementById("ar-button").addEventListener("click", async () => {
       requiredFeatures: ["local-floor", "hit-test", "plane-detection", "anchors"],
       optionalFeatures: ["mesh-detection"],
     });
+    initEngine();
+
     getRenderer().xr.setReferenceSpaceType("local-floor");
     getRenderer().xr.setSession(session);
     console.log("AR session started.");

@@ -41,6 +41,11 @@ This project is a WebXR-based basketball game that leverages augmented reality (
   - Capture shot statistics and enable a replay feature for players to review their gameplay.
 
 ## Todo
+- Fix scoreboard postioning
+- Fix code to mangage scoring 
+- Add shot clock to score board
+- Add game over state and new game state if shot clock is exceeded
+- Reconcile state vs event managment code (score board, boundries, hoop placement)
 - Refactor code to make it easier to maintain
 - Generate AI-based graphic assets ([this guide](https://thomassimonini.substack.com/p/generate-3d-assets-for-roblox-using)).
 - Make sure the ball doesn't leave the room when shot.

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -17,10 +18,12 @@
       overflow: hidden;
       background: none;
     }
+
     canvas {
       display: block;
       background: none;
     }
+
     #ar-button {
       position: absolute;
       bottom: 20px;
@@ -32,6 +35,7 @@
     }
   </style>
 </head>
+
 <body>
   <button id="ar-button">Enter AR</button>
   <script type="module">
@@ -114,16 +118,21 @@
       groundMesh.position.y = floorOffset;
       scene.add(groundMesh);
     }
+
     function createBallPhysics(pos) {
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
+      // Create a dynamic rigid body descriptor and enable CCD
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(pos.x, pos.y, pos.z)
+        .enableCcd(true); // Enables CCD in version 0.14.0
+
       ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
-      // Enable Continuous Collision Detection to reduce tunneling
-      ballRigidBody.setCcdEnabled(true);
+
       const colliderDesc = RAPIER.ColliderDesc.ball(BALL_RADIUS)
         .setRestitution(0.7)
         .setFriction(0.7);
       ballCollider = rapierWorld.createCollider(colliderDesc, ballRigidBody);
     }
+
     function createBallVisual(pos) {
       const geometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
       const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
@@ -260,15 +269,26 @@
           basketballMesh.parent.remove(basketballMesh);
         }
         controller.add(basketballMesh);
-        // Adjust the ball’s local position so it appears in the palm
-        basketballMesh.position.set(-0.1, 0.0, -0.08);
+        if (controller.userData.handedness === "left") {
+          // Positive X offset might place the ball in the left palm
+          basketballMesh.position.set(0.1, 0.0, -0.08);
+        } else {
+          // Negative X offset for the right palm
+          basketballMesh.position.set(-0.1, 0.0, -0.08);
+        }
         isHoldingBall = true;
       } else {
         const currentHolder = basketballMesh.parent;
         if (currentHolder !== controller) {
           if (currentHolder) currentHolder.remove(basketballMesh);
           controller.add(basketballMesh);
-          basketballMesh.position.set(-0.1, 0.0, -0.08);
+          if (controller.userData.handedness === "left") {
+            // Positive X offset might place the ball in the left palm
+            basketballMesh.position.set(0.1, 0.0, -0.08);
+          } else {
+            // Negative X offset for the right palm
+            basketballMesh.position.set(-0.1, 0.0, -0.08);
+          }
         }
       }
     }
@@ -463,4 +483,5 @@
     });
   </script>
 </body>
+
 </html>

@@ -145,9 +145,9 @@
         hoopMesh.position.set(pos.x, pos.y, pos.z);
         scene.add(hoopMesh);
         const boardGeometry = new THREE.PlaneGeometry(0.6, 0.4);
-        const boardMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
+        const boardMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff, side:THREE.DoubleSide }); });
         backboardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
-        backboardMesh.position.set(pos.x, pos.y, pos.z - 0.05);
+        backboardMesh.position.set(pos.x, pos.y, pos.z - 0.15);
         scene.add(backboardMesh);
       }
 

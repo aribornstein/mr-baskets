@@ -13,6 +13,9 @@ let hoopRigidBody = null;
 
 export function initHoopManager(state) {
   // Create the initial hoop relative to the camera
+  if (state.floorOffset == undefined){
+    console.log("Floor offset not yet detected, skipping hoop creation.");
+  }
   if (!state.ballAndHoopCreated && state.floorOffset !== undefined) {
     const hoopPos = getInitialHoopPosition(state);
     createHoopVisual(hoopPos);

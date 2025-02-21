@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -18,12 +17,10 @@
       overflow: hidden;
       background: none;
     }
-
     canvas {
       display: block;
       background: none;
     }
-
     #ar-button {
       position: absolute;
       bottom: 20px;
@@ -35,7 +32,6 @@
     }
   </style>
 </head>
-
 <body>
   <button id="ar-button">Enter AR</button>
   <script type="module">
@@ -96,6 +92,7 @@
     });
 
     // --- Game Logic Functions ---
+
     function createGroundPhysics() {
       const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorOffset, 0);
       const groundBody = rapierWorld.createRigidBody(groundBodyDesc);
@@ -120,6 +117,8 @@
     function createBallPhysics(pos) {
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
       ballRigidBody = rapierWorld.createRigidBody(bodyDesc);
+      // Enable Continuous Collision Detection to reduce tunneling
+      ballRigidBody.setCcdEnabled(true);
       const colliderDesc = RAPIER.ColliderDesc.ball(BALL_RADIUS)
         .setRestitution(0.7)
         .setFriction(0.7);
@@ -198,7 +197,8 @@
     // Create invisible room boundary walls with padding so the ball doesn't leave the room.
     function createRoomWalls(rapierWorld, roomBoundary) {
       const padding = 0.2; // Additional padding (in meters)
-      const thickness = 0.01; // Wall thickness
+      const wallThickness = 0.1; // Total wall thickness in meters
+      const halfThickness = wallThickness / 2; // 0.05
 
       // Compute room dimensions
       const centerX = (roomBoundary.min.x + roomBoundary.max.x) / 2;
@@ -213,7 +213,7 @@
         const xPos = roomBoundary.min.x - padding;
         const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(xPos, centerY, centerZ);
         const wallBody = rapierWorld.createRigidBody(wallBodyDesc);
-        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(thickness, halfHeight, halfDepth);
+        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfThickness, halfHeight, halfDepth);
         rapierWorld.createCollider(wallColliderDesc, wallBody);
       }
       // Right wall (x = max + padding)
@@ -221,7 +221,7 @@
         const xPos = roomBoundary.max.x + padding;
         const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(xPos, centerY, centerZ);
         const wallBody = rapierWorld.createRigidBody(wallBodyDesc);
-        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(thickness, halfHeight, halfDepth);
+        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfThickness, halfHeight, halfDepth);
         rapierWorld.createCollider(wallColliderDesc, wallBody);
       }
       // Front wall (z = min - padding)
@@ -229,7 +229,7 @@
         const zPos = roomBoundary.min.z - padding;
         const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(centerX, centerY, zPos);
         const wallBody = rapierWorld.createRigidBody(wallBodyDesc);
-        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfWidth, halfHeight, thickness);
+        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfWidth, halfHeight, halfThickness);
         rapierWorld.createCollider(wallColliderDesc, wallBody);
       }
       // Back wall (z = max + padding)
@@ -237,7 +237,7 @@
         const zPos = roomBoundary.max.z + padding;
         const wallBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(centerX, centerY, zPos);
         const wallBody = rapierWorld.createRigidBody(wallBodyDesc);
-        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfWidth, halfHeight, thickness);
+        const wallColliderDesc = RAPIER.ColliderDesc.cuboid(halfWidth, halfHeight, halfThickness);
         rapierWorld.createCollider(wallColliderDesc, wallBody);
       }
       console.log("Room boundary walls created with padding:", padding);
@@ -463,5 +463,4 @@
     });
   </script>
 </body>
-
 </html>

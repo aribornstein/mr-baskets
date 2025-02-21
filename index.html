@@ -242,15 +242,18 @@
         scene.add(basketballMesh);
         basketballMesh.position.copy(worldPos);
         createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
+        // Use the computed velocity from the controller
         const throwVelocity = controller.userData.velocity || new THREE.Vector3();
         ballRigidBody.setLinvel({ x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z }, true);
       }
     }
 
+
     // Fixed timestep physics loop
     const fixedTimeStep = 1 / 60;
     let accumulator = 0;
     const clockGame = new THREE.Clock();
+    // In your animation loop, after obtaining delta:
     function animate() {
       const delta = clockGame.getDelta();
       accumulator += delta;
@@ -258,9 +261,25 @@
         if (rapierWorld) rapierWorld.step();
         accumulator -= fixedTimeStep;
       }
+
+      // Update each controller's velocity:
+      controllers.forEach(controller => {
+        // Get current world position
+        const currentPos = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
+        if (controller.userData.prevPos) {
+          // Compute velocity = (currentPos - prevPos) / delta
+          const velocity = new THREE.Vector3().subVectors(currentPos, controller.userData.prevPos).divideScalar(delta);
+          // Store computed velocity
+          controller.userData.velocity.copy(velocity);
+        }
+        // Update previous position for next frame
+        controller.userData.prevPos = currentPos.clone();
+      });
+
       if (ratk && typeof ratk.update === "function") {
         ratk.update();
       }
+
       if (ballAndHoopCreated && ballRigidBody && basketballMesh && !isHoldingBall) {
         const t = ballRigidBody.translation();
         basketballMesh.position.set(t.x, t.y, t.z);
@@ -269,6 +288,7 @@
       }
       renderer.render(scene, camera);
     }
+
 
     // Handler for detected surfaces.
     function handleSurfaceAdded(event) {

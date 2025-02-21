@@ -11,7 +11,8 @@ export class Scoreboard {
         this.canvas.height = 128;
         this.context = this.canvas.getContext("2d");
         this.texture = new THREE.CanvasTexture(this.canvas);
-        const material = new THREE.MeshStandardMaterial({ map: this.texture, side: THREE.DoubleSide });
+        const material = new THREE.MeshStandardMaterial({ map: this.texture });
+        material.side = THREE.DoubleSide;
         const geometry = new THREE.PlaneGeometry(1.5, 0.75);
         this.mesh = new THREE.Mesh(geometry, material);
         // Adjust scale – tweak as needed

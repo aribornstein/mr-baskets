@@ -31,7 +31,8 @@ export function createHoopPhysics(pos) {
 
   // Create a basket detection sensor
   const sensorDesc = RAPIER.ColliderDesc.cylinder(0.15, state.HOOP_RADIUS * 0.9)
-    .setSensor(true); // Make it a sensor (non-solid)
+    .setSensor(true)
+    .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);; // Make it a sensor (non-solid)
   sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
   // Position it slightly below the hoop ring

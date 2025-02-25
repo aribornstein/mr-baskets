@@ -9,19 +9,8 @@ import { state } from "../managers/stateManager.js";
 let basketballMesh = null;
 let ballRigidBody = null, ballCollider = null;
 
-// Initialize Rapier Physics
-async function initializePhysics() {
-  await RAPIER.init();
-}
-initializePhysics();
-
 export function createBallPhysics(pos) {
   const world = getWorld();
-  if (ballRigidBody) {
-    world.removeCollider(ballCollider);
-    world.removeRigidBody(ballRigidBody);
-  }
-
   const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
   ballRigidBody = world.createRigidBody(bodyDesc);
   const colliderDesc = RAPIER.ColliderDesc.ball(state.BALL_RADIUS)
@@ -42,40 +31,28 @@ export function updateBall(delta, roomBoundary) {
   if (ballRigidBody && basketballMesh) {
     const t = ballRigidBody.translation();
     basketballMesh.position.set(t.x, t.y, t.z);
-    
     const r = ballRigidBody.rotation();
-    basketballMesh.quaternion.set(r.x || 0, r.y || 0, r.z || 0, r.w || 1);
-
+    basketballMesh.quaternion.set(r.x, r.y, r.z, r.w);
     clampBallPosition(roomBoundary);
   }
 }
 
 function clampBallPosition(roomBoundary) {
-  if (!roomBoundary || !roomBoundary.min || !roomBoundary.max || !ballRigidBody) return;
-  
-  const t = ballRigidBody.translation();
-  const clampedX = THREE.MathUtils.clamp(t.x, roomBoundary.min.x + state.BALL_RADIUS, roomBoundary.max.x - state.BALL_RADIUS);
-  const clampedZ = THREE.MathUtils.clamp(t.z, roomBoundary.min.z + state.BALL_RADIUS, roomBoundary.max.z - state.BALL_RADIUS);
-
-  if (t.x !== clampedX || t.z !== clampedZ) {
-    ballRigidBody.setTranslation(new RAPIER.Vector3(clampedX, t.y, clampedZ), true);
-    ballRigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
+  if (ballRigidBody && roomBoundary) {
+    const t = ballRigidBody.translation();
+    const clampedX = THREE.MathUtils.clamp(t.x, roomBoundary.min.x + state.BALL_RADIUS, roomBoundary.max.x - state.BALL_RADIUS);
+    const clampedZ = THREE.MathUtils.clamp(t.z, roomBoundary.min.z + state.BALL_RADIUS, roomBoundary.max.z - state.BALL_RADIUS);
+    if (t.x !== clampedX || t.z !== clampedZ) {
+      ballRigidBody.setTranslation({ x: clampedX, y: t.y, z: clampedZ }, true);
+      ballRigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    }
   }
 }
 
 export function registerBallInput(state) {
-  const prevOnGrab = state.onGrab;
-  const prevOnRelease = state.onRelease;
-
-  state.onGrab = (event, controller) => {
-    if (prevOnGrab) prevOnGrab(event, controller);
-    onGrab(event, controller);
-  };
-
-  state.onRelease = (event, controller) => {
-    if (prevOnRelease) prevOnRelease(event, controller);
-    onRelease(event, controller);
-  };
+  // Register onGrab and onRelease callbacks for controller events
+  state.onGrab = onGrab;
+  state.onRelease = onRelease;
 }
 
 function onGrab(event, controller) {
@@ -85,7 +62,6 @@ function onGrab(event, controller) {
   }
   if (!state.isHoldingBall) {
     if (ballRigidBody) {
-      getWorld().removeCollider(ballCollider);
       getWorld().removeRigidBody(ballRigidBody);
       ballRigidBody = null;
       ballCollider = null;
@@ -94,10 +70,23 @@ function onGrab(event, controller) {
       basketballMesh.parent.remove(basketballMesh);
     }
     controller.add(basketballMesh);
-    const worldPos = new THREE.Vector3();
-    controller.getWorldPosition(worldPos);
-    basketballMesh.position.copy(worldPos);
+    if (controller.userData.handedness === "left") {
+      basketballMesh.position.set(0.1, 0.0, -0.08);
+    } else {
+      basketballMesh.position.set(-0.1, 0.0, -0.08);
+    }
     state.isHoldingBall = true;
+  } else {
+    const currentHolder = basketballMesh.parent;
+    if (currentHolder !== controller) {
+      if (currentHolder) currentHolder.remove(basketballMesh);
+      controller.add(basketballMesh);
+      if (controller.userData.handedness === "left") {
+        basketballMesh.position.set(0.1, 0.0, -0.08);
+      } else {
+        basketballMesh.position.set(-0.1, 0.0, -0.08);
+      }
+    }
   }
 }
 
@@ -118,6 +107,8 @@ function onRelease(event, controller) {
     basketballMesh.position.copy(worldPos);
     createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
     const throwVelocity = controller.userData.velocity || new THREE.Vector3();
-    ballRigidBody.setLinvel(new RAPIER.Vector3(throwVelocity.x, throwVelocity.y, throwVelocity.z), true);
+    ballRigidBody.setLinvel({ x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z }, true);
+    // Update ballCollider to point to the newly created collider
   }
 }
+

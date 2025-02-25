@@ -35,9 +35,17 @@ export function createHoopPhysics(pos) {
   sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
   // Position it slightly below the hoop ring
-  const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y - 0.1, pos.z);
+  const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
   const sensorBody = world.createRigidBody(sensorBodyDesc);
   sensor = world.createCollider(sensorDesc, sensorBody);
+
+  // Create a visual representation of the sensor
+  const sensorGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS * 0.9, state.HOOP_RADIUS * 0.9, 0.3, 32);
+  const sensorMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 }); // Green, transparent
+  const sensorMesh = new THREE.Mesh(sensorGeometry, sensorMaterial);
+  sensorMesh.position.copy(pos);
+  sensorMesh.rotation.x = Math.PI / 2; // Rotate to align with the Rapier cylinder
+  addObject(sensorMesh);
 
   // Backboard physics
   const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
@@ -46,7 +54,6 @@ export function createHoopPhysics(pos) {
     .setRestitution(0.3)
     .setFriction(0.8);
   world.createCollider(boardColliderDesc, boardBody);
-
 }
 
 export function createHoopVisual(pos) {

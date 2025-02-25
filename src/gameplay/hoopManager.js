@@ -28,14 +28,6 @@ export function createHoopPhysics(pos) {
   const hoopQuat = dummy.quaternion.clone().multiply(correction);
   ringColliderDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
   world.createCollider(ringColliderDesc, hoopBody);
-  
-  // Add basket sensor to detect when ball goes through the hoop
-  const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y - 0.1, pos.z);
-  const sensorBody = world.createRigidBody(sensorBodyDesc);
-  const sensorDesc = RAPIER.ColliderDesc.cylinder(0.01, state.HOOP_RADIUS * 0.8)
-    .setSensor(true);
-  sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
-  sensor = world.createCollider(sensorDesc, sensorBody);
 
   // Backboard physics
   const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
@@ -103,13 +95,14 @@ export function createHoopVisual(pos) {
   backboardGroup.translateY(0.1);
   addObject(backboardGroup);
 
-  // Net visual wrapped around the hoop
-  const netGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS, state.HOOP_RADIUS * 0.7, 0.5, 16, 8, true);
+  // Net visual wrapped around the hoop properly
+  const netGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS * 0.9, state.HOOP_RADIUS * 0.6, 0.5, 16, 8, true);
   const netTexture = new THREE.TextureLoader().load("path/to/generated_net_texture.png");
   const netMaterial = new THREE.MeshStandardMaterial({ map: netTexture, transparent: true, side: THREE.DoubleSide });
   netMesh = new THREE.Mesh(netGeometry, netMaterial);
   netMesh.position.copy(pos);
-  netMesh.position.y -= 0.3;
+  netMesh.position.y -= 0.25;
+  netMesh.rotation.x = Math.PI / 2; // Ensure it wraps correctly under the hoop
   addObject(netMesh);
 }
 

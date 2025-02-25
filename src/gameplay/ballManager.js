@@ -108,7 +108,5 @@ function onRelease(event, controller) {
     createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
     const throwVelocity = controller.userData.velocity || new THREE.Vector3();
     ballRigidBody.setLinvel({ x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z }, true);
-    // Update ballCollider to point to the newly created collider
   }
 }
-

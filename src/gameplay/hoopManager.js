@@ -23,7 +23,7 @@ export function createHoopPhysics(pos) {
     .setRestitution(0.5)
     .setFriction(0.8);
 
-  // Calculate orientation so the hoop faces the camera
+  // Determine orientation so the hoop faces the camera
   const dummy = new THREE.Object3D();
   dummy.position.copy(pos);
   dummy.lookAt(getCamera().position);
@@ -38,15 +38,15 @@ export function createHoopPhysics(pos) {
   const sensorDesc = RAPIER.ColliderDesc.cylinder(0.15, state.HOOP_RADIUS * 0.9)
     .setSensor(true)
     .setActiveEvents(RAPIER.ActiveEvents.INTERSECTION_EVENTS)
-    .setActiveCollisionTypes(RAPIER.ActiveCollisionTypes.DEFAULT)
+    // Note: Removing setActiveCollisionTypes to avoid physical response.
     .setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
-  // Instead of attaching to hoopBody, create a separate fixed rigid body for the sensor
+  // Create a separate fixed rigid body for the sensor at the same position.
   const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
   const sensorBody = world.createRigidBody(sensorBodyDesc);
   sensor = world.createCollider(sensorDesc, sensorBody);
 
-  // Visual representation of the sensor for debugging
+  // Visual representation of the sensor for debugging.
   const sensorGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS * 0.9, state.HOOP_RADIUS * 0.9, 0.15 * 2, 32);
   const sensorMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
   const sensorMesh = new THREE.Mesh(sensorGeometry, sensorMaterial);

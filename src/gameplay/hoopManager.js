@@ -95,9 +95,9 @@ export function createHoopVisual(pos) {
   backboardGroup.translateY(0.1);
   addObject(backboardGroup);
 
-  // Net visual with physics
-  const netGeometry = new THREE.PlaneGeometry(state.HOOP_RADIUS * 2, 0.5);
-  const netTexture = new THREE.TextureLoader().load("src/assets/net.webp");
+  // Net visual wrapped around the hoop
+  const netGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS, state.HOOP_RADIUS * 0.7, 0.5, 16, 8, true);
+  const netTexture = new THREE.TextureLoader().load("path/to/generated_net_texture.png");
   const netMaterial = new THREE.MeshStandardMaterial({ map: netTexture, transparent: true, side: THREE.DoubleSide });
   netMesh = new THREE.Mesh(netGeometry, netMaterial);
   netMesh.position.copy(pos);

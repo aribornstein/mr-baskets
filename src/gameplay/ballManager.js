@@ -15,7 +15,9 @@ export function createBallPhysics(pos) {
   ballRigidBody = world.createRigidBody(bodyDesc);
   const colliderDesc = RAPIER.ColliderDesc.ball(state.BALL_RADIUS)
     .setRestitution(0.7)
-    .setFriction(0.7);
+    .setFriction(0.7)
+    .setCollisionGroups(RAPIER.CollisionGroups.GROUP_1);
+
   ballCollider = world.createCollider(colliderDesc, ballRigidBody);
 }
 

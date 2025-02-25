@@ -47,14 +47,6 @@ export function createHoopPhysics(pos) {
     .setFriction(0.8);
   world.createCollider(boardColliderDesc, boardBody);
 
-  // Net physics with swishing effect
-  const netBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y - 0.3, pos.z);
-  netBody = world.createRigidBody(netBodyDesc);
-  const netColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, state.HOOP_RADIUS)
-    .setRestitution(0.2)
-    .setFriction(0.5)
-    .setSensor(false); // Allowing for movement interaction
-  world.createCollider(netColliderDesc, netBody);
 }
 
 export function createHoopVisual(pos) {
@@ -104,19 +96,9 @@ export function createHoopVisual(pos) {
   backboardGroup.translateZ(-0.1);
   backboardGroup.translateY(0.1);
   addObject(backboardGroup);
-
-  // Net visual wrapped around the hoop properly
-  const netGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS * 0.9, state.HOOP_RADIUS * 0.6, 0.5, 16, 8, true);
-  const netTexture = new THREE.TextureLoader().load("path/to/generated_net_texture.png");
-  const netMaterial = new THREE.MeshStandardMaterial({ map: netTexture, transparent: true, side: THREE.DoubleSide });
-  netMesh = new THREE.Mesh(netGeometry, netMaterial);
-  netMesh.position.copy(pos);
-  netMesh.position.y -= 0.25;
-  netMesh.rotation.x = Math.PI / 2; // Ensure it wraps correctly under the hoop
-  addObject(netMesh);
 }
 
 export function isBasket(collider1, collider2) {
-
+  debugger;
   return collider1 === sensor || collider2 === sensor;
 }

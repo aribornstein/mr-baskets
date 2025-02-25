@@ -28,6 +28,14 @@ export function createHoopPhysics(pos) {
   const hoopQuat = dummy.quaternion.clone().multiply(correction);
   ringColliderDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
   world.createCollider(ringColliderDesc, hoopBody);
+  
+  // Add basket sensor to detect when ball goes through the hoop
+  const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y - 0.1, pos.z);
+  const sensorBody = world.createRigidBody(sensorBodyDesc);
+  const sensorDesc = RAPIER.ColliderDesc.cylinder(0.01, state.HOOP_RADIUS * 0.8)
+    .setSensor(true);
+  sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
+  sensor = world.createCollider(sensorDesc, sensorBody);
 
   // Backboard physics
   const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);

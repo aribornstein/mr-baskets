@@ -14,13 +14,16 @@ let sensor;
 export function createHoopPhysics(pos) {
   const world = getWorld();
 
+  // -------------------------
   // Hoop ring physics
+  // -------------------------
   const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
   hoopBody = world.createRigidBody(hoopBodyDesc);
   const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, state.HOOP_RADIUS)
     .setRestitution(0.5)
     .setFriction(0.8);
 
+  // Calculate orientation so the hoop faces the camera
   const dummy = new THREE.Object3D();
   dummy.position.copy(pos);
   dummy.lookAt(getCamera().position);
@@ -29,26 +32,31 @@ export function createHoopPhysics(pos) {
   ringColliderDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
   world.createCollider(ringColliderDesc, hoopBody);
 
-    // Create a basket detection sensor
-    const sensorDesc = RAPIER.ColliderDesc.cylinder(0.15, state.HOOP_RADIUS * 0.9)
-      .setSensor(true)
-      .setActiveEvents(RAPIER.ActiveEvents.INTERSECTION_EVENTS)
-      .setActiveCollisionTypes(RAPIER.ActiveCollisionTypes.DEFAULT) // Ensure it interacts with the ball
-      .setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
+  // -------------------------
+  // Sensor for basket detection
+  // -------------------------
+  const sensorDesc = RAPIER.ColliderDesc.cylinder(0.15, state.HOOP_RADIUS * 0.9)
+    .setSensor(true)
+    .setActiveEvents(RAPIER.ActiveEvents.INTERSECTION_EVENTS)
+    .setActiveCollisionTypes(RAPIER.ActiveCollisionTypes.DEFAULT)
+    .setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
-    // Attach the sensor to the hoop body
-    sensor = world.createCollider(sensorDesc, hoopBody);
+  // Instead of attaching to hoopBody, create a separate fixed rigid body for the sensor
+  const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
+  const sensorBody = world.createRigidBody(sensorBodyDesc);
+  sensor = world.createCollider(sensorDesc, sensorBody);
 
-    // Visual representation of the sensor for debugging
-    const sensorGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS * 0.9, state.HOOP_RADIUS * 0.9, 0.15 * 2, 32);
-    const sensorMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
-    const sensorMesh = new THREE.Mesh(sensorGeometry, sensorMaterial);
-    sensorMesh.position.copy(pos);
-    sensorMesh.rotation.x = Math.PI / 2; // Align with the hoop
-    addObject(sensorMesh);
+  // Visual representation of the sensor for debugging
+  const sensorGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS * 0.9, state.HOOP_RADIUS * 0.9, 0.15 * 2, 32);
+  const sensorMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
+  const sensorMesh = new THREE.Mesh(sensorGeometry, sensorMaterial);
+  sensorMesh.position.copy(pos);
+  sensorMesh.rotation.x = Math.PI / 2; // Align with the hoop
+  addObject(sensorMesh);
 
-
+  // -------------------------
   // Backboard physics
+  // -------------------------
   const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
   boardBody = world.createRigidBody(boardBodyDesc);
   const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.6, 0.4, 0.01)

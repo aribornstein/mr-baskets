@@ -13,14 +13,14 @@ let sensor;
 
 export function createHoopPhysics(pos) {
   const world = getWorld();
-  
+
   // Hoop ring physics
   const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
   hoopBody = world.createRigidBody(hoopBodyDesc);
   const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, state.HOOP_RADIUS)
     .setRestitution(0.5)
     .setFriction(0.8);
-  
+
   const dummy = new THREE.Object3D();
   dummy.position.copy(pos);
   dummy.lookAt(getCamera().position);
@@ -28,6 +28,16 @@ export function createHoopPhysics(pos) {
   const hoopQuat = dummy.quaternion.clone().multiply(correction);
   ringColliderDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
   world.createCollider(ringColliderDesc, hoopBody);
+
+  // Create a basket detection sensor
+  const sensorDesc = RAPIER.ColliderDesc.cylinder(0.15, state.HOOP_RADIUS * 0.9)
+    .setSensor(true); // Make it a sensor (non-solid)
+  sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
+
+  // Position it slightly below the hoop ring
+  const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y - 0.1, pos.z);
+  const sensorBody = world.createRigidBody(sensorBodyDesc);
+  sensor = world.createCollider(sensorDesc, sensorBody);
 
   // Backboard physics
   const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
@@ -49,7 +59,7 @@ export function createHoopPhysics(pos) {
 
 export function createHoopVisual(pos) {
   console.log("Creating hoop at:", pos);
-  
+
   // Hoop ring visual
   const hoopGeometry = new THREE.TorusGeometry(state.HOOP_RADIUS, 0.02, 16, 100);
   const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
@@ -60,35 +70,35 @@ export function createHoopVisual(pos) {
 
   // Backboard visual with multiple layers
   const backboardGroup = new THREE.Group();
-  
+
   // Main white backboard
   const mainBoardGeom = new THREE.PlaneGeometry(0.6, 0.4);
   const mainBoardMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
   const mainBoardMesh = new THREE.Mesh(mainBoardGeom, mainBoardMat);
-  
+
   // Red border
   const frameThickness = 0.02;
   const borderMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-  
+
   const topBorderGeom = new THREE.PlaneGeometry(0.6, frameThickness);
   const topBorderMesh = new THREE.Mesh(topBorderGeom, borderMat);
   topBorderMesh.position.set(0, 0.2, 0.001);
-  
+
   const bottomBorderMesh = topBorderMesh.clone();
   bottomBorderMesh.position.set(0, -0.2, 0.001);
-  
+
   const sideBorderGeom = new THREE.PlaneGeometry(frameThickness, 0.4);
   const leftBorderMesh = new THREE.Mesh(sideBorderGeom, borderMat);
   leftBorderMesh.position.set(-0.3, 0, 0.001);
-  
+
   const rightBorderMesh = leftBorderMesh.clone();
   rightBorderMesh.position.set(0.3, 0, 0.001);
-  
+
   // Shooter's square
   const shooterBoxGeom = new THREE.PlaneGeometry(0.2, 0.15);
   const shooterBoxMesh = new THREE.Mesh(shooterBoxGeom, borderMat);
   shooterBoxMesh.position.set(0, 0, 0.002);
-  
+
   backboardGroup.add(mainBoardMesh, topBorderMesh, bottomBorderMesh, leftBorderMesh, rightBorderMesh, shooterBoxMesh);
   backboardGroup.position.copy(pos);
   backboardGroup.translateZ(-0.1);
@@ -107,5 +117,6 @@ export function createHoopVisual(pos) {
 }
 
 export function isBasket(collider1, collider2) {
-  return collider1 === sensor || collider2 === sensor || collider1 === netBody || collider2 === netBody;
+
+  return collider1 === sensor || collider2 === sensor;
 }

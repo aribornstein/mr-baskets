@@ -1,4 +1,3 @@
-// src/gameplay/hoopManager.js
 import * as THREE from "three";
 import * as RAPIER from "rapier";
 import { getScene, getCamera } from "../core/engine.js";
@@ -8,17 +7,20 @@ import { state } from "../managers/stateManager.js";
 
 let hoopMesh = null;
 let backboardMesh = null;
-let hoopBody = null, boardBody = null;
-let sensor; // Add this line
+let netMesh = null;
+let hoopBody = null, boardBody = null, netBody = null;
+let sensor;
 
 export function createHoopPhysics(pos) {
   const world = getWorld();
+  
   // Hoop ring physics
   const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
   hoopBody = world.createRigidBody(hoopBodyDesc);
   const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, state.HOOP_RADIUS)
     .setRestitution(0.5)
     .setFriction(0.8);
+  
   const dummy = new THREE.Object3D();
   dummy.position.copy(pos);
   dummy.lookAt(getCamera().position);
@@ -30,44 +32,79 @@ export function createHoopPhysics(pos) {
   // Backboard physics
   const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
   boardBody = world.createRigidBody(boardBodyDesc);
-  const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.3, 0.2, 0.01)
+  const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.6, 0.4, 0.01)
     .setRestitution(0.3)
     .setFriction(0.8);
   world.createCollider(boardColliderDesc, boardBody);
 
-  // Add a sensor inside the hoop
-  const sensorColliderDesc = RAPIER.ColliderDesc.ball(state.BALL_RADIUS * 1.1) // Slightly larger than the ball
-    .setTranslation(0, 0, 0) // Adjust position as needed
-    .setSensor(true);
-  sensor = world.createCollider(sensorColliderDesc, hoopBody); // Assign the sensor
+  // Net physics with swishing effect
+  const netBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y - 0.3, pos.z);
+  netBody = world.createRigidBody(netBodyDesc);
+  const netColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, state.HOOP_RADIUS)
+    .setRestitution(0.2)
+    .setFriction(0.5)
+    .setSensor(false); // Allowing for movement interaction
+  world.createCollider(netColliderDesc, netBody);
 }
 
 export function createHoopVisual(pos) {
   console.log("Creating hoop at:", pos);
+  
   // Hoop ring visual
   const hoopGeometry = new THREE.TorusGeometry(state.HOOP_RADIUS, 0.02, 16, 100);
-  const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+  const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
   hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
   hoopMesh.rotation.x = Math.PI / 2;
   hoopMesh.position.copy(pos);
   addObject(hoopMesh);
-  // Backboard visual
-  const boardGeometry = new THREE.PlaneGeometry(0.6, 0.4);
-  const boardMaterial = new THREE.MeshStandardMaterial({
-    color: 0x0000ff,
-    side: THREE.DoubleSide
-  });
-  backboardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
-  backboardMesh.position.copy(pos);
-  backboardMesh.translateZ(-0.1);
-  backboardMesh.translateY(0.1);
-  addObject(backboardMesh);
+
+  // Backboard visual with multiple layers
+  const backboardGroup = new THREE.Group();
+  
+  // Main white backboard
+  const mainBoardGeom = new THREE.PlaneGeometry(0.6, 0.4);
+  const mainBoardMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+  const mainBoardMesh = new THREE.Mesh(mainBoardGeom, mainBoardMat);
+  
+  // Red border
+  const frameThickness = 0.02;
+  const borderMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+  
+  const topBorderGeom = new THREE.PlaneGeometry(0.6, frameThickness);
+  const topBorderMesh = new THREE.Mesh(topBorderGeom, borderMat);
+  topBorderMesh.position.set(0, 0.2, 0.001);
+  
+  const bottomBorderMesh = topBorderMesh.clone();
+  bottomBorderMesh.position.set(0, -0.2, 0.001);
+  
+  const sideBorderGeom = new THREE.PlaneGeometry(frameThickness, 0.4);
+  const leftBorderMesh = new THREE.Mesh(sideBorderGeom, borderMat);
+  leftBorderMesh.position.set(-0.3, 0, 0.001);
+  
+  const rightBorderMesh = leftBorderMesh.clone();
+  rightBorderMesh.position.set(0.3, 0, 0.001);
+  
+  // Shooter's square
+  const shooterBoxGeom = new THREE.PlaneGeometry(0.2, 0.15);
+  const shooterBoxMesh = new THREE.Mesh(shooterBoxGeom, borderMat);
+  shooterBoxMesh.position.set(0, 0, 0.002);
+  
+  backboardGroup.add(mainBoardMesh, topBorderMesh, bottomBorderMesh, leftBorderMesh, rightBorderMesh, shooterBoxMesh);
+  backboardGroup.position.copy(pos);
+  backboardGroup.translateZ(-0.1);
+  backboardGroup.translateY(0.1);
+  addObject(backboardGroup);
+
+  // Net visual with physics
+  const netGeometry = new THREE.PlaneGeometry(state.HOOP_RADIUS * 2, 0.5);
+  const netTexture = new THREE.TextureLoader().load("src/assets/net.webp");
+  const netMaterial = new THREE.MeshStandardMaterial({ map: netTexture, transparent: true, side: THREE.DoubleSide });
+  netMesh = new THREE.Mesh(netGeometry, netMaterial);
+  netMesh.position.copy(pos);
+  netMesh.position.y -= 0.3;
+  addObject(netMesh);
 }
 
 export function isBasket(collider1, collider2) {
-    // Check if the sensor is involved in the collision
-    if ((collider1 === sensor || collider2 === sensor)) {
-        return true;
-    }
-    return false;
+  return collider1 === sensor || collider2 === sensor || collider1 === netBody || collider2 === netBody;
 }

@@ -40,8 +40,9 @@ function animate() {
     while (accumulator >= fixedTimeStep) {
         stepPhysics(); // Use the new stepPhysics function
         const eventQueue = getEventQueue(); // Get the event queue
+        
         eventQueue.drainCollisionEvents((event) => {
-            // console.log("Received collision event", event);
+            console.log("Received collision event", event);
             let collider1 = event.collider1();
             let collider2 = event.collider2();
             debugger;

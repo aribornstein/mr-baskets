@@ -99,6 +99,5 @@ export function createHoopVisual(pos) {
 }
 
 export function isBasket(collider1, collider2) {
-  debugger;
   return collider1 === sensor || collider2 === sensor;
 }

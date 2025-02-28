@@ -367,12 +367,14 @@
       • Uses webxr with requiredFeatures for Quest 3 passthrough
       • The renderer is configured with alpha transparency for passthrough
       • The background is set to transparent
+      • ar-hit-test component is ONLY applied to the scene itself
     -->
     <a-scene 
       webxr="requiredFeatures: local-floor, hit-test, plane-detection, anchors, dom-overlay; optionalFeatures: hand-tracking, depth-sensing; overlayElement: #overlay"
       renderer="alpha: true; antialias: true; colorManagement: true; physicallyCorrectLights: true"
       background="transparent: true"
       physics="debug: false"
+      ar-hit-test="target:#hoop"
       input-manager
       room-mapper
       collision-checker
@@ -393,9 +395,6 @@
       
       <!-- Shot Clock display -->
       <a-entity id="shotclock" shot-clock position="1 2.5 -2"></a-entity>
-      
-      <!-- AR Hit Test entity -->
-      <a-entity ar-hit-test="target:#hoop"></a-entity>
     </a-scene>
     
     <script>

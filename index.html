@@ -2,22 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>AR Basketball Game with A-Frame 1.7.0 (Passthrough for Quest 3)</title>
-    <!-- Include A-Frame 1.7.0 -->
+    <title>AR Basketball Game with A-Frame 1.7.0 (Quest 3 Passthrough)</title>
+    <!-- A-Frame 1.7.0 -->
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-    
-    <!-- Polyfill to provide THREE.Geometry for physics-system compatibility -->
-    <script>
-      if (!THREE.Geometry) {
-        THREE.Geometry = THREE.BufferGeometry;
-      }
-    </script>
-    
-    <!-- Include the physics system, super-hands, and AR hit-test support -->
-    <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
+    <!-- Modern physics system based on cannon-es -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@5.0.0-rc.2/dist/aframe-physics-system.min.js"></script>
+    <!-- Super-hands for interaction -->
     <script src="https://cdn.jsdelivr.net/npm/aframe-super-hands@4.0.5/dist/aframe-super-hands.min.js"></script>
+    <!-- AR hit-test support -->
     <script src="https://cdn.jsdelivr.net/npm/aframe-ar-hit-test@1.0.2/dist/aframe-ar-hit-test.min.js"></script>
-    
+
     <style>
       body { margin: 0; overflow: hidden; }
       #ar-button {
@@ -44,7 +38,7 @@
         z-index: 9;
       }
     </style>
-    
+
     <script>
       // Global game state
       const gameState = {
@@ -165,7 +159,7 @@
         tick: function (time, timeDelta) {
           if (this.data.time > 0) {
             this.data.time -= timeDelta / 1000;
-            if (Math.floor(this.data.time * 10) !== Math.floor((this.data.time + timeDelta/1000) * 10)) {
+            if (Math.floor(this.data.time * 10) !== Math.floor((this.data.time + timeDelta / 1000) * 10)) {
               this.updateTexture();
             }
           } else {
@@ -202,7 +196,7 @@
       });
 
       // ------------------------------
-      // COLLISION CHECKER FOR SCORING
+      // COLLISION CHECKER COMPONENT
       // ------------------------------
       AFRAME.registerComponent('collision-checker', {
         init: function () {
@@ -267,14 +261,14 @@
       // QUEST PASSTHROUGH SETUP COMPONENT
       // ------------------------------
       AFRAME.registerComponent('quest-passthrough-setup', {
-        init: function() {
+        init: function () {
           const sceneEl = this.el;
-          sceneEl.addEventListener('enter-vr', function() {
+          sceneEl.addEventListener('enter-vr', function () {
             if (sceneEl.is('ar-mode')) {
               console.log('Entered AR mode with passthrough');
             }
           });
-          sceneEl.addEventListener('xr-session-start-error', function(evt) {
+          sceneEl.addEventListener('xr-session-start-error', function (evt) {
             console.error('Error starting XR session:', evt.detail);
             const message = document.createElement('div');
             message.style.position = 'absolute';
@@ -287,7 +281,7 @@
             message.innerHTML = 'Error starting AR: ' + evt.detail.message;
             document.body.appendChild(message);
           });
-          this.el.addEventListener('ar-hit-test-select', function(evt) {
+          this.el.addEventListener('ar-hit-test-select', function (evt) {
             const hoop = document.querySelector('#hoop');
             const ball = document.querySelector('#ball');
             const scoreboard = document.querySelector('#scoreboard');
@@ -300,12 +294,12 @@
               const quat = new THREE.Quaternion();
               const scale = new THREE.Vector3();
               matrix.decompose(pos, quat, scale);
-              hoop.setAttribute('position', {x: pos.x, y: pos.y + 1.5, z: pos.z});
-              ball.setAttribute('position', {x: pos.x + 0.5, y: pos.y + 1, z: pos.z + 0.5});
-              scoreboard.setAttribute('position', {x: pos.x, y: pos.y + 2.5, z: pos.z - 0.3});
-              scoreboard.setAttribute('rotation', {x: 0, y: 0, z: 0});
-              shotclock.setAttribute('position', {x: pos.x + 0.8, y: pos.y + 2.5, z: pos.z - 0.3});
-              shotclock.setAttribute('rotation', {x: 0, y: 0, z: 0});
+              hoop.setAttribute('position', { x: pos.x, y: pos.y + 1.5, z: pos.z });
+              ball.setAttribute('position', { x: pos.x + 0.5, y: pos.y + 1, z: pos.z + 0.5 });
+              scoreboard.setAttribute('position', { x: pos.x, y: pos.y + 2.5, z: pos.z - 0.3 });
+              scoreboard.setAttribute('rotation', { x: 0, y: 0, z: 0 });
+              shotclock.setAttribute('position', { x: pos.x + 0.8, y: pos.y + 2.5, z: pos.z - 0.3 });
+              shotclock.setAttribute('rotation', { x: 0, y: 0, z: 0 });
               document.querySelectorAll('.hit-test-plane').forEach(plane => {
                 plane.setAttribute('visible', false);
               });
@@ -319,12 +313,10 @@
   <body>
     <!-- DOM Overlay for WebXR -->
     <div id="overlay"></div>
-    
     <!-- AR Entry Button -->
     <button id="ar-button">Enter AR Basketball</button>
-    
     <!-- A-Frame Scene -->
-    <a-scene 
+    <a-scene
       webxr="requiredFeatures: local-floor, hit-test, plane-detection, anchors; optionalFeatures: hand-tracking"
       renderer="alpha: true; antialias: true; colorManagement: true; physicallyCorrectLights: true"
       background="transparent: true"
@@ -342,15 +334,14 @@
       <a-entity id="scoreboard" scoreboard position="0 2.5 -2"></a-entity>
       <a-entity id="shotclock" shot-clock position="1 2.5 -2"></a-entity>
     </a-scene>
-    
     <script>
       // Start AR session when the button is clicked
-      document.getElementById('ar-button').addEventListener('click', function() {
+      document.getElementById('ar-button').addEventListener('click', function () {
         const sceneEl = document.querySelector('a-scene');
         if (sceneEl.hasLoaded) {
           sceneEl.enterVR();
         } else {
-          sceneEl.addEventListener('loaded', function() {
+          sceneEl.addEventListener('loaded', function () {
             sceneEl.enterVR();
           });
         }

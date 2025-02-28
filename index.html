@@ -2,15 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>AR Basketball Game with A-Frame 1.7 & Hand Models</title>
-    <!-- Include the latest A-Frame release (v1.7.0) and the physics system (using Cannon.js) -->
+    <title>AR Basketball Game with A-Frame 1.7.0 (Passthrough)</title>
+    <!-- Include A-Frame 1.7.0 and the physics system (using Cannon.js) -->
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
     <style>
       body { margin: 0; overflow: hidden; }
     </style>
     <script>
-      // Global game state (expand as needed)
+      // Global game state (extend as needed)
       const gameState = {
         score: 0,
         shotTime: 24,
@@ -19,40 +19,20 @@
       };
 
       // ===============================
-      // HAND MODEL COMPONENT
-      // ===============================
-      AFRAME.registerComponent('hand-model', {
-        schema: { hand: { type: 'string', default: 'left' } },
-        init: function () {
-          const el = this.el;
-          const hand = this.data.hand;
-          // URLs for the generic hand models from webxr-input-profiles
-          const modelUrl = hand === 'left'
-            ? 'https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/generic-hand/left.glb'
-            : 'https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/generic-hand/right.glb';
-          el.setAttribute('gltf-model', modelUrl);
-          el.addEventListener('model-loaded', function (evt) {
-            // Adjust model orientation if needed
-            evt.detail.model.scene.rotation.set(Math.PI / 2, 0, 0);
-          });
-        }
-      });
-
-      // ===============================
       // BALL MANAGER COMPONENT
       // ===============================
       AFRAME.registerComponent('ball-manager', {
         schema: { radius: { type: 'number', default: 0.12 } },
         init: function () {
           const el = this.el;
-          // Set up sphere geometry and material
+          // Set up sphere geometry and material if not preset
           if (!el.getAttribute('geometry')) {
             el.setAttribute('geometry', { primitive: 'sphere', radius: this.data.radius });
           }
           if (!el.getAttribute('material')) {
             el.setAttribute('material', { color: '#ff8c00' });
           }
-          // Add dynamic physics body
+          // Add dynamic physics properties
           if (!el.hasAttribute('dynamic-body')) {
             el.setAttribute('dynamic-body', { mass: 1, restitution: 0.7, friction: 0.7 });
           }
@@ -66,7 +46,7 @@
         schema: { radius: { type: 'number', default: 0.3 }, height: { type: 'number', default: 1.8 } },
         init: function () {
           const el = this.el;
-          // Create hoop ring geometry
+          // Create a hoop ring using a torus geometry
           el.setAttribute('geometry', {
             primitive: 'torus',
             radius: this.data.radius,
@@ -76,14 +56,14 @@
           el.setAttribute('material', { color: '#ff8c00' });
           // Rotate so the hoop lies horizontally
           el.object3D.rotation.x = Math.PI / 2;
-          // Set as static physics body
+          // Make it a static physics body
           el.setAttribute('static-body', {});
-          // Add a child sensor for scoring detection
+          // Create a child sensor (invisible) for collision detection
           const sensor = document.createElement('a-entity');
           sensor.setAttribute('geometry', { primitive: 'cylinder', radius: this.data.radius * 0.9, height: 0.3 });
           sensor.setAttribute('material', { opacity: 0.0, transparent: true });
           sensor.setAttribute('static-body', { shape: 'cylinder' });
-          sensor.classList.add('hoop-sensor');
+          sensor.setAttribute('class', 'hoop-sensor');
           el.appendChild(sensor);
         }
       });
@@ -94,12 +74,14 @@
       AFRAME.registerComponent('scoreboard', {
         schema: { score: { type: 'int', default: 0 } },
         init: function () {
+          // Create an offscreen canvas for the scoreboard
           this.canvas = document.createElement('canvas');
           this.canvas.width = 256;
           this.canvas.height = 128;
           this.ctx = this.canvas.getContext('2d');
           this.texture = new THREE.CanvasTexture(this.canvas);
           this.updateTexture();
+          // Create a plane to display the scoreboard
           this.el.setAttribute('geometry', { primitive: 'plane', width: 1.5, height: 0.75 });
           this.el.setAttribute('material', { src: this.texture, transparent: true });
         },
@@ -131,8 +113,8 @@
             this.data.time -= timeDelta / 1000;
           } else {
             console.log("Shot clock expired!");
-            // Handle shot timeout here; for demo, we reset.
-            this.data.time = 24;
+            // Handle shot timeout: reset ball position, update state, etc.
+            this.data.time = 24; // Reset for demo purposes.
           }
         }
       });
@@ -143,15 +125,11 @@
       AFRAME.registerComponent('input-manager', {
         init: function () {
           const sceneEl = this.el;
-          // Create two hand controllers with hand-controls and attach hand-models.
+          // Create two hand controllers using A-Frame's hand-controls.
           ['left', 'right'].forEach(hand => {
             const handEl = document.createElement('a-entity');
             handEl.setAttribute('hand-controls', { hand: hand });
-            // Add the custom hand model as a child.
-            const modelEl = document.createElement('a-entity');
-            modelEl.setAttribute('hand-model', { hand: hand });
-            handEl.appendChild(modelEl);
-            // Listen for squeeze events to grab and release the ball.
+            // Listen for squeeze events to trigger grab and release on the ball.
             handEl.addEventListener('squeezestart', evt => {
               const ball = document.querySelector('#ball');
               if (ball && !gameState.isHoldingBall) {
@@ -178,10 +156,11 @@
         init: function () {
           const el = this.el;
           el.addEventListener('grab', evt => {
-            // Remove physics and attach ball to controller.
+            // Remove the ball’s physics and attach it to the controller.
             el.removeAttribute('dynamic-body');
             const controller = evt.detail.controller;
             controller.object3D.add(el.object3D);
+            // Set a relative offset based on handedness.
             const handData = controller.getAttribute('hand-controls');
             if (handData && handData.hand === 'left') {
               el.setAttribute('position', { x: 0.1, y: 0, z: -0.08 });
@@ -190,13 +169,14 @@
             }
           });
           el.addEventListener('release', evt => {
-            // Detach ball from controller and reapply physics.
+            // Detach the ball from the controller and reapply physics.
             const worldPos = new THREE.Vector3();
             el.object3D.getWorldPosition(worldPos);
             const sceneEl = document.querySelector('a-scene');
-            sceneEl.object3D.add(el.object3D);
+            sceneEl.object3D.add(el.object3D); // reparent to scene
             el.setAttribute('position', worldPos);
             el.setAttribute('dynamic-body', { mass: 1, restitution: 0.7, friction: 0.7 });
+            // Optionally: apply throw velocity based on controller movement.
           });
         }
       });
@@ -217,6 +197,7 @@
             const sensorPos = new THREE.Vector3();
             this.hoopSensor.object3D.getWorldPosition(sensorPos);
             const distance = ballPos.distanceTo(sensorPos);
+            // If the ball is close enough to the sensor (and prevent rapid re-triggering)
             if (distance < 0.2 && (performance.now() - gameState.lastCollisionTime > 1000)) {
               console.log("Basket made!");
               gameState.lastCollisionTime = performance.now();
@@ -262,8 +243,20 @@
     </script>
   </head>
   <body>
-    <!-- A-Frame scene: automatically handles AR/VR sessions -->
-    <a-scene physics="debug: false" input-manager surface-manager collision-checker embedded xr-mode="immersive-ar">
+    <!-- The A-Frame scene with passthrough: 
+         The renderer is set to use alpha transparency and no background color,
+         so that in immersive-ar mode the camera feed (your room) is visible.
+    -->
+    <a-scene
+      physics="debug: false"
+      input-manager
+      surface-manager
+      collision-checker
+      embedded
+      xr-mode="immersive-ar"
+      renderer="alpha: true; antialias: true; premultipliedAlpha: false"
+      background="color: #000000; opacity: 0"
+    >
       <!-- Camera with look-controls -->
       <a-entity camera look-controls position="0 1.6 0"></a-entity>
       <!-- Ball entity with ball-manager and grab-release behavior -->

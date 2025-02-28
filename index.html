@@ -1,33 +1,286 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Passthrough Basketball Game for Quest 3</title>
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js",
-        "rapier": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js"
+  <head>
+    <meta charset="utf-8">
+    <title>Mixed Reality Basketball Trainer</title>
+    <!-- Include A-Frame -->
+    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+    <!-- Include A-Frame Physics System (Ammo.js based) -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
+    <!-- Include Super Hands for grabbing interactions -->
+    <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-super-hands-component@4.0.5/dist/aframe-super-hands.min.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      /* Mode selection overlay styling */
+      #modeSelection {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
       }
-    }
-  </script>
-  <style>
-    body { margin: 0; overflow: hidden; background: none; }
-    canvas { display: block; background: none; }
-    #ar-button {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 12px 24px;
-      font-size: 16px;
-      z-index: 100;
-    }
-  </style>
-</head>
-<body>
-  <button id="ar-button">Enter AR</button>
-  <script type="module" src="./src/main.js"></script>
-</body>
+      #modeSelection h1 {
+        color: #fff;
+        margin-bottom: 20px;
+      }
+      .mode-button {
+        padding: 15px 30px;
+        margin: 10px;
+        font-size: 20px;
+        color: #fff;
+        background: #007BFF;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .mode-button:hover {
+        background: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Mode Selection Overlay -->
+    <div id="modeSelection">
+      <h1>Select Game Mode</h1>
+      <button class="mode-button" data-mode="freeThrow">Free Throw</button>
+      <button class="mode-button" data-mode="timed">Timed Challenge</button>
+      <button class="mode-button" data-mode="arcade">Arcade Mode</button>
+    </div>
+    
+    <!-- A-Frame Scene configured for AR passthrough -->
+    <a-scene physics="driver: ammo; debug: false"
+             renderer="alpha: true; clearColor: 0, 0, 0, 0"
+             webxr="optionalFeatures: hit-test, plane-detection, mesh-detection">
+      
+      <a-assets>
+        <!-- Replace these URLs with your actual assets -->
+        <img id="ballTexture" src="https://cdn.example.com/basketball-texture.jpg" crossorigin="anonymous">
+        <!-- Example: Use a glTF model for the hoop if available -->
+        <!-- <a-asset-item id="hoopModel" src="models/hoop.glb"></a-asset-item> -->
+        <audio id="ambientCrowd" src="https://cdn.example.com/crowd-ambient.mp3"></audio>
+        <audio id="announcerSwish" src="https://cdn.example.com/announcer-swish.mp3"></audio>
+        <audio id="crowdCheer" src="https://cdn.example.com/crowd-cheer.mp3"></audio>
+      </a-assets>
+      
+      <!-- Real-world Meshing (optional, for room boundaries) -->
+      <a-entity id="roomMesh" real-world-meshing="meshesEnabled: false; planeDetectionEnabled: true"></a-entity>
+      
+      <!-- Floor (aligned with user's real floor) -->
+      <a-plane id="floor" position="0 0 0" rotation="-90 0 0" width="10" height="10"
+               color="#7BC8A4" static-body></a-plane>
+      
+      <!-- Invisible fallback walls -->
+      <a-box id="wall-front" position="0 1 5" depth="0.5" height="2" width="10"
+             visible="false" static-body></a-box>
+      <a-box id="wall-back"  position="0 1 -5" depth="0.5" height="2" width="10"
+             visible="false" static-body></a-box>
+      <a-box id="wall-right" position="5 1 0" depth="10" height="2" width="0.5"
+             visible="false" static-body></a-box>
+      <a-box id="wall-left"  position="-5 1 0" depth="10" height="2" width="0.5"
+             visible="false" static-body></a-box>
+      
+      <!-- Basketball: dynamic sphere with realistic physics and grabbable via Super Hands -->
+      <a-sphere id="ball" position="0 1.5 -1.5" radius="0.12" 
+                material="src: #ballTexture; roughness: 0.5; metalness: 0.1"
+                dynamic-body="mass: 0.6; linearDamping: 0.1; angularDamping: 0.1"
+                ammo-shape="type: sphere; sphereRadius: 0.12"
+                ammo-restitution="0.7" grabbable grab-ball>
+      </a-sphere>
+      
+      <!-- Hoop Group: using primitives for rim and backboard -->
+      <a-entity id="hoopGroup" hoop-scoring>
+        <a-ring id="hoopRim" position="0 0 0" rotation="0 0 0"
+                radius-inner="0.3" radius-outer="0.35" color="#FFFFFF"
+                static-body></a-ring>
+        <a-box id="hoopBackboard" position="0 0 0.1" depth="0.05" height="0.8" width="0.9"
+               color="#CCCCCC" static-body></a-box>
+      </a-entity>
+      
+      <!-- Scoreboard Display -->
+      <a-text id="scoreboard" value="Score: 0" position="-1 3 -2"
+              color="#FFF" align="center" width="4"></a-text>
+      
+      <!-- Timer Display -->
+      <a-text id="timer" value="" position="1 3 -2"
+              color="#FFF" align="center" width="4"></a-text>
+      
+      <!-- Ambient and Reaction Sounds -->
+      <a-sound id="ambientSound" src="#ambientCrowd" autoplay="true" loop="true" volume="0.3"></a-sound>
+      <a-sound id="announcerSound" src="#announcerSwish" volume="1"></a-sound>
+      <a-sound id="crowdCheerSound" src="#crowdCheer" volume="1"></a-sound>
+      
+      <!-- Camera Rig with Cursor -->
+      <a-entity id="cameraRig" position="0 1.6 0">
+        <a-camera wasd-controls look-controls>
+          <a-cursor fuse="true" fuse-timeout="500"></a-cursor>
+        </a-camera>
+      </a-entity>
+      
+      <!-- Hand Controllers: support hand tracking or fallback controllers -->
+      <a-entity id="leftHand" hand-controls="hand: left; handModelStyle: lowPoly; color: #ffeecc"></a-entity>
+      <a-entity id="rightHand" hand-controls="hand: right; handModelStyle: lowPoly; color: #ffeecc"></a-entity>
+      
+      <!-- Game Manager: controls game mode and logic -->
+      <a-entity id="gameManager" game-manager></a-entity>
+      
+    </a-scene>
+    
+    <!-- Custom Components -->
+    <script>
+      // Global variable to store selected game mode.
+      window.selectedMode = null;
+      
+      /**********************
+       * Mode Selector Setup *
+       **********************/
+      // Attach click events to mode buttons.
+      document.querySelectorAll('.mode-button').forEach(function(button) {
+        button.addEventListener('click', function() {
+          window.selectedMode = this.getAttribute('data-mode'); // "freeThrow", "timed", or "arcade"
+          document.getElementById('modeSelection').style.display = 'none';
+          // Initialize timer display if necessary.
+          if(window.selectedMode === 'timed' || window.selectedMode === 'arcade') {
+            document.getElementById('timer').setAttribute('value', 'Time: 60');
+          } else {
+            document.getElementById('timer').setAttribute('value', '');
+          }
+        });
+      });
+      
+      /**********************
+       * Grab Ball Component *
+       **********************/
+      AFRAME.registerComponent('grab-ball', {
+        init: function () {
+          var el = this.el;
+          this.grabbed = false;
+          // Use super-hands events for natural grabbing.
+          el.addEventListener('grab-start', function (evt) {
+            if (!this.grabbed) {
+              this.grabbed = true;
+              evt.detail.handEl.appendChild(this.el);
+              this.el.setAttribute('position', { x: 0, y: -0.2, z: -0.5 });
+              this.el.removeAttribute('dynamic-body');
+            }
+          }.bind(this));
+          el.addEventListener('grab-end', function (evt) {
+            if (this.grabbed) {
+              this.grabbed = false;
+              var scene = document.querySelector('a-scene');
+              scene.appendChild(this.el);
+              var worldPos = new THREE.Vector3();
+              this.el.object3D.getWorldPosition(worldPos);
+              this.el.setAttribute('position', worldPos);
+              this.el.setAttribute('dynamic-body', "mass: 0.6; linearDamping: 0.1; angularDamping: 0.1");
+            }
+          }.bind(this));
+          // Fallback for mouse events.
+          el.addEventListener('mousedown', function () {
+            if (!this.grabbed) {
+              this.grabbed = true;
+              var cameraRig = document.querySelector('#cameraRig');
+              cameraRig.appendChild(this.el);
+              this.el.setAttribute('position', { x: 0, y: -0.2, z: -0.5 });
+              this.el.removeAttribute('dynamic-body');
+            }
+          }.bind(this));
+          el.addEventListener('mouseup', function () {
+            if (this.grabbed) {
+              this.grabbed = false;
+              var scene = document.querySelector('a-scene');
+              scene.appendChild(this.el);
+              var worldPos = new THREE.Vector3();
+              this.el.object3D.getWorldPosition(worldPos);
+              this.el.setAttribute('position', worldPos);
+              this.el.setAttribute('dynamic-body', "mass: 0.6; linearDamping: 0.1; angularDamping: 0.1");
+            }
+          }.bind(this));
+        }
+      });
+      
+      /*******************************
+       * Hoop Scoring Component *
+       *******************************/
+      AFRAME.registerComponent('hoop-scoring', {
+        init: function () {
+          this.score = 0;
+          this.el.addEventListener('collide', this.onCollide.bind(this));
+        },
+        onCollide: function (e) {
+          if (e.detail.body.el && e.detail.body.el.id === 'ball') {
+            this.score++;
+            // In Arcade mode, double the score.
+            if(window.selectedMode === 'arcade') { this.score++; }
+            document.querySelector('#scoreboard').setAttribute('value', 'Score: ' + this.score);
+            // Play announcer and crowd sounds.
+            var annSound = document.querySelector('#announcerSound');
+            if (annSound.components.sound) { annSound.components.sound.playSound(); }
+            var crowdSound = document.querySelector('#crowdCheerSound');
+            if (crowdSound.components.sound) { crowdSound.components.sound.playSound(); }
+            // Reposition the hoop randomly within a safe play area.
+            var newX = (Math.random() * 6) - 3;
+            var newZ = -2 - (Math.random() * 2);
+            this.el.setAttribute('position', { x: newX, y: 2, z: newZ });
+            // Reset ball position.
+            var ball = document.querySelector('#ball');
+            ball.setAttribute('position', { x: 0, y: 1.5, z: -1.5 });
+            ball.removeAttribute('dynamic-body');
+            ball.setAttribute('dynamic-body', "mass: 0.6; linearDamping: 0.1; angularDamping: 0.1");
+          }
+        }
+      });
+      
+      /***************************
+       * Game Manager Component *
+       ***************************/
+      AFRAME.registerComponent('game-manager', {
+        schema: {
+          mode: {type: 'string', default: 'timed'},
+          duration: {type: 'int', default: 60} // 60 seconds for timed modes
+        },
+        init: function () {
+          var self = this;
+          // Wait until the user selects a mode.
+          var waitForMode = setInterval(function() {
+            if(window.selectedMode) {
+              self.data.mode = window.selectedMode;
+              clearInterval(waitForMode);
+              if(self.data.mode === 'timed' || self.data.mode === 'arcade'){
+                self.startTimedGame();
+              } else {
+                document.querySelector('#timer').setAttribute('value', '');
+              }
+            }
+          }, 500);
+        },
+        startTimedGame: function () {
+          this.timeRemaining = this.data.duration;
+          this.running = true;
+          this.startTime = Date.now();
+          this.tick();
+        },
+        tick: function () {
+          if (!this.running) return;
+          var elapsed = (Date.now() - this.startTime) / 1000;
+          this.timeRemaining = Math.max(this.data.duration - elapsed, 0);
+          document.querySelector('#timer').setAttribute('value', 'Time: ' + Math.floor(this.timeRemaining));
+          if (this.timeRemaining > 0) {
+            requestAnimationFrame(this.tick.bind(this));
+          } else {
+            this.endGame();
+          }
+        },
+        endGame: function () {
+          this.running = false;
+          alert("Time's up! Final " + (this.data.mode === 'arcade' ? "Arcade" : "Timed") + " Score: " + document.querySelector('#scoreboard').getAttribute('value'));
+          location.reload();
+        }
+      });
+    </script>
+  </body>
 </html>

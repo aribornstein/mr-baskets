@@ -3,14 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <title>AR Basketball Game with A-Frame 1.7.0 (Passthrough)</title>
-    <!-- Include A-Frame 1.7.0 and the physics system (using Cannon.js) -->
+    <!-- Include A-Frame 1.7.0, physics system, super-hands, and AR hit-test support -->
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-super-hands@4.0.5/dist/aframe-super-hands.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-ar-hit-test@1.0.2/dist/aframe-ar-hit-test.min.js"></script>
     <style>
       body { margin: 0; overflow: hidden; }
     </style>
     <script>
-      // Global game state (extend as needed)
+      // Global game state
       const gameState = {
         score: 0,
         shotTime: 24,
@@ -18,35 +20,57 @@
         lastCollisionTime: 0
       };
 
-      // ===============================
+      // ------------------------------
       // BALL MANAGER COMPONENT
-      // ===============================
+      // ------------------------------
       AFRAME.registerComponent('ball-manager', {
         schema: { radius: { type: 'number', default: 0.12 } },
         init: function () {
           const el = this.el;
-          // Set up sphere geometry and material if not preset
+          // Setup sphere geometry and material if not already set
           if (!el.getAttribute('geometry')) {
             el.setAttribute('geometry', { primitive: 'sphere', radius: this.data.radius });
           }
           if (!el.getAttribute('material')) {
             el.setAttribute('material', { color: '#ff8c00' });
           }
-          // Add dynamic physics properties
+          // Add dynamic physics so the ball reacts to forces
           if (!el.hasAttribute('dynamic-body')) {
             el.setAttribute('dynamic-body', { mass: 1, restitution: 0.7, friction: 0.7 });
           }
+          // Mark this entity as grabbable by super-hands.
+          el.setAttribute('grabbable', '');
         }
       });
 
-      // ===============================
+      // ------------------------------
+      // THROWABLE COMPONENT
+      // (When dropped, re-add physics so the ball can be thrown)
+      // ------------------------------
+      AFRAME.registerComponent('throwable', {
+        init: function () {
+          const el = this.el;
+          el.addEventListener('drag-drop', evt => {
+            // Detach from hand: reparent to the scene.
+            const worldPos = new THREE.Vector3();
+            el.object3D.getWorldPosition(worldPos);
+            const sceneEl = document.querySelector('a-scene');
+            sceneEl.object3D.add(el.object3D);
+            el.setAttribute('position', worldPos);
+            // Reapply physics so it reacts to forces (velocity from super-hands may be available)
+            el.setAttribute('dynamic-body', { mass: 1, restitution: 0.7, friction: 0.7 });
+          });
+        }
+      });
+
+      // ------------------------------
       // HOOP MANAGER COMPONENT
-      // ===============================
+      // ------------------------------
       AFRAME.registerComponent('hoop-manager', {
         schema: { radius: { type: 'number', default: 0.3 }, height: { type: 'number', default: 1.8 } },
         init: function () {
           const el = this.el;
-          // Create a hoop ring using a torus geometry
+          // Create hoop ring using torus geometry
           el.setAttribute('geometry', {
             primitive: 'torus',
             radius: this.data.radius,
@@ -54,34 +78,34 @@
             segmentsTubular: 32
           });
           el.setAttribute('material', { color: '#ff8c00' });
-          // Rotate so the hoop lies horizontally
+          // Rotate so the hoop is horizontal
           el.object3D.rotation.x = Math.PI / 2;
-          // Make it a static physics body
+          // Make it static in physics simulation
           el.setAttribute('static-body', {});
-          // Create a child sensor (invisible) for collision detection
+          // Create an invisible sensor child for scoring
           const sensor = document.createElement('a-entity');
           sensor.setAttribute('geometry', { primitive: 'cylinder', radius: this.data.radius * 0.9, height: 0.3 });
-          sensor.setAttribute('material', { opacity: 0.0, transparent: true });
+          sensor.setAttribute('material', { opacity: 0, transparent: true });
           sensor.setAttribute('static-body', { shape: 'cylinder' });
-          sensor.setAttribute('class', 'hoop-sensor');
+          sensor.classList.add('hoop-sensor');
           el.appendChild(sensor);
         }
       });
 
-      // ===============================
+      // ------------------------------
       // SCOREBOARD COMPONENT
-      // ===============================
+      // ------------------------------
       AFRAME.registerComponent('scoreboard', {
         schema: { score: { type: 'int', default: 0 } },
         init: function () {
-          // Create an offscreen canvas for the scoreboard
+          // Create an offscreen canvas for drawing score
           this.canvas = document.createElement('canvas');
           this.canvas.width = 256;
           this.canvas.height = 128;
           this.ctx = this.canvas.getContext('2d');
           this.texture = new THREE.CanvasTexture(this.canvas);
           this.updateTexture();
-          // Create a plane to display the scoreboard
+          // Set up a plane to display the score
           this.el.setAttribute('geometry', { primitive: 'plane', width: 1.5, height: 0.75 });
           this.el.setAttribute('material', { src: this.texture, transparent: true });
         },
@@ -100,9 +124,9 @@
         }
       });
 
-      // ===============================
+      // ------------------------------
       // SHOT CLOCK COMPONENT
-      // ===============================
+      // ------------------------------
       AFRAME.registerComponent('shot-clock', {
         schema: { time: { type: 'number', default: 24 } },
         init: function () {
@@ -113,82 +137,38 @@
             this.data.time -= timeDelta / 1000;
           } else {
             console.log("Shot clock expired!");
-            // Handle shot timeout: reset ball position, update state, etc.
-            this.data.time = 24; // Reset for demo purposes.
+            // Reset for demo; you could trigger a penalty or reset ball/hoop
+            this.data.time = 24;
           }
         }
       });
 
-      // ===============================
+      // ------------------------------
       // INPUT MANAGER COMPONENT
-      // ===============================
+      // (Creates hand controllers with super-hands support)
+      // ------------------------------
       AFRAME.registerComponent('input-manager', {
         init: function () {
           const sceneEl = this.el;
-          // Create two hand controllers using A-Frame's hand-controls.
           ['left', 'right'].forEach(hand => {
             const handEl = document.createElement('a-entity');
             handEl.setAttribute('hand-controls', { hand: hand });
-            // Listen for squeeze events to trigger grab and release on the ball.
-            handEl.addEventListener('squeezestart', evt => {
-              const ball = document.querySelector('#ball');
-              if (ball && !gameState.isHoldingBall) {
-                ball.emit('grab', { controller: handEl });
-                gameState.isHoldingBall = true;
-              }
-            });
-            handEl.addEventListener('squeezeend', evt => {
-              const ball = document.querySelector('#ball');
-              if (ball && gameState.isHoldingBall) {
-                ball.emit('release', { controller: handEl });
-                gameState.isHoldingBall = false;
-              }
-            });
+            // Enable super-hands so that grabbing works automatically.
+            handEl.setAttribute('super-hands', '');
             sceneEl.appendChild(handEl);
           });
         }
       });
 
-      // ===============================
-      // GRAB/RELEASE BEHAVIOR FOR THE BALL
-      // ===============================
-      AFRAME.registerComponent('grab-release', {
-        init: function () {
-          const el = this.el;
-          el.addEventListener('grab', evt => {
-            // Remove the ball’s physics and attach it to the controller.
-            el.removeAttribute('dynamic-body');
-            const controller = evt.detail.controller;
-            controller.object3D.add(el.object3D);
-            // Set a relative offset based on handedness.
-            const handData = controller.getAttribute('hand-controls');
-            if (handData && handData.hand === 'left') {
-              el.setAttribute('position', { x: 0.1, y: 0, z: -0.08 });
-            } else {
-              el.setAttribute('position', { x: -0.1, y: 0, z: -0.08 });
-            }
-          });
-          el.addEventListener('release', evt => {
-            // Detach the ball from the controller and reapply physics.
-            const worldPos = new THREE.Vector3();
-            el.object3D.getWorldPosition(worldPos);
-            const sceneEl = document.querySelector('a-scene');
-            sceneEl.object3D.add(el.object3D); // reparent to scene
-            el.setAttribute('position', worldPos);
-            el.setAttribute('dynamic-body', { mass: 1, restitution: 0.7, friction: 0.7 });
-            // Optionally: apply throw velocity based on controller movement.
-          });
-        }
-      });
-
-      // ===============================
+      // ------------------------------
       // COLLISION CHECKER FOR SCORING
-      // ===============================
+      // ------------------------------
       AFRAME.registerComponent('collision-checker', {
         init: function () {
           this.ball = document.querySelector('#ball');
-          this.hoopSensor = document.querySelector('.hoop-sensor');
           this.scoreboardEl = document.querySelector('#scoreboard');
+          // Note: The hoop sensor is inside the hoop entity.
+          this.hoopSensor = document.querySelector('#hoop .hoop-sensor');
         },
         tick: function () {
           if (this.ball && this.hoopSensor) {
@@ -197,7 +177,6 @@
             const sensorPos = new THREE.Vector3();
             this.hoopSensor.object3D.getWorldPosition(sensorPos);
             const distance = ballPos.distanceTo(sensorPos);
-            // If the ball is close enough to the sensor (and prevent rapid re-triggering)
             if (distance < 0.2 && (performance.now() - gameState.lastCollisionTime > 1000)) {
               console.log("Basket made!");
               gameState.lastCollisionTime = performance.now();
@@ -209,64 +188,72 @@
         }
       });
 
-      // ===============================
-      // SURFACE MANAGER COMPONENT (FLOOR & WALLS)
-      // ===============================
-      AFRAME.registerComponent('surface-manager', {
+      // ------------------------------
+      // ROOM MAPPER COMPONENT
+      // (Uses the aframe-ar-hit-test component to spawn planes for detected surfaces)
+      // ------------------------------
+      AFRAME.registerComponent('room-mapper', {
         init: function () {
-          const sceneEl = this.el;
-          // Create a floor entity
-          const floor = document.createElement('a-entity');
-          floor.setAttribute('geometry', { primitive: 'plane', width: 10, height: 10 });
-          floor.setAttribute('material', { color: '#888', opacity: 0.5 });
-          floor.setAttribute('rotation', '-90 0 0');
-          floor.setAttribute('static-body', {});
-          sceneEl.appendChild(floor);
-          // Create invisible walls (room boundaries)
-          const walls = [
-            { pos: { x: 5, y: 2, z: 0 }, rot: { x: 0, y: -90, z: 0 } },
-            { pos: { x: -5, y: 2, z: 0 }, rot: { x: 0, y: 90, z: 0 } },
-            { pos: { x: 0, y: 2, z: 5 }, rot: { x: 0, y: 180, z: 0 } },
-            { pos: { x: 0, y: 2, z: -5 }, rot: { x: 0, y: 0, z: 0 } },
-          ];
-          walls.forEach(w => {
-            const wall = document.createElement('a-entity');
-            wall.setAttribute('geometry', { primitive: 'box', width: 0.1, height: 4, depth: 10 });
-            wall.setAttribute('material', { opacity: 0, transparent: true });
-            wall.setAttribute('position', w.pos);
-            wall.setAttribute('rotation', w.rot);
-            wall.setAttribute('static-body', {});
-            sceneEl.appendChild(wall);
+          // This component assumes that the XR session supports plane-detection.
+          // It listens for "ar-hit-test-update" events (provided by aframe-ar-hit-test)
+          // and creates temporary plane entities to represent surfaces.
+          this.planes = [];
+          this.el.addEventListener('ar-hit-test-update', evt => {
+            // Remove old planes.
+            this.planes.forEach(plane => plane.parentNode.removeChild(plane));
+            this.planes = [];
+            // For each hit, create a plane.
+            evt.detail.hits.forEach(hit => {
+              const plane = document.createElement('a-entity');
+              plane.setAttribute('geometry', { primitive: 'plane', width: 1, height: 1 });
+              plane.setAttribute('material', { color: '#CCC', opacity: 0.5, side: 'double' });
+              // Set position and rotation from hit test matrix.
+              const matrix = new THREE.Matrix4();
+              matrix.fromArray(hit.transform.matrix);
+              const pos = new THREE.Vector3();
+              const quat = new THREE.Quaternion();
+              const scale = new THREE.Vector3();
+              matrix.decompose(pos, quat, scale);
+              plane.setAttribute('position', pos);
+              plane.object3D.quaternion.copy(quat);
+              this.el.appendChild(plane);
+              this.planes.push(plane);
+            });
           });
         }
       });
     </script>
   </head>
   <body>
-    <!-- The A-Frame scene with passthrough: 
-         The renderer is set to use alpha transparency and no background color,
-         so that in immersive-ar mode the camera feed (your room) is visible.
+    <!--
+         The A-Frame scene:
+         • Uses xr="requiredFeatures: local-floor, hit-test, plane-detection, anchors" to request an AR session with passthrough.
+         • The renderer is configured with alpha transparency and no premultiplied alpha so the real-world camera feed shows.
+         • The background is set to transparent.
     -->
-    <a-scene
+    <a-scene 
+      xr="requiredFeatures: local-floor, hit-test, plane-detection, anchors"
+      renderer="alpha: true; antialias: true; premultipliedAlpha: false"
+      background="color: #000000; opacity: 0"
       physics="debug: false"
       input-manager
-      surface-manager
+      room-mapper
       collision-checker
       embedded
       xr-mode="immersive-ar"
-      renderer="alpha: true; antialias: true; premultipliedAlpha: false"
-      background="color: #000000; opacity: 0"
     >
       <!-- Camera with look-controls -->
       <a-entity camera look-controls position="0 1.6 0"></a-entity>
-      <!-- Ball entity with ball-manager and grab-release behavior -->
-      <a-entity id="ball" ball-manager grab-release position="0 1 -1"></a-entity>
+      <!-- Ball entity: now using ball-manager, grabbable, and throwable for pick-up/throw -->
+      <a-entity id="ball" ball-manager grabbable throwable position="0 1 -1"></a-entity>
       <!-- Hoop entity with hoop-manager -->
       <a-entity id="hoop" hoop-manager position="0 2 -2"></a-entity>
       <!-- Scoreboard entity -->
       <a-entity id="scoreboard" scoreboard position="0 2 -3"></a-entity>
-      <!-- Optional Shot Clock display -->
+      <!-- Shot Clock display -->
       <a-entity id="shotclock" shot-clock position="1 2 -3"></a-entity>
+      <!-- The ar-hit-test component (from aframe-ar-hit-test) is attached to the scene -->
+      <a-entity ar-hit-test></a-entity>
     </a-scene>
   </body>
 </html>

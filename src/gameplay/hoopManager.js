@@ -35,23 +35,38 @@ export function createHoopPhysics(pos) {
   // -------------------------
   // Sensor for basket detection
   // -------------------------
-  const sensorDesc = RAPIER.ColliderDesc.cylinder(0.001, state.HOOP_RADIUS * 0.9) // Reduced height to 0.001
+  // Improved sensor creation: very thin horizontal disk slightly below hoop
+  const sensorThickness = 0.0001; // Extremely thin
+  const sensorYOffset = -0.01; // Slightly below hoop center to detect ball passing through
+
+  const sensorDesc = RAPIER.ColliderDesc.cylinder(sensorThickness, state.HOOP_RADIUS * 0.9)
     .setSensor(true)
     .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
-    // Note: Removing setActiveCollisionTypes to avoid physical response.
     .setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
-  // Create a separate fixed rigid body for the sensor at the same position.
-  const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
+  const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(
+    pos.x,
+    pos.y + sensorYOffset,
+    pos.z
+  );
   const sensorBody = world.createRigidBody(sensorBodyDesc);
   sensor = world.createCollider(sensorDesc, sensorBody);
 
-  // Visual representation of the sensor for debugging.
-  const sensorGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS * 0.9, state.HOOP_RADIUS * 0.9, 0.001 * 2, 32); // Reduced height to 0.001 * 2
-  const sensorMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
+  // Visual representation for debugging
+  const sensorGeometry = new THREE.CylinderGeometry(
+    state.HOOP_RADIUS * 0.9,
+    state.HOOP_RADIUS * 0.9,
+    sensorThickness * 2,
+    32
+  );
+  const sensorMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    transparent: true,
+    opacity: 0.5,
+  });
   const sensorMesh = new THREE.Mesh(sensorGeometry, sensorMaterial);
-  sensorMesh.position.copy(pos);
-  sensorMesh.rotation.x = Math.PI / 2; // Align with the hoop
+  sensorMesh.position.set(pos.x, pos.y + sensorYOffset, pos.z);
+  sensorMesh.rotation.x = Math.PI / 2; // Align horizontally
   addObject(sensorMesh);
 
   // -------------------------

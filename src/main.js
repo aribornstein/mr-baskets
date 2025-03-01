@@ -14,6 +14,7 @@ import { isBasket } from "./gameplay/hoopManager.js";
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
 let ratk;
 let scoreboardManager; // Add this line
+let world;
 
 async function initGame() {
     clockGame = new THREE.Clock();
@@ -29,6 +30,9 @@ async function initGame() {
     ratk.onMeshAdded = (event) => handleSurfaceAdded(event, state);
     getScene().add(ratk.root);
     ratk.root.visible = false;
+    
+    // Get the world 
+    world = getWorld();
 
     // Start the render loop
     getRenderer().setAnimationLoop(animate);
@@ -40,12 +44,10 @@ function animate() {
     while (accumulator >= fixedTimeStep) {
         stepPhysics(); // Use the new stepPhysics function
         const eventQueue = getEventQueue(); // Get the event queue
-        
-        eventQueue.drainCollisionEvents((handle1, handle2, started) => {
-            /* Handle the collision event. */
-            let collider1 = handle1.collider();
-            let collider2 = handle2.collider();
 
+        eventQueue.drainCollisionEvents((handle1, handle2, started) => {
+            const collider1 = world.getCollider(handle1);
+            const collider2 = world.getCollider(handle2);
             if (isBasket(collider1, collider2)) {
                 console.log("Basket made!");
                 scoreboardManager.incrementScore();

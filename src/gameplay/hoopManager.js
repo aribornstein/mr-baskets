@@ -66,7 +66,7 @@ export function createHoopPhysics(pos) {
   });
   const sensorMesh = new THREE.Mesh(sensorGeometry, sensorMaterial);
   sensorMesh.position.set(pos.x, pos.y + sensorYOffset, pos.z);
-  sensorMesh.rotation.x = Math.PI / 2; // Align horizontally
+  sensorMesh.quaternion.copy(hoopQuat);
   addObject(sensorMesh);
 
   // -------------------------

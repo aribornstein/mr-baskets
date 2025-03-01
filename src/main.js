@@ -41,16 +41,28 @@ function animate() {
         stepPhysics(); // Use the new stepPhysics function
         const eventQueue = getEventQueue(); // Get the event queue
         
-        eventQueue.drainCollisionEvents((event) => {
-            console.log("Received collision event", event);
-            let collider1 = event.collider1();
-            let collider2 = event.collider2();
-            debugger;
+        eventQueue.drainCollisionEvents((handle1, handle2, started) => {
+            /* Handle the collision event. */
+            let collider1 = handle1.collider();
+            let collider2 = handle2.collider();
+
             if (isBasket(collider1, collider2)) {
                 console.log("Basket made!");
                 scoreboardManager.incrementScore();
             }
+
         });
+        // eventQueue.drainCollisionEvents((event) => {
+        //     console.log("Received collision event", event);
+        //     debugger;
+        //     let collider1 = event.collider1();
+        //     let collider2 = event.collider2();
+            
+        //     if (isBasket(collider1, collider2)) {
+        //         console.log("Basket made!");
+        //         scoreboardManager.incrementScore();
+        //     }
+        // });
         accumulator -= fixedTimeStep;
     }
 

@@ -115,5 +115,5 @@ export function createHoopVisual(pos) {
 }
 
 export function isBasket(collider1, collider2) {
-  return collider1 === sensor || collider2 === sensor;
+  return world.getCollider(collider1) === sensor || world.getCollider(collider2) === sensor;
 }

@@ -7,7 +7,7 @@ import { initInputManager, getControllers } from "./managers/inputManager.js";
 import { handleSurfaceAdded } from "./managers/surfaceManager.js";
 import { state } from "./managers/stateManager.js";
 import { registerBallInput, updateBall } from "./gameplay/ballManager.js";
-import { RealityAccelerator } from "https://unpkg.com/ratk@0.3.0";
+import { RealityAccelerator } from "ratk";
 import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { isBasket } from "./gameplay/hoopManager.js";
 

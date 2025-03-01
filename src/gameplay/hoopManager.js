@@ -37,7 +37,7 @@ export function createHoopPhysics(pos) {
   // -------------------------
   const sensorDesc = RAPIER.ColliderDesc.cylinder(0.15, state.HOOP_RADIUS * 0.9)
     .setSensor(true)
-    .setActiveEvents(RAPIER.ActiveEvents.INTERSECTION_EVENTS)
+    .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
     // Note: Removing setActiveCollisionTypes to avoid physical response.
     .setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 

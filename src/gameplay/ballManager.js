@@ -11,9 +11,12 @@ let ballRigidBody = null, ballCollider = null;
 
 export function createBallPhysics(pos) {
   const world = getWorld();
-  const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z);
+  const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+                  .setCcdEnabled(true)
+                  .setTranslation(pos.x, pos.y, pos.z);
   ballRigidBody = world.createRigidBody(bodyDesc);
   const colliderDesc = RAPIER.ColliderDesc.ball(state.BALL_RADIUS)
+    .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS) 
     .setRestitution(0.7)
     .setFriction(0.7);
     
@@ -64,6 +67,7 @@ function onGrab(event, controller) {
   if (!state.isHoldingBall) {
     if (ballRigidBody) {
       getWorld().removeRigidBody(ballRigidBody);
+      getWorld().removeCollider(ballCollider);
       ballRigidBody = null;
       ballCollider = null;
     }

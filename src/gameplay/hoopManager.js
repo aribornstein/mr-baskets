@@ -35,7 +35,7 @@ export function createHoopPhysics(pos) {
   // -------------------------
   // Sensor for basket detection
   // -------------------------
-  const sensorDesc = RAPIER.ColliderDesc.cylinder(0.05, state.HOOP_RADIUS * 0.9)
+  const sensorDesc = RAPIER.ColliderDesc.cylinder(0.001, state.HOOP_RADIUS * 0.9) // Reduced height to 0.001
     .setSensor(true)
     .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
     // Note: Removing setActiveCollisionTypes to avoid physical response.
@@ -47,7 +47,7 @@ export function createHoopPhysics(pos) {
   sensor = world.createCollider(sensorDesc, sensorBody);
 
   // Visual representation of the sensor for debugging.
-  const sensorGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS * 0.9, state.HOOP_RADIUS * 0.9, 0.05 * 2, 32);
+  const sensorGeometry = new THREE.CylinderGeometry(state.HOOP_RADIUS * 0.9, state.HOOP_RADIUS * 0.9, 0.001 * 2, 32); // Reduced height to 0.001 * 2
   const sensorMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
   const sensorMesh = new THREE.Mesh(sensorGeometry, sensorMaterial);
   sensorMesh.position.copy(pos);

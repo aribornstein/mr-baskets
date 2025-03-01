@@ -54,17 +54,7 @@ function animate() {
             }
 
         });
-        // eventQueue.drainCollisionEvents((event) => {
-        //     console.log("Received collision event", event);
-        //     debugger;
-        //     let collider1 = event.collider1();
-        //     let collider2 = event.collider2();
-            
-        //     if (isBasket(collider1, collider2)) {
-        //         console.log("Basket made!");
-        //         scoreboardManager.incrementScore();
-        //     }
-        // });
+
         accumulator -= fixedTimeStep;
     }
 

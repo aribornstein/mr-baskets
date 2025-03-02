@@ -56,43 +56,58 @@ export class ScoreboardManager {
 
     placeScoreboard(roomBoundary) {
         const camPos = getCamera().position;
-
+        const camDir = new THREE.Vector3(0, 0, -1).transformDirection(getCamera().matrixWorld); // Get camera's forward direction
+    
         let nearestWall = null;
         let minDist = Infinity;
         let pos = new THREE.Vector3();
         let quat = new THREE.Quaternion();
-
-        // Check distances to each wall
-        const distMinX = Math.abs(camPos.x - roomBoundary.min.x);
-        const distMaxX = Math.abs(camPos.x - roomBoundary.max.x);
-        const distMinZ = Math.abs(camPos.z - roomBoundary.min.z);
-        const distMaxZ = Math.abs(camPos.z - roomBoundary.max.z);
-
-        if (distMinX < minDist) {
-            minDist = distMinX;
-            nearestWall = "minX";
-            pos.set(roomBoundary.min.x - 0.1, camPos.y + 1.5, camPos.z);
-            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-        }
-        if (distMaxX < minDist) {
-            minDist = distMaxX;
-            nearestWall = "maxX";
-            pos.set(roomBoundary.max.x + 0.1, camPos.y + 1.5, camPos.z);
-            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
-        }
-        if (distMinZ < minDist) {
-            minDist = distMinZ;
-            nearestWall = "minZ";
-            pos.set(camPos.x, camPos.y + 1.5, roomBoundary.min.z - 0.1);
-            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
-        }
-        if (distMaxZ < minDist) {
-            minDist = distMaxZ;
-            nearestWall = "maxZ";
-            pos.set(camPos.x, camPos.y + 1.5, roomBoundary.max.z + 0.1);
-            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-        }
-
+    
+        // Check distances and angles to each wall
+        const walls = [
+            { name: "minX", position: new THREE.Vector3(roomBoundary.min.x, camPos.y, camPos.z), normal: new THREE.Vector3(1, 0, 0) },
+            { name: "maxX", position: new THREE.Vector3(roomBoundary.max.x, camPos.y, camPos.z), normal: new THREE.Vector3(-1, 0, 0) },
+            { name: "minZ", position: new THREE.Vector3(camPos.x, camPos.y, roomBoundary.min.z), normal: new THREE.Vector3(0, 0, 1) },
+            { name: "maxZ", position: new THREE.Vector3(camPos.x, camPos.y, roomBoundary.max.z), normal: new THREE.Vector3(0, 0, -1) }
+        ];
+    
+        walls.forEach(wall => {
+            const dist = camPos.distanceTo(wall.position);
+            const directionToWall = new THREE.Vector3().subVectors(wall.position, camPos).normalize();
+            const dotProduct = camDir.dot(directionToWall); // Dot product of camera direction and direction to wall
+    
+            // Check if the wall is in front of the camera (dotProduct > 0) and if it's the closest so far
+            if (dotProduct > 0 && dist < minDist) {
+                minDist = dist;
+                nearestWall = wall.name;
+                pos.copy(wall.position);
+    
+                // Offset the position and rotation based on the wall
+                switch (wall.name) {
+                    case "minX":
+                        pos.x -= 0.1;
+                        pos.y = camPos.y + 1.5;
+                        quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+                        break;
+                    case "maxX":
+                        pos.x += 0.1;
+                        pos.y = camPos.y + 1.5;
+                        quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+                        break;
+                    case "minZ":
+                        pos.z -= 0.1;
+                        pos.y = camPos.y + 1.5;
+                        quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
+                        break;
+                    case "maxZ":
+                        pos.z += 0.1;
+                        pos.y = camPos.y + 1.5;
+                        quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+                        break;
+                }
+            }
+        });
+    
         if (nearestWall) {
             this.scoreboard.setPosition(pos, quat);
         }

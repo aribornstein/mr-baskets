@@ -29,6 +29,9 @@ async function initGame() {
         scoreboardManager = new ScoreboardManager(state);
         state.scoreboardCreated = true;
     }
+    else {
+        scoreboardManager.startShotClock();
+    }
 
     // Setup RealityAccelerator for plane/mesh detection
     ratk = new RealityAccelerator(getRenderer().xr);

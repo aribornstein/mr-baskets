@@ -82,26 +82,26 @@ export class ScoreboardManager {
                     minDist = dist;
                     nearestWall = wall.name;
                     pos.copy(wall.position);
-    
+                
                     switch (wall.name) {
                         case "minX":
                             pos.x -= 0.1;
-                            pos.y = camPos.y + 1.5;
+                            pos.y = this.state.floorOffset + 2.0; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
                             break;
                         case "maxX":
                             pos.x += 0.1;
-                            pos.y = camPos.y + 1.5;
+                            pos.y = this.state.floorOffset + 2.0; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
                             break;
                         case "minZ":
                             pos.z -= 0.1;
-                            pos.y = camPos.y + 1.5;
+                            pos.y = this.state.floorOffset + 2.0; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
                             break;
                         case "maxZ":
                             pos.z += 0.1;
-                            pos.y = camPos.y + 1.5;
+                            pos.y = this.state.floorOffset + 2.0; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
                             break;
                     }

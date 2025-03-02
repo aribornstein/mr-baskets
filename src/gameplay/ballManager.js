@@ -65,11 +65,13 @@ function onGrab(event, controller) {
     return;
   }
   if (!state.isHoldingBall) {
+    if (ballCollider){
+      getWorld().removeCollider(ballCollider);
+      ballCollider = null;
+    }
     if (ballRigidBody) {
       getWorld().removeRigidBody(ballRigidBody);
-      getWorld().removeCollider(ballCollider);
       ballRigidBody = null;
-      ballCollider = null;
     }
     if (basketballMesh.parent) {
       basketballMesh.parent.remove(basketballMesh);

@@ -81,9 +81,9 @@ function animate() {
         }
         controller.userData.prevPos = currentPos.clone();
 
-        if (controller.gamepad && controller.gamepad.buttons) {
-            for (let i = 0; i < controller.gamepad.buttons.length; i++) {
-                if (controller.gamepad.buttons[i].pressed) {
+        if (controller.userData.inputSource.gamepad && controller.userData.inputSource.gamepad.buttons) {
+            for (let i = 0; i < userData.inputSource.gamepad.buttons.length; i++) {
+                if (controller.userData.inputSource.gamepad.buttons[i].pressed) {
                     console.log("Button " + i + " is pressed on controller", controller);
                     // Add your logic here for when a button is pressed
                 }

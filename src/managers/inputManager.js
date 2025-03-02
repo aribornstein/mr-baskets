@@ -13,12 +13,16 @@ export function initInputManager(state) {
     controller.userData.velocity = new THREE.Vector3();
     controller.addEventListener("connected", (event) => {
       controller.userData.handedness = event.data.handedness;
+      if (event.data && event.data.gamepad) {
+        controller.userData.inputSource = event.data;
+      }
       gltfLoader(controller.userData.handedness)
         .then((handModel) => {
           const handWrapper = new THREE.Group();
           handModel.rotation.set(Math.PI / 2, 0, 0);
           handWrapper.add(handModel);
           controller.add(handWrapper);
+
         })
         .catch((error) => console.error("Error loading hand model:", error));
     });

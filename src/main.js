@@ -147,6 +147,12 @@ function resetGame() {
     scoreboardManager.scoreboard.score = 0;
     scoreboardManager.scoreboard.updateTexture();
 
+    // Clear controller velocities
+    getControllers().forEach(controller => {
+        controller.userData.velocity = new THREE.Vector3();
+        controller.userData.prevPos = null; // Reset prevPos
+    });
+
     // Re-initialize the game
     initGame();
 }

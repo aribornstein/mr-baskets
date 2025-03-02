@@ -57,6 +57,7 @@ function animate() {
         stepPhysics(); // Use the new stepPhysics function
         const eventQueue = getEventQueue(); // Get the event queue
 
+        // Check for collisions between ball and hoop
         eventQueue.drainCollisionEvents((handle1, handle2, started) => {
             const collider1 = world.getCollider(handle1);
             const collider2 = world.getCollider(handle2);
@@ -71,14 +72,24 @@ function animate() {
         accumulator -= fixedTimeStep;
     }
 
-    // Update controller velocities
     getControllers().forEach(controller => {
+        // Update controller velocities
         const currentPos = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
         if (controller.userData.prevPos) {
             const velocity = new THREE.Vector3().subVectors(currentPos, controller.userData.prevPos).divideScalar(delta);
             controller.userData.velocity.copy(velocity);
         }
         controller.userData.prevPos = currentPos.clone();
+
+        if (controller.gamepad && controller.gamepad.buttons) {
+            for (let i = 0; i < controller.gamepad.buttons.length; i++) {
+                if (controller.gamepad.buttons[i].pressed) {
+                    console.log("Button " + i + " is pressed on controller", controller);
+                    // Add your logic here for when a button is pressed
+                }
+            }
+        }
+
     });
 
     // Update RealityAccelerator

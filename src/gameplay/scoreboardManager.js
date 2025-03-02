@@ -110,7 +110,7 @@ export class ScoreboardManager {
         });
     
         if (nearestWall) {
-            pos.y = state.floorOffset + 2.5; // Set a fixed height above the floor
+            pos.y = state.floorOffset + 2.5; // Set a fixed height above the floor replace this something relative to wall height
             this.scoreboard.setPosition(pos, quat);
         }
     }

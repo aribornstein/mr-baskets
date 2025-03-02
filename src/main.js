@@ -83,9 +83,8 @@ function animate() {
 
         if (controller.userData.inputSource && controller.userData.inputSource.gamepad && controller.userData.inputSource.gamepad.buttons) {
             for (let i = 0; i < controller.userData.inputSource.gamepad.buttons.length; i++) {
-                if (controller.userData.inputSource.gamepad.buttons[i].pressed) {
-                    console.log("Button " + i + " is pressed on controller", controller);
-                    // Add your logic here for when a button is pressed
+                if (state.gameOver && controller.userData.inputSource.gamepad.buttons[4].pressed) {
+                    resetGame();
                 }
             }
         }

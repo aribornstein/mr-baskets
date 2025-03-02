@@ -10,10 +10,12 @@ import { registerBallInput, updateBall } from "./gameplay/ballManager.js";
 import { RealityAccelerator } from "ratk";
 import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { isBasket } from "./gameplay/hoopManager.js";
+import { removeBall } from "./gameplay/ballManager.js";
+import { removeHoop } from "./gameplay/hoopManager.js";
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
 let ratk;
-let scoreboardManager; // Add this line
+let scoreboardManager;
 let world;
 
 async function initGame() {
@@ -22,7 +24,7 @@ async function initGame() {
     initSceneManager();
     registerBallInput(state);
     initInputManager(state);
-    scoreboardManager = new ScoreboardManager(state); // Add this line
+    scoreboardManager = new ScoreboardManager(state);
 
     // Setup RealityAccelerator for plane/mesh detection
     ratk = new RealityAccelerator(getRenderer().xr);
@@ -33,6 +35,15 @@ async function initGame() {
     
     // Get the world 
     world = getWorld();
+
+    // Listen for game over event
+    eventBus.on("gameOver", () => {
+        console.log("Game Over - Resetting Game");
+        state.gameOver = true;
+        scoreboardManager.scoreboard.updateTexture(); // Update scoreboard to show game over
+        removeBall(); // Remove ball when game is over
+        removeHoop(); // Remove hoop when game is over
+    });
 
     // Start the render loop
     getRenderer().setAnimationLoop(animate);
@@ -97,3 +108,25 @@ document.getElementById("ar-button").addEventListener("click", async () => {
         console.error("Failed to start AR session:", err);
     }
 });
+
+function resetGame() {
+    // Reset game state
+    state.gameOver = false;
+    state.floorOffset = 0;
+    state.floorConfigured = false;
+    state.groundCreated = false;
+    
+    state.ballCreated = false;
+    state.hoopCreated = false;
+    state.wallsCreated = false;
+    state.roomBoundary = null;
+    state.isHoldingBall = false;
+
+    // Reset scoreboard
+    scoreboardManager.resetShotClock();
+    scoreboardManager.scoreboard.score = 0;
+    scoreboardManager.scoreboard.updateTexture();
+
+    // Re-initialize the game
+    initGame();
+}

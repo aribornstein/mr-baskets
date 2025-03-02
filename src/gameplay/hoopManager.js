@@ -131,3 +131,35 @@ export function isBasket(collider1, collider2) {
 
   return false;
 }
+
+export function removeHoop() {
+    const world = getWorld();
+    if (hoopMesh) {
+        getScene().remove(hoopMesh);
+        hoopMesh = null;
+    }
+    if (backboardMesh) {
+        getScene().remove(backboardMesh);
+        backboardMesh = null;
+    }
+    if (netMesh) {
+        getScene().remove(netMesh);
+        netMesh = null;
+    }
+    if (hoopBody) {
+        world.removeRigidBody(hoopBody);
+        hoopBody = null;
+    }
+    if (boardBody) {
+        world.removeRigidBody(boardBody);
+        boardBody = null;
+    }
+    if (netBody) {
+        world.removeRigidBody(netBody);
+        netBody = null;
+    }
+    if (sensor){
+        world.removeCollider(sensor);
+        sensor = null;
+    }
+}

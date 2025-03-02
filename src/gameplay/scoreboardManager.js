@@ -18,13 +18,13 @@ const MIN_FONT_SIZE = 10;
 const SCOREBOARD_BACKGROUND_COLOR = "rgba(0, 0, 0, 0.7)";
 const SCOREBOARD_TEXT_COLOR = "#ffffff";
 const SCOREBOARD_POSITION_OFFSET = 0.1;
+const GAME_OVER_TEXT = "Game Over! Play Again?";
 
 export class Scoreboard {
     constructor() {
         this.score = 0;
-        this.shotClock = SHOT_CLOCK_INITIAL; // Initialize shot clock to 24 seconds
-        this.shotClockInterval = null; // Interval for shot clock countdown
-        // Create an offscreen canvas to render text
+        this.shotClock = SHOT_CLOCK_INITIAL;
+        this.shotClockInterval = null;
         this.canvas = document.createElement("canvas");
         this.canvas.width = CANVAS_WIDTH;
         this.canvas.height = CANVAS_HEIGHT;
@@ -33,8 +33,7 @@ export class Scoreboard {
         const material = new THREE.MeshStandardMaterial({ map: this.texture, transparent: true, side: THREE.DoubleSide });
         const geometry = new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT);
         this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.frustumCulled = false; // Disable frustum culling
-        // Adjust scale – tweak as needed
+        this.mesh.frustumCulled = false;
         this.updateTexture();
         addObject(this.mesh);
     }
@@ -43,27 +42,32 @@ export class Scoreboard {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.context.fillStyle = SCOREBOARD_BACKGROUND_COLOR;
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
-        const maxWidth = this.canvas.width - SCOREBOARD_PADDING * 2; // Padding of 20 on each side
-    
-        const scoreText = `Score: ${this.score}`;
-        const shotClockText = `Shot Clock: ${this.shotClock}`;
-    
+
+        const maxWidth = this.canvas.width - SCOREBOARD_PADDING * 2;
+
         let fontSize = MAX_FONT_SIZE;
         this.context.font = `${fontSize}px Arial`;
-    
-        while (this.context.measureText(scoreText).width > maxWidth || this.context.measureText(shotClockText).width > maxWidth) {
-            fontSize--;
-            if (fontSize < MIN_FONT_SIZE) {
-                fontSize = MIN_FONT_SIZE;
-                break;
-            }
-            this.context.font = `${fontSize}px Arial`;
-        }
-    
         this.context.fillStyle = SCOREBOARD_TEXT_COLOR;
-        this.context.fillText(scoreText, SCOREBOARD_PADDING, 50);
-        this.context.fillText(shotClockText, SCOREBOARD_PADDING, 100);
+
+        if (state.gameOver) {
+            this.context.font = `${fontSize}px Arial`;
+            this.context.fillText(GAME_OVER_TEXT, SCOREBOARD_PADDING, this.canvas.height / 2);
+        } else {
+            const scoreText = `Score: ${this.score}`;
+            const shotClockText = `Shot Clock: ${this.shotClock}`;
+
+            while (this.context.measureText(scoreText).width > maxWidth || this.context.measureText(shotClockText).width > maxWidth) {
+                fontSize--;
+                if (fontSize < MIN_FONT_SIZE) {
+                    fontSize = MIN_FONT_SIZE;
+                    break;
+                }
+                this.context.font = `${fontSize}px Arial`;
+            }
+
+            this.context.fillText(scoreText, SCOREBOARD_PADDING, 50);
+            this.context.fillText(shotClockText, SCOREBOARD_PADDING, 100);
+        }
         this.texture.needsUpdate = true;
     }
 
@@ -72,8 +76,6 @@ export class Scoreboard {
         this.updateTexture();
     }
 
-    // Places the scoreboard on a wall.
-    // pos is a THREE.Vector3 and quat a THREE.Quaternion representing the wall's orientation.
     setPosition(pos, quat) {
         this.mesh.position.copy(pos);
         this.mesh.quaternion.copy(quat);
@@ -87,7 +89,8 @@ export class Scoreboard {
                 this.shotClock--;
                 this.updateTexture();
             } else {
-                clearInterval(this.shotClockInterval);
+                this.stopShotClock();
+                eventBus.emit("gameOver");
             }
         }, SHOT_CLOCK_INTERVAL_MS);
     }
@@ -116,34 +119,33 @@ export class ScoreboardManager {
     placeScoreboard(roomBoundary) {
         const camPos = getCamera().position;
         const camDir = new THREE.Vector3(0, 0, -1).transformDirection(getCamera().matrixWorld).normalize();
-    
+
         let nearestWall = null;
         let minDist = Infinity;
         let maxDotProduct = -Infinity;
         let pos = new THREE.Vector3();
         let quat = new THREE.Quaternion();
-    
+
         const walls = [
             { name: "minX", position: new THREE.Vector3(roomBoundary.min.x, roomBoundary.max.y / 2, camPos.z), normal: new THREE.Vector3(1, 0, 0) },
             { name: "maxX", position: new THREE.Vector3(roomBoundary.max.x, roomBoundary.max.y / 2, camPos.z), normal: new THREE.Vector3(-1, 0, 0) },
             { name: "minZ", position: new THREE.Vector3(camPos.x, roomBoundary.max.y / 2, roomBoundary.min.z), normal: new THREE.Vector3(0, 0, 1) },
             { name: "maxZ", position: new THREE.Vector3(camPos.x, roomBoundary.max.y / 2, roomBoundary.max.z), normal: new THREE.Vector3(0, 0, -1) }
         ];
-    
+
         walls.forEach(wall => {
             const directionToWall = new THREE.Vector3().subVectors(wall.position, camPos).normalize();
             const dotProduct = camDir.dot(directionToWall);
-    
-            // Check if the wall is in front of the camera (dotProduct > 0)
+
             if (dotProduct > 0) {
                 const dist = camPos.distanceTo(wall.position);
-    
+
                 if (dotProduct > maxDotProduct || (dotProduct === maxDotProduct && dist < minDist)) {
                     maxDotProduct = dotProduct;
                     minDist = dist;
                     nearestWall = wall.name;
                     pos.copy(wall.position);
-                
+
                     switch (wall.name) {
                         case "minX":
                             pos.x -= SCOREBOARD_POSITION_OFFSET;
@@ -165,9 +167,9 @@ export class ScoreboardManager {
                 }
             }
         });
-    
+
         if (nearestWall) {
-            pos.y = state.floorOffset + SCOREBOARD_HEIGHT_ABOVE_FLOOR; // Set a fixed height above the floor replace this something relative to wall height
+            pos.y = state.floorOffset + SCOREBOARD_HEIGHT_ABOVE_FLOOR;
             this.scoreboard.setPosition(pos, quat);
         }
     }

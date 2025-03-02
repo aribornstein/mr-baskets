@@ -13,6 +13,6 @@ export const state = {
     HOOP_HEIGHT: 1.8,
     // Callbacks for input events
     onGrab: null,
-    onRelease: null
+    onRelease: null,
+    gameOver: false
   };
-  

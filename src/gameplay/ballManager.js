@@ -117,3 +117,19 @@ function onRelease(event, controller) {
     ballRigidBody.setLinvel({ x: throwVelocity.x, y: throwVelocity.y, z: throwVelocity.z }, true);
   }
 }
+
+export function removeBall() {
+  const world = getWorld();
+  if (basketballMesh) {
+    getScene().remove(basketballMesh);
+    basketballMesh = null;
+  }
+  if (ballCollider){
+    world.removeCollider(ballCollider);
+    ballCollider = null;
+  }
+  if (ballRigidBody) {
+    world.removeRigidBody(ballRigidBody);
+    ballRigidBody = null;
+  }
+}

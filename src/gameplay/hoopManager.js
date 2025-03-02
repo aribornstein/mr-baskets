@@ -10,6 +10,8 @@ let backboardMesh = null;
 let netMesh = null;
 let hoopBody = null, boardBody = null, netBody = null;
 let sensor;
+let sensorCooldown = false; // Add this line to define sensorCooldown
+
 
 export function createHoopPhysics(pos) {
   const world = getWorld();

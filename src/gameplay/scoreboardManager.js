@@ -88,22 +88,18 @@ export class ScoreboardManager {
                     switch (wall.name) {
                         case "minX":
                             pos.x -= 0.1;
-                            pos.y = roomBoundary.max.y / 2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
                             break;
                         case "maxX":
                             pos.x += 0.1;
-                            pos.y = roomBoundary.max.y / 2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
                             break;
                         case "minZ":
                             pos.z -= 0.1;
-                            pos.y = roomBoundary.max.y / 2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
                             break;
                         case "maxZ":
                             pos.z += 0.1;
-                            pos.y = roomBoundary.max.y / 2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
                             break;
                     }
@@ -112,6 +108,7 @@ export class ScoreboardManager {
         });
     
         if (nearestWall) {
+            pos.y = state.floorOffset + 2.0; // Set a fixed height above the floor
             this.scoreboard.setPosition(pos, quat);
         }
     }

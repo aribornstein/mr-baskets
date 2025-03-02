@@ -60,25 +60,27 @@ export class ScoreboardManager {
     
         let nearestWall = null;
         let minDist = Infinity;
+        let maxDotProduct = -Infinity;
         let pos = new THREE.Vector3();
         let quat = new THREE.Quaternion();
     
         const walls = [
-            { name: "minX", position: new THREE.Vector3(roomBoundary.min.x, roomBoundary.max.y/2, camPos.z), normal: new THREE.Vector3(1, 0, 0) },
-            { name: "maxX", position: new THREE.Vector3(roomBoundary.max.x, roomBoundary.max.y/2, camPos.z), normal: new THREE.Vector3(-1, 0, 0) },
-            { name: "minZ", position: new THREE.Vector3(camPos.x, roomBoundary.max.y/2, roomBoundary.min.z), normal: new THREE.Vector3(0, 0, 1) },
-            { name: "maxZ", position: new THREE.Vector3(camPos.x, roomBoundary.max.y/2, roomBoundary.max.z), normal: new THREE.Vector3(0, 0, -1) }
+            { name: "minX", position: new THREE.Vector3(roomBoundary.min.x, roomBoundary.max.y / 2, camPos.z), normal: new THREE.Vector3(1, 0, 0) },
+            { name: "maxX", position: new THREE.Vector3(roomBoundary.max.x, roomBoundary.max.y / 2, camPos.z), normal: new THREE.Vector3(-1, 0, 0) },
+            { name: "minZ", position: new THREE.Vector3(camPos.x, roomBoundary.max.y / 2, roomBoundary.min.z), normal: new THREE.Vector3(0, 0, 1) },
+            { name: "maxZ", position: new THREE.Vector3(camPos.x, roomBoundary.max.y / 2, roomBoundary.max.z), normal: new THREE.Vector3(0, 0, -1) }
         ];
     
         walls.forEach(wall => {
             const directionToWall = new THREE.Vector3().subVectors(wall.position, camPos).normalize();
             const dotProduct = camDir.dot(directionToWall);
     
-            // Check if the wall is directly in front of the camera (dotProduct close to 1)
-            if (dotProduct > 0.99) { // Use a threshold close to 1
+            // Check if the wall is in front of the camera (dotProduct > 0)
+            if (dotProduct > 0) {
                 const dist = camPos.distanceTo(wall.position);
     
-                if (dist < minDist) {
+                if (dotProduct > maxDotProduct || (dotProduct === maxDotProduct && dist < minDist)) {
+                    maxDotProduct = dotProduct;
                     minDist = dist;
                     nearestWall = wall.name;
                     pos.copy(wall.position);
@@ -86,22 +88,22 @@ export class ScoreboardManager {
                     switch (wall.name) {
                         case "minX":
                             pos.x -= 0.1;
-                            pos.y = roomBoundary.max.y/2; // Set a fixed height above the floor
+                            pos.y = roomBoundary.max.y / 2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
                             break;
                         case "maxX":
                             pos.x += 0.1;
-                            pos.y = roomBoundary.max.y/2; // Set a fixed height above the floor
+                            pos.y = roomBoundary.max.y / 2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
                             break;
                         case "minZ":
                             pos.z -= 0.1;
-                            pos.y = roomBoundary.max.y/2; // Set a fixed height above the floor
+                            pos.y = roomBoundary.max.y / 2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
                             break;
                         case "maxZ":
                             pos.z += 0.1;
-                            pos.y = roomBoundary.max.y/2; // Set a fixed height above the floor
+                            pos.y = roomBoundary.max.y / 2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
                             break;
                     }

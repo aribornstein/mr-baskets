@@ -18,6 +18,7 @@ let ratk;
 let scoreboardManager;
 let world;
 
+//this belongs in a spawn manager
 function createBallAndHoop(state) {
     // Ball creation relative to the camera
     const camera = getCamera();

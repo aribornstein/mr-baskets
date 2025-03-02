@@ -56,14 +56,13 @@ export class ScoreboardManager {
 
     placeScoreboard(roomBoundary) {
         const camPos = getCamera().position;
-        const camDir = new THREE.Vector3(0, 0, -1).transformDirection(getCamera().matrixWorld); // Get camera's forward direction
+        const camDir = new THREE.Vector3(0, 0, -1).transformDirection(getCamera().matrixWorld).normalize();
     
         let nearestWall = null;
         let minDist = Infinity;
         let pos = new THREE.Vector3();
         let quat = new THREE.Quaternion();
     
-        // Check distances and angles to each wall
         const walls = [
             { name: "minX", position: new THREE.Vector3(roomBoundary.min.x, camPos.y, camPos.z), normal: new THREE.Vector3(1, 0, 0) },
             { name: "maxX", position: new THREE.Vector3(roomBoundary.max.x, camPos.y, camPos.z), normal: new THREE.Vector3(-1, 0, 0) },
@@ -72,38 +71,40 @@ export class ScoreboardManager {
         ];
     
         walls.forEach(wall => {
-            const dist = camPos.distanceTo(wall.position);
             const directionToWall = new THREE.Vector3().subVectors(wall.position, camPos).normalize();
-            const dotProduct = camDir.dot(directionToWall); // Dot product of camera direction and direction to wall
+            const dotProduct = camDir.dot(directionToWall);
     
-            // Check if the wall is in front of the camera (dotProduct > 0) and if it's the closest so far
-            if (dotProduct > 0 && dist < minDist) {
-                minDist = dist;
-                nearestWall = wall.name;
-                pos.copy(wall.position);
+            // Check if the wall is directly in front of the camera (dotProduct close to 1)
+            if (dotProduct > 0.99) { // Use a threshold close to 1
+                const dist = camPos.distanceTo(wall.position);
     
-                // Offset the position and rotation based on the wall
-                switch (wall.name) {
-                    case "minX":
-                        pos.x -= 0.1;
-                        pos.y = camPos.y + 1.5;
-                        quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-                        break;
-                    case "maxX":
-                        pos.x += 0.1;
-                        pos.y = camPos.y + 1.5;
-                        quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
-                        break;
-                    case "minZ":
-                        pos.z -= 0.1;
-                        pos.y = camPos.y + 1.5;
-                        quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
-                        break;
-                    case "maxZ":
-                        pos.z += 0.1;
-                        pos.y = camPos.y + 1.5;
-                        quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-                        break;
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearestWall = wall.name;
+                    pos.copy(wall.position);
+    
+                    switch (wall.name) {
+                        case "minX":
+                            pos.x -= 0.1;
+                            pos.y = camPos.y + 1.5;
+                            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+                            break;
+                        case "maxX":
+                            pos.x += 0.1;
+                            pos.y = camPos.y + 1.5;
+                            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+                            break;
+                        case "minZ":
+                            pos.z -= 0.1;
+                            pos.y = camPos.y + 1.5;
+                            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
+                            break;
+                        case "maxZ":
+                            pos.z += 0.1;
+                            pos.y = camPos.y + 1.5;
+                            quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+                            break;
+                    }
                 }
             }
         });

@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { addObject } from "../managers/sceneManager.js";
 import { getCamera } from "../core/engine.js";
 import { eventBus } from "../core/eventBus.js";
+import { state } from "../managers/stateManager.js";
+
 
 export class Scoreboard {
     constructor() {

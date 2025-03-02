@@ -51,6 +51,7 @@ function animate() {
             if (isBasket(collider1, collider2)) {
                 console.log("Basket made!");
                 scoreboardManager.incrementScore();
+                scoreboardManager.resetShotClock();
             }
 
         });

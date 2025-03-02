@@ -8,6 +8,8 @@ import { state } from "../managers/stateManager.js";
 export class Scoreboard {
     constructor() {
         this.score = 0;
+        this.shotClock = 24; // Initialize shot clock to 24 seconds
+        this.shotClockInterval = null; // Interval for shot clock countdown
         // Create an offscreen canvas to render text
         this.canvas = document.createElement("canvas");
         this.canvas.width = 256;
@@ -29,7 +31,8 @@ export class Scoreboard {
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.context.font = "40px Arial";
         this.context.fillStyle = "#ffffff";
-        this.context.fillText(`Score: ${this.score}`, 20, 70);
+        this.context.fillText(`Score: ${this.score}`, 20, 50);
+        this.context.fillText(`Shot Clock: ${this.shotClock}`, 20, 100); // Add shot clock display
         this.texture.needsUpdate = true;
     }
 
@@ -44,6 +47,28 @@ export class Scoreboard {
         this.mesh.position.copy(pos);
         this.mesh.quaternion.copy(quat);
     }
+
+    startShotClock() {
+        this.shotClock = 24;
+        this.updateTexture();
+        this.shotClockInterval = setInterval(() => {
+            if (this.shotClock > 0) {
+                this.shotClock--;
+                this.updateTexture();
+            } else {
+                clearInterval(this.shotClockInterval);
+            }
+        }, 1000);
+    }
+
+    stopShotClock() {
+        clearInterval(this.shotClockInterval);
+    }
+
+    resetShotClock() {
+        this.shotClock = 24;
+        this.updateTexture();
+    }
 }
 
 export class ScoreboardManager {
@@ -53,6 +78,7 @@ export class ScoreboardManager {
         eventBus.on("roomBoundaryReady", (roomBoundary) => {
             console.log("Placing scoreboard...");
             this.placeScoreboard(roomBoundary);
+            this.startShotClock();
         });
     }
 
@@ -81,7 +107,7 @@ export class ScoreboardManager {
             if (dotProduct > 0) {
                 const dist = camPos.distanceTo(wall.position);
     
-                if (dotProduct > maxDotProduct || (dotProduct === maxDotProduct && dist > minDist)) {
+                if (dotProduct > maxDotProduct || (dotProduct === maxDotProduct && dist < minDist)) {
                     maxDotProduct = dotProduct;
                     minDist = dist;
                     nearestWall = wall.name;
@@ -117,5 +143,17 @@ export class ScoreboardManager {
 
     incrementScore() {
         this.scoreboard.increment();
+    }
+
+    startShotClock() {
+        this.scoreboard.startShotClock();
+    }
+
+    stopShotClock() {
+        this.scoreboard.stopShotClock();
+    }
+
+    resetShotClock() {
+        this.scoreboard.resetShotClock();
     }
 }

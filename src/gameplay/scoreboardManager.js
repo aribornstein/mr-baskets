@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { addObject } from "../managers/sceneManager.js";
+// import { addObject } from "../managers/sceneManager.js";
 import { getCamera } from "../core/engine.js";
 import { eventBus } from "../core/eventBus.js";
 import { state } from "../managers/stateManager.js";
@@ -35,7 +35,7 @@ export class Scoreboard {
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.frustumCulled = false;
         this.updateTexture();
-        addObject(this.mesh);
+        // addObject(this.mesh);
     }
 
     updateTexture() {

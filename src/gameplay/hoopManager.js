@@ -44,7 +44,6 @@ export function createHoopPhysics(pos) {
   const sensorDesc = RAPIER.ColliderDesc.cylinder(sensorThickness, state.HOOP_RADIUS * 0.9)
     .setSensor(true)
     .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
-    .setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w })
     .setRestitution(0.0)
     .setFriction(0.0);
 
@@ -64,6 +63,13 @@ export function createHoopPhysics(pos) {
   const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.6, 0.4, 0.01)
     .setRestitution(0.3)
     .setFriction(0.8);
+    
+    //Orient the backboard
+    const backboardDummy = new THREE.Object3D();
+    backboardDummy.position.copy(pos);
+    backboardDummy.lookAt(getCamera().position);
+    const backboardQuat = backboardDummy.quaternion.clone();
+    boardColliderDesc.setRotation({ x: backboardQuat.x, y: backboardQuat.y, z: backboardQuat.z, w: backboardQuat.w });
   world.createCollider(boardColliderDesc, boardBody);
 }
 
@@ -74,8 +80,17 @@ export function createHoopVisual(pos) {
   const hoopGeometry = new THREE.TorusGeometry(state.HOOP_RADIUS, 0.02, 16, 100);
   const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
   hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
+
+  //Orient the hoop
   hoopMesh.rotation.x = Math.PI / 2;
   hoopMesh.position.copy(pos);
+
+  const dummy = new THREE.Object3D();
+  dummy.position.copy(pos);
+  dummy.lookAt(getCamera().position);
+  hoopMesh.quaternion.copy(dummy.quaternion);
+  
+
   addObject(hoopMesh);
 
   // Backboard visual with multiple layers
@@ -110,7 +125,14 @@ export function createHoopVisual(pos) {
   shooterBoxMesh.position.set(0, 0, 0.002);
 
   backboardMesh.add(mainBoardMesh, topBorderMesh, bottomBorderMesh, leftBorderMesh, rightBorderMesh, shooterBoxMesh);
+  
+  //Orient the backboard
   backboardMesh.position.copy(pos);
+  const backboardDummy = new THREE.Object3D();
+  backboardDummy.position.copy(pos);
+  backboardDummy.lookAt(getCamera().position);
+  backboardMesh.quaternion.copy(backboardDummy.quaternion);
+
   backboardMesh.translateZ(-0.1);
   backboardMesh.translateY(0.1);
   addObject(backboardMesh);

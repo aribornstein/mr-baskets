@@ -64,10 +64,10 @@ export class ScoreboardManager {
         let quat = new THREE.Quaternion();
     
         const walls = [
-            { name: "minX", position: new THREE.Vector3(roomBoundary.min.x, camPos.y, camPos.z), normal: new THREE.Vector3(1, 0, 0) },
-            { name: "maxX", position: new THREE.Vector3(roomBoundary.max.x, camPos.y, camPos.z), normal: new THREE.Vector3(-1, 0, 0) },
-            { name: "minZ", position: new THREE.Vector3(camPos.x, camPos.y, roomBoundary.min.z), normal: new THREE.Vector3(0, 0, 1) },
-            { name: "maxZ", position: new THREE.Vector3(camPos.x, camPos.y, roomBoundary.max.z), normal: new THREE.Vector3(0, 0, -1) }
+            { name: "minX", position: new THREE.Vector3(roomBoundary.min.x, roomBoundary.max.y/2, camPos.z), normal: new THREE.Vector3(1, 0, 0) },
+            { name: "maxX", position: new THREE.Vector3(roomBoundary.max.x, roomBoundary.max.y/2, camPos.z), normal: new THREE.Vector3(-1, 0, 0) },
+            { name: "minZ", position: new THREE.Vector3(camPos.x, roomBoundary.max.y/2, roomBoundary.min.z), normal: new THREE.Vector3(0, 0, 1) },
+            { name: "maxZ", position: new THREE.Vector3(camPos.x, roomBoundary.max.y/2, roomBoundary.max.z), normal: new THREE.Vector3(0, 0, -1) }
         ];
     
         walls.forEach(wall => {
@@ -86,22 +86,22 @@ export class ScoreboardManager {
                     switch (wall.name) {
                         case "minX":
                             pos.x -= 0.1;
-                            pos.y = this.state.floorOffset + 2.0; // Set a fixed height above the floor
+                            pos.y = roomBoundary.max.y/2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
                             break;
                         case "maxX":
                             pos.x += 0.1;
-                            pos.y = this.state.floorOffset + 2.0; // Set a fixed height above the floor
+                            pos.y = roomBoundary.max.y/2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
                             break;
                         case "minZ":
                             pos.z -= 0.1;
-                            pos.y = this.state.floorOffset + 2.0; // Set a fixed height above the floor
+                            pos.y = roomBoundary.max.y/2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0);
                             break;
                         case "maxZ":
                             pos.z += 0.1;
-                            pos.y = this.state.floorOffset + 2.0; // Set a fixed height above the floor
+                            pos.y = roomBoundary.max.y/2; // Set a fixed height above the floor
                             quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
                             break;
                     }

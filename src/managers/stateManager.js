@@ -9,6 +9,7 @@ export const state = {
     scoreboardCreated: false,
     roomBoundary: null,
     isHoldingBall: false,
+    roomSetupComplete: false,
     BALL_RADIUS: 0.12,
     HOOP_RADIUS: 0.3,
     HOOP_HEIGHT: 1.8,

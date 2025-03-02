@@ -36,7 +36,8 @@ export function handleSurfaceAdded(event, state) {
             eventBus.emit("roomBoundaryReady", state.roomBoundary);
         }
     }
-    if (state.groundCreated && state.wallsCreated) {
+    if (state.groundCreated && state.wallsCreated) 
+        state.roomSetupComplete = true;
         eventBus.emit("roomSetupComplete", state);
     }
 }

@@ -94,7 +94,7 @@ function startGame() {
     }
 
     // Create ball and hoop after floor is configured
-    if (state.floorConfigured) {
+    if (state.roomSetupComplete) {
         createBallAndHoop(state);
     }
 }
@@ -173,15 +173,6 @@ document.getElementById("ar-button").addEventListener("click", async () => {
 function resetGame() {
     // Reset game state
     state.gameOver = false;
-    state.floorOffset = 0;
-    state.floorConfigured = false;
-    state.groundCreated = false;
-
-    state.ballCreated = false;
-    state.hoopCreated = false;
-    state.wallsCreated = false;
-    state.roomBoundary = null;
-    state.isHoldingBall = false;
 
     // Reset scoreboard
     scoreboardManager.resetShotClock();

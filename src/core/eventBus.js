@@ -15,5 +15,8 @@ export const eventBus = {
       if (this.events[event]) {
         this.events[event].forEach(listener => listener(payload));
       }
+    },
+    removeAllListeners() {
+      this.events = {};
     }
   };

@@ -126,7 +126,7 @@ export function createHoopVisual(pos) {
 
     //Orient the hoop
     hoopMesh.rotation.x = Math.PI / 2;
-    hoopMesh.position.set(0, -0.2, 0.1); //Position the hoop relative to the backboard
+    hoopMesh.position.set(0, -0.1, 0.1); //Position the hoop relative to the backboard
 
     backboardMesh.add(hoopMesh); // Add the hoop to the backboard
 

@@ -18,7 +18,7 @@ const MIN_FONT_SIZE = 10;
 const SCOREBOARD_BACKGROUND_COLOR = "rgba(0, 0, 0, 0.7)";
 const SCOREBOARD_TEXT_COLOR = "#ffffff";
 const SCOREBOARD_POSITION_OFFSET = 0.1;
-const GAME_OVER_TEXT = "Game Over! Play Again?";
+const GAME_OVER_TEXT = "Game Over! Press the A Button to Play Again!";
 
 export class Scoreboard {
     constructor() {
@@ -44,26 +44,34 @@ export class Scoreboard {
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         const maxWidth = this.canvas.width - SCOREBOARD_PADDING * 2;
-
         let fontSize = MAX_FONT_SIZE;
-        this.context.font = `${fontSize}px Arial`;
         this.context.fillStyle = SCOREBOARD_TEXT_COLOR;
 
+        const adjustFontSize = (text) => {
+            let currentFontSize = fontSize;
+            this.context.font = `${currentFontSize}px Arial`;
+            while (this.context.measureText(text).width > maxWidth) {
+                currentFontSize--;
+                if (currentFontSize < MIN_FONT_SIZE) {
+                    currentFontSize = MIN_FONT_SIZE;
+                    break;
+                }
+                this.context.font = `${currentFontSize}px Arial`;
+            }
+            return currentFontSize;
+        };
+
         if (state.gameOver) {
+            fontSize = adjustFontSize(GAME_OVER_TEXT);
+            this.context.fillStyle = "red";
             this.context.font = `${fontSize}px Arial`;
             this.context.fillText(GAME_OVER_TEXT, SCOREBOARD_PADDING, this.canvas.height / 2);
         } else {
             const scoreText = `Score: ${this.score}`;
             const shotClockText = `Shot Clock: ${this.shotClock}`;
 
-            while (this.context.measureText(scoreText).width > maxWidth || this.context.measureText(shotClockText).width > maxWidth) {
-                fontSize--;
-                if (fontSize < MIN_FONT_SIZE) {
-                    fontSize = MIN_FONT_SIZE;
-                    break;
-                }
-                this.context.font = `${fontSize}px Arial`;
-            }
+            fontSize = Math.min(adjustFontSize(scoreText), adjustFontSize(shotClockText));
+            this.context.font = `${fontSize}px Arial`;
 
             this.context.fillText(scoreText, SCOREBOARD_PADDING, 50);
             this.context.fillText(shotClockText, SCOREBOARD_PADDING, 100);

@@ -8,9 +8,9 @@ import { handleSurfaceAdded } from "./managers/surfaceManager.js";
 import { state } from "./managers/stateManager.js";
 import { RealityAccelerator } from "ratk";
 import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
-import { createBallAndHoop } from "./managers/spawnManager.js";
-import {registerBallInput, updateBall, removeBall, createBallPhysics, createBallVisual } from "./gameplay/ballManager.js";
-import { isBasket, removeHoop, createHoopPhysics, createHoopVisual } from "./gameplay/hoopManager.js";
+import { createBallAndHoop, removeBallAndHoop } from "./managers/spawnManager.js";
+import {registerBallInput, updateBall } from "./gameplay/ballManager.js";
+import { isBasket } from "./gameplay/hoopManager.js";
 
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
@@ -39,8 +39,7 @@ async function initGame() {
         console.log("Game Over - Resetting Game");
         state.gameOver = true;
         scoreboardManager.scoreboard.updateTexture(); // Update scoreboard to show game over
-        removeBall(); // Remove ball when game is over
-        removeHoop(); // Remove hoop when game is over
+        removeBallAndHoop(state);
     });
 
     eventBus.on("roomSetupComplete", (state) => {

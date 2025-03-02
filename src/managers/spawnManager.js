@@ -1,11 +1,10 @@
 // src/managers/spawnManager.js
 import * as THREE from "three";
 import { getCamera } from "../core/engine.js";
-import { createBallPhysics, createBallVisual } from "../gameplay/ballManager.js";
-import { createHoopPhysics, createHoopVisual } from "../gameplay/hoopManager.js";
+import { createBallPhysics, createBallVisual, removeBall } from "../gameplay/ballManager.js";
+import { createHoopPhysics, createHoopVisual, removeHoop } from "../gameplay/hoopManager.js";
 
-export function createBallAndHoop(state) {
-    // Ball creation relative to the camera
+function createBall(state) {
     const camera = getCamera();
     const ballOffset = new THREE.Vector3(0, 0, -1);
     ballOffset.applyQuaternion(camera.quaternion);
@@ -18,8 +17,11 @@ export function createBallAndHoop(state) {
     createBallPhysics(ballPos);
     createBallVisual(ballPos);
     state.ballCreated = true;
+    return ballPos;
+}
 
-    // Hoop creation relative to the camera
+function createHoop(state) {
+    const camera = getCamera();
     const hoopOffset = new THREE.Vector3(0, 0, -2.5);
     hoopOffset.applyQuaternion(camera.quaternion);
     const hoopPos = camera.position.clone().add(hoopOffset);
@@ -31,5 +33,19 @@ export function createBallAndHoop(state) {
     createHoopPhysics(hoopPos);
     createHoopVisual(hoopPos);
     state.hoopCreated = true;
+    return hoopPos
+}
+
+export function createBallAndHoop(state) {
+    createBall(state)
+    createHoop(state)
     console.log("Ball and hoop created relative to the camera within room bounds.");
+}
+
+export function removeBallAndHoop(state) {
+    removeBall();
+    removeHoop();
+    state.ballCreated = false;
+    state.hoopCreated = false;
+    console.log("Ball and hoop removed.");
 }

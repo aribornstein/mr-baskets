@@ -25,7 +25,10 @@ async function initGame() {
     initSceneManager();
     registerBallInput(state);
     initInputManager(state);
-    scoreboardManager = new ScoreboardManager(state);
+    if (!state.scoreboardCreated) {
+        scoreboardManager = new ScoreboardManager(state);
+        state.scoreboardCreated = true;
+    }
 
     // Setup RealityAccelerator for plane/mesh detection
     ratk = new RealityAccelerator(getRenderer().xr);
@@ -132,6 +135,9 @@ function resetGame() {
     state.wallsCreated = false;
     state.roomBoundary = null;
     state.isHoldingBall = false;
+
+    // Remove all events
+    eventBus.removeAllListeners();
 
     // Reset scoreboard
     scoreboardManager.resetShotClock();

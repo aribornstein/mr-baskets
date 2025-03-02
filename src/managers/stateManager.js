@@ -6,6 +6,7 @@ export const state = {
     ballCreated: false,
     hoopCreated: false,
     wallsCreated: false,
+    scoreboardCreated: false,
     roomBoundary: null,
     isHoldingBall: false,
     BALL_RADIUS: 0.12,

@@ -3,12 +3,12 @@ import * as THREE from "three";
 import { eventBus } from "./core/eventBus.js";
 import { initEngine, getRenderer, getScene, getCamera } from "./core/engine.js";
 import { initPhysics, getWorld, getEventQueue, stepPhysics } from "./core/physics.js";
-import { initSceneManager } from "./managers/sceneManager.js";
 import { initInputManager, getControllers } from "./managers/inputManager.js";
 import { handleSurfaceAdded } from "./managers/surfaceManager.js";
 import { state } from "./managers/stateManager.js";
 import { RealityAccelerator } from "ratk";
 import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
+import { createBallAndHoop } from "./managers/spawnManager.js";
 import {registerBallInput, updateBall, removeBall, createBallPhysics, createBallVisual } from "./gameplay/ballManager.js";
 import { isBasket, removeHoop, createHoopPhysics, createHoopVisual } from "./gameplay/hoopManager.js";
 
@@ -18,41 +18,9 @@ let ratk;
 let scoreboardManager;
 let world;
 
-//this belongs in a spawn manager
-function createBallAndHoop(state) {
-    // Ball creation relative to the camera
-    const camera = getCamera();
-    const ballOffset = new THREE.Vector3(0, 0, -1);
-    ballOffset.applyQuaternion(camera.quaternion);
-    const ballPos = camera.position.clone().add(ballOffset);
-    ballPos.y = state.BALL_RADIUS + state.floorOffset;
-    if (state.roomBoundary) {
-        ballPos.x = THREE.MathUtils.clamp(ballPos.x, state.roomBoundary.min.x + state.BALL_RADIUS, state.roomBoundary.max.x - state.BALL_RADIUS);
-        ballPos.z = THREE.MathUtils.clamp(ballPos.z, state.roomBoundary.min.z + state.BALL_RADIUS, state.roomBoundary.max.z - state.BALL_RADIUS);
-    }
-    createBallPhysics(ballPos);
-    createBallVisual(ballPos);
-    state.ballCreated = true;
-
-    // Hoop creation relative to the camera
-    const hoopOffset = new THREE.Vector3(0, 0, -2.5);
-    hoopOffset.applyQuaternion(camera.quaternion);
-    const hoopPos = camera.position.clone().add(hoopOffset);
-    hoopPos.y = state.HOOP_HEIGHT + state.floorOffset;
-    if (state.roomBoundary) {
-        hoopPos.x = THREE.MathUtils.clamp(hoopPos.x, state.roomBoundary.min.x + state.HOOP_RADIUS, state.roomBoundary.max.x - state.HOOP_RADIUS);
-        hoopPos.z = THREE.MathUtils.clamp(hoopPos.z, state.roomBoundary.min.z + state.HOOP_RADIUS, state.roomBoundary.max.z - state.HOOP_RADIUS);
-    }
-    createHoopPhysics(hoopPos);
-    createHoopVisual(hoopPos);
-    state.hoopCreated = true;
-    console.log("Ball and hoop created relative to the camera within room bounds.");
-}
-
 async function initGame() {
     clockGame = new THREE.Clock();
     await initPhysics();  // Wait for Rapier to initialize
-    initSceneManager();
     registerBallInput(state);
     initInputManager(state);
 

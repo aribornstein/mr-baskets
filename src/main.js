@@ -7,17 +7,46 @@ import { initSceneManager } from "./managers/sceneManager.js";
 import { initInputManager, getControllers } from "./managers/inputManager.js";
 import { handleSurfaceAdded } from "./managers/surfaceManager.js";
 import { state } from "./managers/stateManager.js";
-import { registerBallInput, updateBall } from "./gameplay/ballManager.js";
 import { RealityAccelerator } from "ratk";
 import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
-import { isBasket } from "./gameplay/hoopManager.js";
-import { removeBall } from "./gameplay/ballManager.js";
-import { removeHoop } from "./gameplay/hoopManager.js";
+import {registerBallInput, updateBall, removeBall, createBallPhysics, createBallVisual } from "./gameplay/ballManager.js";
+import { isBasket, removeHoop, createHoopPhysics, createHoopVisual } from "./gameplay/hoopManager.js";
+
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
 let ratk;
 let scoreboardManager;
 let world;
+
+function createBallAndHoop(state) {
+    // Ball creation relative to the camera
+    const camera = getCamera();
+    const ballOffset = new THREE.Vector3(0, 0, -1);
+    ballOffset.applyQuaternion(camera.quaternion);
+    const ballPos = camera.position.clone().add(ballOffset);
+    ballPos.y = state.BALL_RADIUS + state.floorOffset;
+    if (state.roomBoundary) {
+        ballPos.x = THREE.MathUtils.clamp(ballPos.x, state.roomBoundary.min.x + state.BALL_RADIUS, state.roomBoundary.max.x - state.BALL_RADIUS);
+        ballPos.z = THREE.MathUtils.clamp(ballPos.z, state.roomBoundary.min.z + state.BALL_RADIUS, state.roomBoundary.max.z - state.BALL_RADIUS);
+    }
+    createBallPhysics(ballPos);
+    createBallVisual(ballPos);
+    state.ballCreated = true;
+
+    // Hoop creation relative to the camera
+    const hoopOffset = new THREE.Vector3(0, 0, -2.5);
+    hoopOffset.applyQuaternion(camera.quaternion);
+    const hoopPos = camera.position.clone().add(hoopOffset);
+    hoopPos.y = state.HOOP_HEIGHT + state.floorOffset;
+    if (state.roomBoundary) {
+        hoopPos.x = THREE.MathUtils.clamp(hoopPos.x, state.roomBoundary.min.x + state.HOOP_RADIUS, state.roomBoundary.max.x - state.HOOP_RADIUS);
+        hoopPos.z = THREE.MathUtils.clamp(hoopPos.z, state.roomBoundary.min.z + state.HOOP_RADIUS, state.roomBoundary.max.z - state.HOOP_RADIUS);
+    }
+    createHoopPhysics(hoopPos);
+    createHoopVisual(hoopPos);
+    state.hoopCreated = true;
+    console.log("Ball and hoop created relative to the camera within room bounds.");
+}
 
 async function initGame() {
     clockGame = new THREE.Clock();
@@ -25,13 +54,6 @@ async function initGame() {
     initSceneManager();
     registerBallInput(state);
     initInputManager(state);
-    if (!state.scoreboardCreated) {
-        scoreboardManager = new ScoreboardManager(state);
-        state.scoreboardCreated = true;
-    }
-    else {
-        scoreboardManager.startShotClock();
-    }
 
     // Setup RealityAccelerator for plane/mesh detection
     ratk = new RealityAccelerator(getRenderer().xr);
@@ -52,8 +74,29 @@ async function initGame() {
         removeHoop(); // Remove hoop when game is over
     });
 
+    eventBus.on("roomSetupComplete", (state) => {
+        if (!state.ballCreated && !state.hoopCreated) {
+            createBallAndHoop(state);
+        }
+    });
+
     // Start the render loop
     getRenderer().setAnimationLoop(animate);
+}
+
+function startGame() {
+    if (!state.scoreboardCreated) {
+        scoreboardManager = new ScoreboardManager(state);
+        state.scoreboardCreated = true;
+    }
+    else {
+        scoreboardManager.startShotClock();
+    }
+
+    // Create ball and hoop after floor is configured
+    if (state.floorConfigured) {
+        createBallAndHoop(state);
+    }
 }
 
 function animate() {
@@ -121,6 +164,7 @@ document.getElementById("ar-button").addEventListener("click", async () => {
         getRenderer().xr.setSession(session);
         console.log("AR session started.");
         initGame();
+        startGame();
     } catch (err) {
         console.error("Failed to start AR session:", err);
     }
@@ -139,9 +183,6 @@ function resetGame() {
     state.roomBoundary = null;
     state.isHoldingBall = false;
 
-    // Remove all events
-    eventBus.removeAllListeners();
-
     // Reset scoreboard
     scoreboardManager.resetShotClock();
     scoreboardManager.scoreboard.score = 0;
@@ -150,9 +191,8 @@ function resetGame() {
     // Clear controller velocities
     getControllers().forEach(controller => {
         controller.userData.velocity = new THREE.Vector3();
-        controller.userData.prevPos = null; // Reset prevPos
+        controller.userData.prevPos = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld); // Reset prevPos
     });
 
-    // Re-initialize the game
-    initGame();
+    startGame();
 }

@@ -81,7 +81,7 @@ export class ScoreboardManager {
             if (dotProduct > 0) {
                 const dist = camPos.distanceTo(wall.position);
     
-                if (dotProduct > maxDotProduct || (dotProduct === maxDotProduct && dist < minDist)) {
+                if (dotProduct > maxDotProduct || (dotProduct === maxDotProduct && dist > minDist)) {
                     maxDotProduct = dotProduct;
                     minDist = dist;
                     nearestWall = wall.name;

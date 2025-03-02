@@ -79,7 +79,7 @@ export function createHoopVisual(pos) {
   addObject(hoopMesh);
 
   // Backboard visual with multiple layers
-  const backboardGroup = new THREE.Group();
+  backboardMesh = new THREE.Group();
 
   // Main white backboard
   const mainBoardGeom = new THREE.PlaneGeometry(0.6, 0.4);
@@ -109,11 +109,11 @@ export function createHoopVisual(pos) {
   const shooterBoxMesh = new THREE.Mesh(shooterBoxGeom, borderMat);
   shooterBoxMesh.position.set(0, 0, 0.002);
 
-  backboardGroup.add(mainBoardMesh, topBorderMesh, bottomBorderMesh, leftBorderMesh, rightBorderMesh, shooterBoxMesh);
-  backboardGroup.position.copy(pos);
-  backboardGroup.translateZ(-0.1);
-  backboardGroup.translateY(0.1);
-  addObject(backboardGroup);
+  backboardMesh.add(mainBoardMesh, topBorderMesh, bottomBorderMesh, leftBorderMesh, rightBorderMesh, shooterBoxMesh);
+  backboardMesh.position.copy(pos);
+  backboardMesh.translateZ(-0.1);
+  backboardMesh.translateY(0.1);
+  addObject(backboardMesh);
 }
 
 export function isBasket(collider1, collider2) {

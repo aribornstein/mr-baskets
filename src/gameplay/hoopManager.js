@@ -115,5 +115,17 @@ export function createHoopVisual(pos) {
 }
 
 export function isBasket(collider1, collider2) {
-  return collider1 === sensor || collider2 === sensor;
+  if (sensorCooldown) return false;
+
+  if (collider1 === sensor || collider2 === sensor) {
+    // Start the cooldown
+    sensorCooldown = true;
+    setTimeout(() => {
+      sensorCooldown = false;
+    }, 500); // Cooldown for 500 milliseconds
+
+    return true;
+  }
+
+  return false;
 }

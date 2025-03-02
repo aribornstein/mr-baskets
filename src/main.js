@@ -1,6 +1,6 @@
 // src/main.js
 import * as THREE from "three";
-import { eventBus } from "../core/eventBus.js";
+import { eventBus } from "./core/eventBus.js";
 import { initEngine, getRenderer, getScene, getCamera } from "./core/engine.js";
 import { initPhysics, getWorld, getEventQueue, stepPhysics } from "./core/physics.js";
 import { initSceneManager } from "./managers/sceneManager.js";

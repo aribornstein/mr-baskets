@@ -4,6 +4,7 @@ import { eventBus } from "./core/eventBus.js";
 import { initEngine, getRenderer, getScene, getCamera } from "./core/engine.js";
 import { initPhysics, getWorld, getEventQueue, stepPhysics } from "./core/physics.js";
 import { initInputManager, getControllers } from "./managers/inputManager.js";
+import { initSceneManager } from "./managers/sceneManager.js";
 import { handleSurfaceAdded } from "./managers/surfaceManager.js";
 import { state } from "./managers/stateManager.js";
 import { RealityAccelerator } from "ratk";
@@ -21,6 +22,7 @@ let world;
 async function initGame() {
     clockGame = new THREE.Clock();
     await initPhysics();  // Wait for Rapier to initialize
+    initSceneManager();
     registerBallInput(state);
     initInputManager(state);
 

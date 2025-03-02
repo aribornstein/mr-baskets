@@ -3,7 +3,7 @@ import * as THREE from "three";
 import * as RAPIER from "rapier";
 import { getScene, getCamera } from "../core/engine.js";
 import { getWorld } from "../core/physics.js";
-// import { addObject } from "../managers/sceneManager.js";
+import { addObject } from "../managers/sceneManager.js";
 import { state } from "../managers/stateManager.js";
 
 let basketballMesh = null;
@@ -28,7 +28,7 @@ export function createBallVisual(pos) {
   const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
   basketballMesh = new THREE.Mesh(geometry, material);
   basketballMesh.position.copy(pos);
-  // addObject(basketballMesh);
+  addObject(basketballMesh);
 }
 
 export function updateBall(delta, roomBoundary) {

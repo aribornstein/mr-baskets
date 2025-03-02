@@ -2,7 +2,7 @@ import * as THREE from "three";
 import * as RAPIER from "rapier";
 import { getScene, getCamera } from "../core/engine.js";
 import { getWorld } from "../core/physics.js";
-// import { addObject } from "../managers/sceneManager.js";
+import { addObject } from "../managers/sceneManager.js";
 import { state } from "../managers/stateManager.js";
 
 let hoopMesh = null;
@@ -130,7 +130,7 @@ export function createHoopVisual(pos) {
 
     backboardMesh.add(hoopMesh); // Add the hoop to the backboard
 
-    // addObject(backboardMesh); // Add the backboard (with the hoop) to the scene
+    addObject(backboardMesh); // Add the backboard (with the hoop) to the scene
 }
 
 export function isBasket(collider1, collider2) {

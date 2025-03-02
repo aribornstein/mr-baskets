@@ -33,7 +33,7 @@ async function initGame() {
     ratk.onMeshAdded = (event) => handleSurfaceAdded(event, state);
     getScene().add(ratk.root);
     ratk.root.visible = false;
-    
+
     // Get the world 
     world = getWorld();
 
@@ -81,7 +81,7 @@ function animate() {
         }
         controller.userData.prevPos = currentPos.clone();
 
-        if (controller.userData.inputSource.gamepad && controller.userData.inputSource.gamepad.buttons) {
+        if (controller.userData.inputSource && controller.userData.inputSource.gamepad && controller.userData.inputSource.gamepad.buttons) {
             for (let i = 0; i < userData.inputSource.gamepad.buttons.length; i++) {
                 if (controller.userData.inputSource.gamepad.buttons[i].pressed) {
                     console.log("Button " + i + " is pressed on controller", controller);
@@ -127,7 +127,7 @@ function resetGame() {
     state.floorOffset = 0;
     state.floorConfigured = false;
     state.groundCreated = false;
-    
+
     state.ballCreated = false;
     state.hoopCreated = false;
     state.wallsCreated = false;

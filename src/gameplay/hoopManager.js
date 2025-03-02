@@ -74,68 +74,63 @@ export function createHoopPhysics(pos) {
 }
 
 export function createHoopVisual(pos) {
-  console.log("Creating hoop at:", pos);
+    console.log("Creating hoop at:", pos);
 
-  // Hoop ring visual
-  const hoopGeometry = new THREE.TorusGeometry(state.HOOP_RADIUS, 0.02, 16, 100);
-  const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
-  hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
+    // Backboard visual with multiple layers
+    backboardMesh = new THREE.Group();
 
-  //Orient the hoop
-  hoopMesh.rotation.x = Math.PI / 2;
-  hoopMesh.position.copy(pos);
+    // Main white backboard
+    const mainBoardGeom = new THREE.PlaneGeometry(0.6, 0.4);
+    const mainBoardMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    const mainBoardMesh = new THREE.Mesh(mainBoardGeom, mainBoardMat);
 
-  const dummy = new THREE.Object3D();
-  dummy.position.copy(pos);
-  dummy.lookAt(getCamera().position);
-  hoopMesh.quaternion.copy(dummy.quaternion);
-  
+    // Red border
+    const frameThickness = 0.02;
+    const borderMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
 
-  addObject(hoopMesh);
+    const topBorderGeom = new THREE.PlaneGeometry(0.6, frameThickness);
+    const topBorderMesh = new THREE.Mesh(topBorderGeom, borderMat);
+    topBorderMesh.position.set(0, 0.2, 0.001);
 
-  // Backboard visual with multiple layers
-  backboardMesh = new THREE.Group();
+    const bottomBorderMesh = topBorderMesh.clone();
+    bottomBorderMesh.position.set(0, -0.2, 0.001);
 
-  // Main white backboard
-  const mainBoardGeom = new THREE.PlaneGeometry(0.6, 0.4);
-  const mainBoardMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-  const mainBoardMesh = new THREE.Mesh(mainBoardGeom, mainBoardMat);
+    const sideBorderGeom = new THREE.PlaneGeometry(frameThickness, 0.4);
+    const leftBorderMesh = new THREE.Mesh(sideBorderGeom, borderMat);
+    leftBorderMesh.position.set(-0.3, 0, 0.001);
 
-  // Red border
-  const frameThickness = 0.02;
-  const borderMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    const rightBorderMesh = leftBorderMesh.clone();
+    rightBorderMesh.position.set(0.3, 0, 0.001);
 
-  const topBorderGeom = new THREE.PlaneGeometry(0.6, frameThickness);
-  const topBorderMesh = new THREE.Mesh(topBorderGeom, borderMat);
-  topBorderMesh.position.set(0, 0.2, 0.001);
+    // Shooter's square
+    const shooterBoxGeom = new THREE.PlaneGeometry(0.2, 0.15);
+    const shooterBoxMesh = new THREE.Mesh(shooterBoxGeom, borderMat);
+    shooterBoxMesh.position.set(0, 0, 0.002);
 
-  const bottomBorderMesh = topBorderMesh.clone();
-  bottomBorderMesh.position.set(0, -0.2, 0.001);
+    backboardMesh.add(mainBoardMesh, topBorderMesh, bottomBorderMesh, leftBorderMesh, rightBorderMesh, shooterBoxMesh);
 
-  const sideBorderGeom = new THREE.PlaneGeometry(frameThickness, 0.4);
-  const leftBorderMesh = new THREE.Mesh(sideBorderGeom, borderMat);
-  leftBorderMesh.position.set(-0.3, 0, 0.001);
+    //Orient the backboard
+    backboardMesh.position.copy(pos);
+    const backboardDummy = new THREE.Object3D();
+    backboardDummy.position.copy(pos);
+    backboardDummy.lookAt(getCamera().position);
+    backboardMesh.quaternion.copy(backboardDummy.quaternion);
 
-  const rightBorderMesh = leftBorderMesh.clone();
-  rightBorderMesh.position.set(0.3, 0, 0.001);
+    backboardMesh.translateZ(-0.1);
+    backboardMesh.translateY(0.1);
 
-  // Shooter's square
-  const shooterBoxGeom = new THREE.PlaneGeometry(0.2, 0.15);
-  const shooterBoxMesh = new THREE.Mesh(shooterBoxGeom, borderMat);
-  shooterBoxMesh.position.set(0, 0, 0.002);
+    // Hoop ring visual
+    const hoopGeometry = new THREE.TorusGeometry(state.HOOP_RADIUS, 0.02, 16, 100);
+    const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
+    hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
 
-  backboardMesh.add(mainBoardMesh, topBorderMesh, bottomBorderMesh, leftBorderMesh, rightBorderMesh, shooterBoxMesh);
-  
-  //Orient the backboard
-  backboardMesh.position.copy(pos);
-  const backboardDummy = new THREE.Object3D();
-  backboardDummy.position.copy(pos);
-  backboardDummy.lookAt(getCamera().position);
-  backboardMesh.quaternion.copy(backboardDummy.quaternion);
+    //Orient the hoop
+    hoopMesh.rotation.x = Math.PI / 2;
+    hoopMesh.position.set(0, 0.1, 0.1); //Position the hoop relative to the backboard
 
-  backboardMesh.translateZ(-0.1);
-  backboardMesh.translateY(0.1);
-  addObject(backboardMesh);
+    backboardMesh.add(hoopMesh); // Add the hoop to the backboard
+
+    addObject(backboardMesh); // Add the backboard (with the hoop) to the scene
 }
 
 export function isBasket(collider1, collider2) {

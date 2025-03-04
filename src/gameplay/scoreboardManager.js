@@ -131,11 +131,11 @@ export class Scoreboard {
         // ========== Draw SHOT CLOCK label and number ==========
         ctx.font = "bold 20px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_LABEL;
-        ctx.fillText("SHOT CLOCK", centerX, centerY + 40);
+        ctx.fillText("SHOT CLOCK", centerX, centerY + 60);
 
         ctx.font = "bold 40px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_SHOT_CLOCK;
-        ctx.fillText(String(this.shotClock), centerX, centerY + 80);
+        ctx.fillText(String(this.shotClock), centerX, centerY + 90);
 
         // Update the texture
         this.texture.needsUpdate = true;
@@ -363,7 +363,7 @@ export class ScoreboardManager {
     resetGameClock() {
         this.scoreboard.resetGameClock();
     }
-    
+
     resetShotClock() {
         this.scoreboard.resetShotClock();
     }

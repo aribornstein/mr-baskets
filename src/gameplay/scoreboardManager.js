@@ -33,7 +33,6 @@ export class Scoreboard {
         // Single player: only "homeScore" + "level"
         this.homeScore = 0;
         this.level = 1;
-        this.period = 1;       
         this.gameClock = "00:00";
 
         // Shot clock logic
@@ -104,15 +103,6 @@ export class Scoreboard {
         // ========== Draw LEVEL number ==========
         ctx.fillStyle = COLOR_LEVEL;
         ctx.fillText(String(this.level), centerX + 100, 90);
-
-        // ========== Draw PERIOD label and value (optional) ==========
-        ctx.font = "bold 20px 'DSEG7 Classic', Arial";
-        ctx.fillStyle = COLOR_LABEL;
-        ctx.fillText("PERIOD", centerX, 30);
-
-        ctx.font = "bold 30px 'DSEG7 Classic', Arial";
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(String(this.period), centerX, 60);
 
         // ========== Draw main game clock ==========
         ctx.font = "bold 50px 'DSEG7 Classic', Arial";

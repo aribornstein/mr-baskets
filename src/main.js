@@ -143,6 +143,12 @@ document.getElementById("ar-button").addEventListener("click", async () => {
         console.log("AR session started.");
         initGame();
         startGame();
+
+        // Add event listener for session end
+        session.addEventListener('end', () => {
+            console.log("AR session ended.");
+            stopBackgroundMusic();
+        });
     } catch (err) {
         console.error("Failed to start AR session:", err);
     }

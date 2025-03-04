@@ -56,7 +56,7 @@ function findNewHoopPosition(state) {
     return newHoopPos;
 }
 
-export function moveHoopToNewPosition(state, delay = 500) {
+export function moveHoopToNewPosition(state, delay = 200) {
     const newHoopPos = findNewHoopPosition(state);
     // Wait for the specified delay before moving the hoop
     setTimeout(() => {

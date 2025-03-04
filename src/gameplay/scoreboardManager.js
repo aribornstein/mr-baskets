@@ -348,10 +348,22 @@ export class ScoreboardManager {
         this.scoreboard.startShotClock();
     }
 
+    startGameClock() {
+        this.scoreboard.startGameClock();
+    }
+
+    stopGameClock() {
+        this.scoreboard.stopGameClock();
+    }
+
     stopShotClock() {
         this.scoreboard.stopShotClock();
     }
 
+    resetGameClock() {
+        this.scoreboard.resetGameClock();
+    }
+    
     resetShotClock() {
         this.scoreboard.resetShotClock();
     }

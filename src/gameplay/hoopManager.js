@@ -51,7 +51,7 @@ export function createHoopPhysics(pos) {
   // Apply the same orientation to the sensor as the hoop
   sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
-  const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(
+  const sensorBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
     pos.x,
     pos.y + sensorYOffset,
     pos.z

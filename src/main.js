@@ -10,7 +10,7 @@ import { state } from "./managers/stateManager.js";
 import { RealityAccelerator } from "ratk";
 import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./managers/spawnManager.js";
-import {registerBallInput, updateBall } from "./gameplay/ballManager.js";
+import { registerBallInput, updateBall } from "./gameplay/ballManager.js";
 import { isBasket } from "./gameplay/hoopManager.js";
 import { playBackgroundMusic, stopBackgroundMusic } from "./effects/audioManager.js";
 
@@ -68,9 +68,9 @@ function startGame() {
     }
 
     // Create ball and hoop after floor is configured
-    if (state.roomSetupComplete && !state.gameStarted) { 
+    if (state.roomSetupComplete && !state.gameStarted) {
         createBallAndHoop(state);
-        state.gameStarted = true; 
+        state.gameStarted = true;
     }
 
     playBackgroundMusic(); // Start playing background music
@@ -162,7 +162,7 @@ function resetGame() {
 
     // Reset scoreboard
     scoreboardManager.resetShotClock();
-    scoreboardManager.resetGameClock(); 
+    scoreboardManager.resetGameClock();
     scoreboardManager.scoreboard.score = 0;
     scoreboardManager.scoreboard.updateTexture();
 

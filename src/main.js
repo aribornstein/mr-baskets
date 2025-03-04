@@ -12,6 +12,8 @@ import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { createBallAndHoop, removeBallAndHoop } from "./managers/spawnManager.js";
 import {registerBallInput, updateBall } from "./gameplay/ballManager.js";
 import { isBasket } from "./gameplay/hoopManager.js";
+import { playBackgroundMusic, stopBackgroundMusic } from "./effects/audioManager.js";
+
 
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
@@ -42,6 +44,7 @@ async function initGame() {
         state.gameOver = true;
         scoreboardManager.scoreboard.updateTexture(); // Update scoreboard to show game over
         removeBallAndHoop(state);
+        stopBackgroundMusic(); // Stop
     });
 
     eventBus.on("roomSetupComplete", (state) => {
@@ -67,6 +70,9 @@ function startGame() {
     if (state.roomSetupComplete) {
         createBallAndHoop(state);
     }
+
+    playBackgroundMusic(); // Start playing background music
+
 }
 
 function animate() {

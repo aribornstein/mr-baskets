@@ -37,29 +37,28 @@ export function createHoopPhysics(pos) {
   // -------------------------
   // Sensor for basket detection
   // -------------------------
-  const sensorThickness = 0.0001; // Keep extremely thin
-  const sensorYOffset = -0.02; // Increase the offset to create more separation
+  // Improved sensor creation: very thin horizontal disk slightly below hoop
+  const sensorThickness = 0.0001; // Extremely thin
+  const sensorYOffset = -0.01; // Slightly below hoop center to detect ball passing through
 
-  // Create a ghost object without a physical presence
-  const sensorBodyDesc = RAPIER.RigidBodyDesc.dynamic() // Try dynamic instead of kinematic
-    .setTranslation(pos.x, pos.y + sensorYOffset, pos.z)
-    .setBodyType(RAPIER.RigidBodyType.KinematicPositionBased) // Force kinematic type
-    .setGravityScale(0) // No gravity effect
-    .setLinearDamping(0) // No damping
-    .setAngularDamping(0) // No angular damping
-    .lockTranslations() // Lock all movement
-    .lockRotations(); // Lock all rotation
-
-  const sensorBody = world.createRigidBody(sensorBodyDesc);
-
-  // Use a ball collider instead of a cylinder
-  const sensorDesc = RAPIER.ColliderDesc.ball(state.HOOP_RADIUS * 0.8) // Use 80% of hoop radius
+  const sensorDesc = RAPIER.ColliderDesc.cylinder(sensorThickness, state.HOOP_RADIUS * 0.9)
     .setSensor(true)
     .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
-    .setCollisionGroups(0x0001FFFF) // Group 1, can interact with all groups
+    .setCollisionGroups(0x0001FFFF)
     .setMass(0); // Zero mass
 
-  // Create the collider
+    // .setRestitution(0.0)
+    // .setFriction(0.0);
+    
+  // Apply the same orientation to the sensor as the hoop
+  sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
+
+  const sensorBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+    pos.x,
+    pos.y + sensorYOffset,
+    pos.z
+  );
+  const sensorBody = world.createRigidBody(sensorBodyDesc);
   sensor = world.createCollider(sensorDesc, sensorBody);
 
   // -------------------------

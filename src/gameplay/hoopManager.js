@@ -21,7 +21,22 @@ export function createHoopPhysics(pos) {
   // -------------------------
   const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
   hoopBody = world.createRigidBody(hoopBodyDesc);
-  const ringColliderDesc = RAPIER.ColliderDesc.cylinder(0.02, state.HOOP_RADIUS)
+
+  // Create a torus geometry for the hoop ring
+  const torusGeometry = new THREE.TorusGeometry(state.HOOP_RADIUS, 0.02, 16, 100);
+  const vertices = [];
+  const indices = [];
+
+  // Extract vertices and indices from the torus geometry
+  torusGeometry.attributes.position.array.forEach((v, i) => {
+    vertices.push(v);
+  });
+  torusGeometry.index.array.forEach((i) => {
+    indices.push(i);
+  });
+
+  // Create a trimesh collider for the hoop ring
+  const ringColliderDesc = RAPIER.ColliderDesc.trimesh(vertices, indices)
     .setRestitution(0.5)
     .setFriction(0.8);
 
@@ -45,11 +60,7 @@ export function createHoopPhysics(pos) {
     .setSensor(true)
     .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
     .setCollisionGroups(0x0001FFFF)
-    .setMass(0); // Zero mass
 
-    // .setRestitution(0.0)
-    // .setFriction(0.0);
-    
   // Apply the same orientation to the sensor as the hoop
   sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
@@ -57,7 +68,7 @@ export function createHoopPhysics(pos) {
     pos.x,
     pos.y + sensorYOffset,
     pos.z
-  ).setDominanceGroup(10);;
+  ) // Set dominance group to a higher value
   const sensorBody = world.createRigidBody(sensorBodyDesc);
   sensor = world.createCollider(sensorDesc, sensorBody);
 
@@ -70,12 +81,12 @@ export function createHoopPhysics(pos) {
     .setRestitution(0.3)
     .setFriction(0.8);
     
-    //Orient the backboard
-    const backboardDummy = new THREE.Object3D();
-    backboardDummy.position.copy(pos);
-    backboardDummy.lookAt(getCamera().position);
-    const backboardQuat = backboardDummy.quaternion.clone();
-    boardColliderDesc.setRotation({ x: backboardQuat.x, y: backboardQuat.y, z: backboardQuat.z, w: backboardQuat.w });
+  // Orient the backboard
+  const backboardDummy = new THREE.Object3D();
+  backboardDummy.position.copy(pos);
+  backboardDummy.lookAt(getCamera().position);
+  const backboardQuat = backboardDummy.quaternion.clone();
+  boardColliderDesc.setRotation({ x: backboardQuat.x, y: backboardQuat.y, z: backboardQuat.z, w: backboardQuat.w });
   world.createCollider(boardColliderDesc, boardBody);
 }
 

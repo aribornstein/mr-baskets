@@ -15,7 +15,6 @@ export function createBallPhysics(pos) {
   const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
                   .setCcdEnabled(true)
                   .setTranslation(pos.x, pos.y, pos.z)
-                  .setDominanceGroup(-20); // Set dominance group for the ball
                   
   ballRigidBody = world.createRigidBody(bodyDesc);
   const colliderDesc = RAPIER.ColliderDesc.ball(state.BALL_RADIUS)

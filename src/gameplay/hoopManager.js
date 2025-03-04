@@ -57,7 +57,7 @@ export function createHoopPhysics(pos) {
     pos.x,
     pos.y + sensorYOffset,
     pos.z
-  );
+  ).setDominanceGroup(10);;
   const sensorBody = world.createRigidBody(sensorBodyDesc);
   sensor = world.createCollider(sensorDesc, sensorBody);
 

@@ -46,6 +46,9 @@ export function createHoopPhysics(pos) {
     .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
     .setRestitution(0.0)
     .setFriction(0.0);
+    
+  // Apply the same orientation to the sensor as the hoop
+  sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
   const sensorBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(
     pos.x,
@@ -196,37 +199,36 @@ export function moveHoop(newPos) {
     // Update visual position
     backboardMesh.position.copy(newPos);
 
-    // Update physics position of the hoop
+    // Calculate proper orientation to face camera (same as in createHoopPhysics)
+    const dummy = new THREE.Object3D();
+    dummy.position.copy(newPos);
+    dummy.lookAt(getCamera().position);
+    const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+    const hoopQuat = dummy.quaternion.clone().multiply(correction);
+    
+    // Update both position and orientation of hoop body
     hoopBody.setTranslation(new RAPIER.Vector3(newPos.x, newPos.y, newPos.z));
+    hoopBody.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
-    // Update physics position of the sensor
-    const sensorYOffset = -0.01; // Adjust this value based on your initial setup
-
-    // Calculate the sensor's position relative to the hoop's *original* position
-    const relativeSensorPos = new THREE.Vector3(0, sensorYOffset, 0); // Sensor offset
-
-    // Apply the hoop's rotation to the relative sensor position
-    const hoopQuaternion = new THREE.Quaternion(
-        hoopBody.rotation().x,
-        hoopBody.rotation().y,
-        hoopBody.rotation().z,
-        hoopBody.rotation().w
-    );
-    relativeSensorPos.applyQuaternion(hoopQuaternion);
-
-   // Calculate the absolute position of the sensor
-    const absoluteSensorPos = new RAPIER.Vector3(
-        newPos.x + relativeSensorPos.x,
-        newPos.y + relativeSensorPos.y,
-        newPos.z + relativeSensorPos.z
-    );
-
-    // Get the sensor body and update its translation
-    const sensorBody = sensor.parent(); // Get the rigid body the sensor is attached to
+    // Update sensor position and orientation
+    const sensorYOffset = -0.01;
+    const sensorBodyDesc = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
+    
+    // Get the sensor body and update its translation and rotation
+    const sensorBody = sensor.parent();
     if (sensorBody) {
-        sensorBody.setTranslation(absoluteSensorPos);
+        sensorBody.setTranslation(sensorBodyDesc);
+        sensorBody.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
     }
 
-    // Reorient the hoop to face the camera after moving
-    reorientHoop(newPos);
+    // Update backboard orientation
+    const backboardDummy = new THREE.Object3D();
+    backboardDummy.position.copy(newPos);
+    backboardDummy.lookAt(getCamera().position);
+    backboardMesh.quaternion.copy(backboardDummy.quaternion);
+    
+    // Apply any needed offsets to visual elements
+    backboardMesh.position.copy(newPos);
+    backboardMesh.updateMatrix();
+    backboardMesh.updateMatrixWorld();
 }

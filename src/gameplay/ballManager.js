@@ -121,6 +121,13 @@ function onRelease(event, controller) {
 export function removeBall() {
   const world = getWorld();
   if (basketballMesh) {
+    if (state.isHoldingBall) {
+      // If the ball is held, remove it from the controller first
+      if (basketballMesh.parent) {
+        basketballMesh.parent.remove(basketballMesh);
+      }
+      state.isHoldingBall = false; // Update the state
+    }
     getScene().remove(basketballMesh);
     basketballMesh = null;
   }

@@ -200,9 +200,32 @@ export function moveHoop(newPos) {
     hoopBody.setTranslation(new RAPIER.Vector3(newPos.x, newPos.y, newPos.z));
 
     // Update physics position of the sensor
-    // The sensor's Y offset is relative to the original position, so maintain that
     const sensorYOffset = -0.01; // Adjust this value based on your initial setup
-    sensor.parent().setTranslation(new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z));
+
+    // Calculate the sensor's position relative to the hoop's new position
+    const relativeSensorPos = new THREE.Vector3(0, sensorYOffset, 0); // Sensor offset
+
+    // Apply the hoop's rotation to the relative sensor position
+    const hoopQuaternion = new THREE.Quaternion(
+        hoopBody.rotation().x,
+        hoopBody.rotation().y,
+        hoopBody.rotation().z,
+        hoopBody.rotation().w
+    );
+    relativeSensorPos.applyQuaternion(hoopQuaternion);
+
+    // Calculate the absolute position of the sensor
+    const absoluteSensorPos = new RAPIER.Vector3(
+        newPos.x + relativeSensorPos.x,
+        newPos.y + relativeSensorPos.y,
+        newPos.z + relativeSensorPos.z
+    );
+
+    // Get the sensor body and update its translation
+    const sensorBody = sensor.parent(); // Get the rigid body the sensor is attached to
+    if (sensorBody) {
+        sensorBody.setTranslation(absoluteSensorPos);
+    }
 
     // Reorient the hoop to face the camera after moving
     reorientHoop(newPos);

@@ -92,6 +92,7 @@ function animate() {
                 console.log("Basket made!");
                 scoreboardManager.incrementScore();
                 scoreboardManager.resetShotClock();
+                spawnManager.moveHoopToNewPosition(state);
             }
 
         });

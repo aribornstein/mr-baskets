@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { getCamera } from "../core/engine.js";
 import { createBallPhysics, createBallVisual, removeBall } from "../gameplay/ballManager.js";
-import { createHoopPhysics, createHoopVisual, removeHoop } from "../gameplay/hoopManager.js";
+import { createHoopPhysics, createHoopVisual, removeHoop, moveHoop } from "../gameplay/hoopManager.js";
 
 function createBall(state) {
     const camera = getCamera();
@@ -36,6 +36,32 @@ function createHoop(state) {
     return hoopPos
 }
 
+function findNewHoopPosition(state) {
+    const camera = getCamera();
+    let newHoopPos = new THREE.Vector3();
+
+    // Generate a random position within the room boundaries
+    if (state.roomBoundary) {
+        const x = THREE.MathUtils.randFloat(state.roomBoundary.min.x + state.HOOP_RADIUS, state.roomBoundary.max.x - state.HOOP_RADIUS);
+        const z = THREE.MathUtils.randFloat(state.roomBoundary.min.z + state.HOOP_RADIUS, state.roomBoundary.max.z - state.HOOP_RADIUS);
+        newHoopPos.set(x, state.HOOP_HEIGHT + state.floorOffset, z);
+    } else {
+        // If no room boundary, default to a position in front of the camera
+        const hoopOffset = new THREE.Vector3(0, 0, -2.5);
+        hoopOffset.applyQuaternion(camera.quaternion);
+        newHoopPos = camera.position.clone().add(hoopOffset);
+        newHoopPos.y = state.HOOP_HEIGHT + state.floorOffset;
+    }
+
+    return newHoopPos;
+}
+
+export function moveHoopToNewPosition(state) {
+    const newHoopPos = findNewHoopPosition(state);
+    moveHoop(newHoopPos);
+    console.log("Hoop moved to a new position within room bounds.");
+}
+
 export function createBallAndHoop(state) {
     createBall(state)
     createHoop(state)
@@ -49,3 +75,4 @@ export function removeBallAndHoop(state) {
     state.hoopCreated = false;
     console.log("Ball and hoop removed.");
 }
+

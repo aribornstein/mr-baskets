@@ -180,3 +180,30 @@ export function removeHoop() {
         sensor = null;
     }
 }
+
+export function reorientHoop(pos) {
+    if (!backboardMesh) return;
+
+    const backboardDummy = new THREE.Object3D();
+    backboardDummy.position.copy(pos);
+    backboardDummy.lookAt(getCamera().position);
+    backboardMesh.quaternion.copy(backboardDummy.quaternion);
+}
+
+export function moveHoop(newPos) {
+    if (!backboardMesh || !hoopBody || !sensor) return;
+
+    // Update visual position
+    backboardMesh.position.copy(newPos);
+
+    // Update physics position of the hoop
+    hoopBody.setTranslation(new RAPIER.Vector3(newPos.x, newPos.y, newPos.z));
+
+    // Update physics position of the sensor
+    // The sensor's Y offset is relative to the original position, so maintain that
+    const sensorYOffset = -0.01; // Adjust this value based on your initial setup
+    sensor.parent().setTranslation(new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z));
+
+    // Reorient the hoop to face the camera after moving
+    reorientHoop(newPos);
+}

@@ -46,6 +46,7 @@ export function removeBallAndHoop(state) {
     removeBall();
     removeHoop();
     state.ballCreated = false;
+    state.isHoldingBall = false;
     state.hoopCreated = false;
     console.log("Ball and hoop removed.");
 }

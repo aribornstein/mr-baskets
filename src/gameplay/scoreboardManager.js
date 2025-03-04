@@ -83,20 +83,20 @@ export class Scoreboard {
         // If game over, show only the game over message
         if (state.gameOver) {
             ctx.fillStyle = "red";
-            ctx.font = "bold 30px 'DSEG7 Classic', Arial";
+            ctx.font = "bold 30px 'DSEG14 Classic', Arial";
             ctx.fillText(GAME_OVER_TEXT, centerX, centerY);
             this.texture.needsUpdate = true;
             return;
         }
 
         // ========== Draw HOME / LEVEL labels ==========
-        ctx.font = "bold 30px 'DSEG7 Classic', Arial";
+        ctx.font = "bold 30px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_LABEL;
         ctx.fillText("HOME", centerX - 100, 40);
         ctx.fillText("LEVEL", centerX + 100, 40);
 
         // ========== Draw HOME Score ==========
-        ctx.font = "bold 50px 'DSEG7 Classic', Arial";
+        ctx.font = "bold 50px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_HOME;
         ctx.fillText(String(this.homeScore).padStart(3, "0"), centerX - 100, 90);
 
@@ -105,16 +105,16 @@ export class Scoreboard {
         ctx.fillText(String(this.level), centerX + 100, 90);
 
         // ========== Draw main game clock ==========
-        ctx.font = "bold 50px 'DSEG7 Classic', Arial";
+        ctx.font = "bold 50px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_MAIN_CLOCK;
         ctx.fillText(this.gameClock, centerX, centerY);
 
         // ========== Draw SHOT CLOCK label and number ==========
-        ctx.font = "bold 20px 'DSEG7 Classic', Arial";
+        ctx.font = "bold 20px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_LABEL;
         ctx.fillText("SHOT CLOCK", centerX, centerY + 40);
 
-        ctx.font = "bold 40px 'DSEG7 Classic', Arial";
+        ctx.font = "bold 40px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_SHOT_CLOCK;
         ctx.fillText(String(this.shotClock), centerX, centerY + 80);
 

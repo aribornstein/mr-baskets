@@ -34,7 +34,7 @@ export class Scoreboard {
         this.homeScore = 0;
         this.level = 1;
         this.period = 1;       
-        this.gameClock = "15:00";
+        this.gameClock = "00:00";
 
         // Shot clock logic
         this.shotClock = SHOT_CLOCK_INITIAL;

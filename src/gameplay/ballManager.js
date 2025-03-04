@@ -5,6 +5,7 @@ import { getScene, getCamera } from "../core/engine.js";
 import { getWorld } from "../core/physics.js";
 import { addObject } from "../managers/sceneManager.js";
 import { state } from "../managers/stateManager.js";
+import { loadBasketballModel } from "../effects/graphics.js";
 
 let basketballMesh = null;
 let ballRigidBody = null, ballCollider = null;
@@ -24,11 +25,22 @@ export function createBallPhysics(pos) {
 }
 
 export function createBallVisual(pos) {
-  const geometry = new THREE.SphereGeometry(state.BALL_RADIUS, 32, 32);
-  const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
-  basketballMesh = new THREE.Mesh(geometry, material);
-  basketballMesh.position.copy(pos);
-  addObject(basketballMesh);
+  loadBasketballModel()
+    .then(basketball => {
+      basketballMesh = basketball;
+      basketballMesh.scale.set(state.BALL_RADIUS, state.BALL_RADIUS, state.BALL_RADIUS); // Adjust scale if necessary
+      basketballMesh.position.copy(pos);
+      addObject(basketballMesh);
+    })
+    .catch(error => {
+      console.error("Failed to load basketball model:", error);
+      // Fallback to sphere geometry if loading fails
+      const geometry = new THREE.SphereGeometry(state.BALL_RADIUS, 32, 32);
+      const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
+      basketballMesh = new THREE.Mesh(geometry, material);
+      basketballMesh.position.copy(pos);
+      addObject(basketballMesh);
+    });
 }
 
 export function updateBall(delta, roomBoundary) {

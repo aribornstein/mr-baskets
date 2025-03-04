@@ -128,20 +128,6 @@ export class Scoreboard {
         ctx.fillStyle = COLOR_SHOT_CLOCK;
         ctx.fillText(String(this.shotClock), centerX, centerY + 80);
 
-        // ========== Optionally draw Fouls, Time-Out, etc. ==========
-        ctx.font = "bold 20px 'DSEG7 Classic', Arial";
-        ctx.fillStyle = "#ffffff";
-
-        // Left side
-        ctx.textAlign = "left";
-        ctx.fillText("FOUL: 0", 20, this.canvas.height - 40);
-        ctx.fillText("TIME-OUT: 0", 20, this.canvas.height - 15);
-
-        // Right side
-        ctx.textAlign = "right";
-        ctx.fillText("FOUL: 0", this.canvas.width - 20, this.canvas.height - 40);
-        ctx.fillText("TIME-OUT: 0", this.canvas.width - 20, this.canvas.height - 15);
-
         // Update the texture
         this.texture.needsUpdate = true;
     }

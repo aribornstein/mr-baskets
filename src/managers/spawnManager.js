@@ -56,10 +56,13 @@ function findNewHoopPosition(state) {
     return newHoopPos;
 }
 
-export function moveHoopToNewPosition(state) {
+export function moveHoopToNewPosition(state, delay = 1000) {
     const newHoopPos = findNewHoopPosition(state);
-    moveHoop(newHoopPos);
-    console.log("Hoop moved to a new position within room bounds.");
+    // Wait for the specified delay before moving the hoop
+    setTimeout(() => {
+        moveHoop(newHoopPos);
+        console.log("Hoop moved to a new position within room bounds.");
+    }, delay);
 }
 
 export function createBallAndHoop(state) {

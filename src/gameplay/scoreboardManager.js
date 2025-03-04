@@ -83,7 +83,24 @@ export class Scoreboard {
         // If game over, show only the game over message
         if (state.gameOver) {
             ctx.fillStyle = "red";
-            ctx.font = "bold 30px 'DSEG14 Classic', Arial";
+            let fontSize = 30; // Start with a default font size
+            const minFontSize = 16; // Minimum font size
+            ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
+
+            // Measure the text width with the current font size
+            let textWidth = ctx.measureText(GAME_OVER_TEXT).width;
+
+            // Reduce the font size until the text fits within the canvas width
+            while (textWidth > this.canvas.width && fontSize > minFontSize) {
+                fontSize--;
+                ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
+                textWidth = ctx.measureText(GAME_OVER_TEXT).width;
+            }
+
+             // Ensure the font size doesn't go below the minimum
+             fontSize = Math.max(fontSize, minFontSize);
+             ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
+
             ctx.fillText(GAME_OVER_TEXT, centerX, centerY);
             this.texture.needsUpdate = true;
             return;
@@ -92,17 +109,17 @@ export class Scoreboard {
         // ========== Draw HOME / LEVEL labels ==========
         ctx.font = "bold 30px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_LABEL;
-        ctx.fillText("HOME", centerX - 100, 40);
-        ctx.fillText("LEVEL", centerX + 100, 40);
+        ctx.fillText("HOME", centerX - 150, 40);
+        ctx.fillText("LEVEL", centerX + 150, 40);
 
         // ========== Draw HOME Score ==========
         ctx.font = "bold 50px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_HOME;
-        ctx.fillText(String(this.homeScore).padStart(3, "0"), centerX - 100, 90);
+        ctx.fillText(String(this.homeScore).padStart(3, "0"), centerX - 150, 90);
 
         // ========== Draw LEVEL number ==========
         ctx.fillStyle = COLOR_LEVEL;
-        ctx.fillText(String(this.level), centerX + 100, 90);
+        ctx.fillText(String(this.level), centerX + 150, 90);
 
         // ========== Draw main game clock ==========
         ctx.font = "bold 50px 'DSEG14 Classic', Arial";

@@ -202,7 +202,7 @@ export function moveHoop(newPos) {
     // Update physics position of the sensor
     const sensorYOffset = -0.01; // Adjust this value based on your initial setup
 
-    // Calculate the sensor's position relative to the hoop's new position
+    // Calculate the sensor's position relative to the hoop's *original* position
     const relativeSensorPos = new THREE.Vector3(0, sensorYOffset, 0); // Sensor offset
 
     // Apply the hoop's rotation to the relative sensor position
@@ -214,7 +214,7 @@ export function moveHoop(newPos) {
     );
     relativeSensorPos.applyQuaternion(hoopQuaternion);
 
-    // Calculate the absolute position of the sensor
+   // Calculate the absolute position of the sensor
     const absoluteSensorPos = new RAPIER.Vector3(
         newPos.x + relativeSensorPos.x,
         newPos.y + relativeSensorPos.y,

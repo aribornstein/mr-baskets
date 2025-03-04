@@ -33,11 +33,13 @@ export class Scoreboard {
         // Single player: only "homeScore" + "level"
         this.homeScore = 0;
         this.level = 1;
-        this.gameClock = "00:00";
+        this.gameClock = 0; // Changed to seconds
+        this.gameClockDisplay = "00:00"; // Display string
 
         // Shot clock logic
         this.shotClock = SHOT_CLOCK_INITIAL;
         this.shotClockInterval = null;
+        this.gameClockInterval = null; // Interval for the game clock
 
         // Create canvas + texture
         this.canvas = document.createElement("canvas");
@@ -109,22 +111,22 @@ export class Scoreboard {
         // ========== Draw HOME / LEVEL labels ==========
         ctx.font = "bold 30px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_LABEL;
-        ctx.fillText("HOME", centerX - 150, 40);
-        ctx.fillText("LEVEL", centerX + 150, 40);
+        ctx.fillText("HOME", centerX - 160, 40);
+        ctx.fillText("LEVEL", centerX + 160, 40);
 
         // ========== Draw HOME Score ==========
         ctx.font = "bold 50px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_HOME;
-        ctx.fillText(String(this.homeScore).padStart(3, "0"), centerX - 150, 90);
+        ctx.fillText(String(this.homeScore).padStart(3, "0"), centerX - 160, 90);
 
         // ========== Draw LEVEL number ==========
         ctx.fillStyle = COLOR_LEVEL;
-        ctx.fillText(String(this.level), centerX + 150, 90);
+        ctx.fillText(String(this.level), centerX + 160, 90);
 
         // ========== Draw main game clock ==========
         ctx.font = "bold 50px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_MAIN_CLOCK;
-        ctx.fillText(this.gameClock, centerX, centerY);
+        ctx.fillText(this.gameClockDisplay, centerX, centerY);
 
         // ========== Draw SHOT CLOCK label and number ==========
         ctx.font = "bold 20px 'DSEG14 Classic', Arial";
@@ -137,6 +139,33 @@ export class Scoreboard {
 
         // Update the texture
         this.texture.needsUpdate = true;
+    }
+
+    // Method to update the displayed game clock
+    updateGameClockDisplay() {
+        const minutes = Math.floor(this.gameClock / 60);
+        const seconds = this.gameClock % 60;
+        this.gameClockDisplay = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        this.updateTexture();
+    }
+
+    // Start the game clock
+    startGameClock() {
+        this.gameClockInterval = setInterval(() => {
+            this.gameClock++;
+            this.updateGameClockDisplay();
+        }, 1000);
+    }
+
+    // Stop the game clock
+    stopGameClock() {
+        clearInterval(this.gameClockInterval);
+    }
+
+    // Reset the game clock
+    resetGameClock() {
+        this.gameClock = 0;
+        this.updateGameClockDisplay();
     }
 
     // Increment home score method
@@ -167,6 +196,7 @@ export class Scoreboard {
                 this.updateTexture();
             } else {
                 this.stopShotClock();
+                this.stopGameClock(); // Stop the game clock when game is over
                 eventBus.emit("gameOver");
             }
         }, SHOT_CLOCK_INTERVAL_MS);
@@ -191,6 +221,8 @@ export class ScoreboardManager {
             console.log("Placing scoreboard...");
             this.placeScoreboard(roomBoundary);
             this.startShotClock();
+            this.startGameClock(); // Start the game clock when the scoreboard is placed
+
         });
     }
 

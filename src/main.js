@@ -64,6 +64,7 @@ function startGame() {
     }
     else {
         scoreboardManager.startShotClock();
+        scoreboardManager.startGameClock();
     }
 
     // Create ball and hoop after floor is configured
@@ -154,6 +155,7 @@ function resetGame() {
 
     // Reset scoreboard
     scoreboardManager.resetShotClock();
+    scoreboardManager.resetGameClock(); 
     scoreboardManager.scoreboard.score = 0;
     scoreboardManager.scoreboard.updateTexture();
 

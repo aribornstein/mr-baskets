@@ -37,28 +37,29 @@ export function createHoopPhysics(pos) {
   // -------------------------
   // Sensor for basket detection
   // -------------------------
-  // Improved sensor creation: very thin horizontal disk slightly below hoop
-  const sensorThickness = 0.0001; // Extremely thin
-  const sensorYOffset = -0.01; // Slightly below hoop center to detect ball passing through
+  const sensorThickness = 0.0001; // Keep extremely thin
+  const sensorYOffset = -0.02; // Increase the offset to create more separation
 
-  const sensorDesc = RAPIER.ColliderDesc.cylinder(sensorThickness, state.HOOP_RADIUS * 0.9)
+  // Create a ghost object without a physical presence
+  const sensorBodyDesc = RAPIER.RigidBodyDesc.dynamic() // Try dynamic instead of kinematic
+    .setTranslation(pos.x, pos.y + sensorYOffset, pos.z)
+    .setBodyType(RAPIER.RigidBodyType.KinematicPositionBased) // Force kinematic type
+    .setGravityScale(0) // No gravity effect
+    .setLinearDamping(0) // No damping
+    .setAngularDamping(0) // No angular damping
+    .lockTranslations() // Lock all movement
+    .lockRotations(); // Lock all rotation
+
+  const sensorBody = world.createRigidBody(sensorBodyDesc);
+
+  // Use a ball collider instead of a cylinder
+  const sensorDesc = RAPIER.ColliderDesc.ball(state.HOOP_RADIUS * 0.8) // Use 80% of hoop radius
     .setSensor(true)
     .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
-    .setCollisionGroups(0x0001FFFF)
+    .setCollisionGroups(0x0001FFFF) // Group 1, can interact with all groups
     .setMass(0); // Zero mass
 
-    // .setRestitution(0.0)
-    // .setFriction(0.0);
-    
-  // Apply the same orientation to the sensor as the hoop
-  sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
-
-  const sensorBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
-    pos.x,
-    pos.y + sensorYOffset,
-    pos.z
-  );
-  const sensorBody = world.createRigidBody(sensorBodyDesc);
+  // Create the collider
   sensor = world.createCollider(sensorDesc, sensorBody);
 
   // -------------------------
@@ -141,17 +142,31 @@ export function createHoopVisual(pos) {
 
 export function isBasket(collider1, collider2) {
   if (sensorCooldown) return false;
-
+  
+  // Check if one of the colliders is our sensor
   if (collider1 === sensor || collider2 === sensor) {
-    // Start the cooldown
-    sensorCooldown = true;
-    setTimeout(() => {
-      sensorCooldown = false;
-    }, 500); // Cooldown for 500 milliseconds
-
-    return true;
+    // Determine which collider is the ball
+    const ballCollider = collider1 === sensor ? collider2 : collider1;
+    const ballBody = ballCollider.parent();
+    
+    // Get the ball's velocity
+    if (ballBody) {
+      const velocity = ballBody.linvel();
+      
+      // Only count as a basket if the ball is moving downward (y velocity is negative)
+      // This ensures the ball came from above the hoop
+      if (velocity.y < 0) {
+        // Start the cooldown
+        sensorCooldown = true;
+        setTimeout(() => {
+          sensorCooldown = false;
+        }, 500); // Cooldown for 500 milliseconds
+        
+        return true;
+      }
+    }
   }
-
+  
   return false;
 }
 

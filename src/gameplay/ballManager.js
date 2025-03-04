@@ -21,7 +21,6 @@ export function createBallPhysics(pos) {
     .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS) 
     .setRestitution(0.7)
     .setFriction(0.7)
-    .setCollisionGroups(0x0002FFFF);
     
   ballCollider = world.createCollider(colliderDesc, ballRigidBody);
 }

@@ -1,5 +1,5 @@
 // src/effects/graphics.js
-import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/loaders/GLTFLoader.js";
+import { GLTFLoader } from "GLTFLoader";
 
 export function loadHandModel(handedness) {
   return new Promise((resolve, reject) => {
@@ -11,5 +11,12 @@ export function loadHandModel(handedness) {
   });
 }
 
+export function loadBasketballModel() {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader();
+    const url = "src/assets/basketball.glb";
+    loader.load(url, (gltf) => resolve(gltf.scene), undefined, (error) => reject(error));
+  });
+}
 
 // Additional functions for particle effects or debugging overlays can be added here.

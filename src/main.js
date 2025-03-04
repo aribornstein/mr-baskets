@@ -67,8 +67,9 @@ function startGame() {
     }
 
     // Create ball and hoop after floor is configured
-    if (state.roomSetupComplete) {
+    if (state.roomSetupComplete && !state.gameStarted) { 
         createBallAndHoop(state);
+        state.gameStarted = true; 
     }
 
     playBackgroundMusic(); // Start playing background music
@@ -149,6 +150,7 @@ document.getElementById("ar-button").addEventListener("click", async () => {
 function resetGame() {
     // Reset game state
     state.gameOver = false;
+    state.gameStarted = false;
 
     // Reset scoreboard
     scoreboardManager.resetShotClock();

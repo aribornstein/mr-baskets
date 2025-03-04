@@ -16,5 +16,7 @@ export const state = {
     // Callbacks for input events
     onGrab: null,
     onRelease: null,
-    gameOver: false
+    gameOver: false,
+    gameStarted: false // ADD THIS LINE
+
   };

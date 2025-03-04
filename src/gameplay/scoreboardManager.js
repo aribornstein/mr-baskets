@@ -135,7 +135,7 @@ export class Scoreboard {
 
         ctx.font = "bold 40px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_SHOT_CLOCK;
-        ctx.fillText(String(this.shotClock), centerX, centerY + 90);
+        ctx.fillText(String(this.shotClock), centerX, centerY + 100);
 
         // Update the texture
         this.texture.needsUpdate = true;

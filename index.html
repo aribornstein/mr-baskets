@@ -1,11 +1,10 @@
-mr-baskets/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>972 Ball</title>
-  <link rel="icon" type="image/webp" href="./src/assets/icon.webp">
+  <link rel="icon" type="image/ico" href="favicon.ico">
   <script type="importmap">
     {
       "imports": {
@@ -16,17 +15,8 @@ mr-baskets/index.html -->
     }
   </script>
   <style>
-    body { 
-      margin: 0; 
-      overflow: hidden; 
-      background: url('./src/assets/web_background.webp') no-repeat center center fixed;
-      -webkit-background-size: cover;
-      -moz-background-size: cover;
-      -o-background-size: cover;
-      background-size: cover;
-      font-family: sans-serif;
-    }
-    canvas { display: block; }
+    body { margin: 0; overflow: hidden; background: none; }
+    canvas { display: block; background: none; }
     #ar-button {
       position: absolute;
       bottom: 20px;
@@ -35,50 +25,14 @@ mr-baskets/index.html -->
       padding: 12px 24px;
       font-size: 16px;
       z-index: 100;
-      background-color: #4CAF50; /* Green */
-      border: none;
-      color: white;
-      text-align: center;
-      text-decoration: none;
-      display: inline-block;
-      cursor: pointer;
-      border-radius: 5px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    }
-    #ar-button:hover {
-      background-color: #367c39;
-    }
-    #instructions {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      color: white;
-      font-size: 16px;
-      z-index: 100;
-      padding: 20px;
-      background-color: rgba(0, 0, 0, 0.5);
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-    #instructions h2 {
-      margin-top: 0;
-      margin-bottom: 10px;
-      font-size: 24px;
-    }
-    #instructions ul {
-      padding-left: 20px;
-    }
-    #instructions li {
-      margin-bottom: 5px;
     }
   </style>
 </head>
 <body>
   <button id="ar-button">Let's shoot some baskets! </button>
-  <div id="instructions">
+  <div id="instructions" style="position: absolute; top: 20px; left: 20px; color: white; font-size: 16px; z-index: 100;">
     <h2>How to Play</h2>
     <ul>
-      <li>Tap the button to start the AR session.</li>
       <li>Point your controller at the basketball and squeeze the trigger to grab it.</li>
       <li>Release the trigger to shoot.</li>
       <li>Make baskets before the shot clock runs out!</li>

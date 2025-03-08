@@ -13,6 +13,8 @@ export const state = {
     BALL_RADIUS: 0.12,
     HOOP_RADIUS: 0.3,
     HOOP_HEIGHT: 1.8,
+
+    moveHoopBackAndForth:true,
     // Callbacks for input events
     onGrab: null,
     onRelease: null,

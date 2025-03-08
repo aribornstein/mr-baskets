@@ -259,3 +259,25 @@ export function moveHoop(newPos) {
     backboardMesh.updateMatrix();
     backboardMesh.updateMatrixWorld();
 }
+
+export function updateHoopMovement() {
+  if (state.moveHoopBackAndForth) {
+    const elapsedTime = clock.getElapsedTime();
+    
+    // Calculate the maximum allowable amplitude based on room boundaries
+    const roomBoundary = state.roomBoundary;
+    const hoopPos = hoopBody.translation();
+    const maxAmplitude = Math.min(
+      hoopPos.x - roomBoundary.min.x - state.HOOP_RADIUS,
+      roomBoundary.max.x - hoopPos.x - state.HOOP_RADIUS
+    );
+
+    const amplitude = Math.min(state.hoopMovementAmplitude || 1.0, maxAmplitude); // Default amplitude if not set
+    const frequency = 0.5; // Adjust the frequency as needed
+    const offsetX = amplitude * Math.sin(elapsedTime * frequency * Math.PI * 2);
+    
+    const newPos = hoopBody.translation();
+    newPos.x += offsetX;
+    moveHoop(newPos);
+  }
+}

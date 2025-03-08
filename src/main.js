@@ -9,7 +9,7 @@ import { handleSurfaceAdded } from "./managers/surfaceManager.js";
 import { state } from "./managers/stateManager.js";
 import { RealityAccelerator } from "ratk";
 import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
-import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./managers/spawnManager.js";
+import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition, updateHoopMovement } from "./managers/spawnManager.js";
 import { registerBallInput, updateBall } from "./gameplay/ballManager.js";
 import { isBasket } from "./gameplay/hoopManager.js";
 import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound } from "./effects/audioManager.js";
@@ -104,6 +104,10 @@ function animate() {
                 }
             }
         });
+
+        if (state.hoopCreated) {
+            updateHoopMovement(state);
+        }
 
         accumulator -= fixedTimeStep;
     }

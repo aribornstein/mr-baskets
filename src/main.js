@@ -1,20 +1,18 @@
 // src/main.js
 import * as THREE from "three";
-import { eventBus } from "./core/eventBus.js";
-import { initEngine, getRenderer, getScene, getCamera } from "./core/engine.js";
-import { initPhysics, getWorld, getEventQueue, stepPhysics } from "./core/physics.js";
-import { initInputManager, getControllers } from "./managers/inputManager.js";
-import { initSceneManager } from "./managers/sceneManager.js";
-import { handleSurfaceAdded } from "./managers/surfaceManager.js";
-import { state } from "./managers/stateManager.js";
+import { eventBus } from "../core/eventBus.js";
+import { initEngine, getRenderer, getScene, getCamera } from "../core/engine.js";
+import { initPhysics, getWorld, getEventQueue, stepPhysics } from "../core/physics.js";
+import { initInputManager, getControllers } from "../managers/inputManager.js";
+import { initSceneManager } from "../managers/sceneManager.js";
+import { handleSurfaceAdded } from "../managers/surfaceManager.js";
+import { state } from "../managers/stateManager.js";
 import { RealityAccelerator } from "ratk";
-import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
-import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./managers/spawnManager.js";
-import { registerBallInput, updateBall } from "./gameplay/ballManager.js";
-import { isBasket } from "./gameplay/hoopManager.js";
-import { playBackgroundMusic, stopBackgroundMusic } from "./effects/audioManager.js";
-
-
+import { ScoreboardManager } from "../gameplay/scoreboardManager.js";
+import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "../managers/spawnManager.js";
+import { registerBallInput, updateBall } from "../gameplay/ballManager.js";
+import { isBasket } from "../gameplay/hoopManager.js";
+import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound } from "../effects/audioManager.js";
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
 let ratk;
@@ -27,6 +25,9 @@ async function initGame() {
     initSceneManager();
     registerBallInput(state);
     initInputManager(state);
+
+    // Load the bounce sound
+    await loadBounceSound(); // Add this line
 
     // Setup RealityAccelerator for plane/mesh detection
     ratk = new RealityAccelerator(getRenderer().xr);
@@ -95,6 +96,13 @@ function animate() {
                 moveHoopToNewPosition(state);
             }
 
+            // Check for collisions between ball and ground
+            if (started && (collider1 === ballCollider || collider2 === ballCollider)) {
+                const otherCollider = collider1 === ballCollider ? collider2 : collider1;
+                if (otherCollider === groundCollider) {
+                    playBounceSound();
+                }
+            }
         });
 
         accumulator -= fixedTimeStep;

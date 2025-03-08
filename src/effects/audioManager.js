@@ -12,6 +12,7 @@ let audioLoader;
 let currentTrack;
 let audioListener;
 let audio;
+let bounceSound; // Add this line
 
 export function initAudioListener() {
     // Create an AudioListener and add it to the camera
@@ -75,5 +76,26 @@ export async function playBackgroundMusic() {
 export function stopBackgroundMusic() {
     if (audio && audio.isPlaying) {
         audio.stop();
+    }
+}
+
+// Add this function to load the bounce sound
+export async function loadBounceSound() {
+    if (!audioListener) {
+        audioListener = initAudioListener();
+    }
+    if (!audioLoader) {
+        audioLoader = new THREE.AudioLoader();
+    }
+    bounceSound = new THREE.Audio(audioListener);
+    const buffer = await loadAudioTrack('src/assets/ball-bounce.mp3');
+    bounceSound.setBuffer(buffer);
+    bounceSound.setVolume(0.5);
+}
+
+// Add this function to play the bounce sound
+export function playBounceSound() {
+    if (bounceSound) {
+        bounceSound.play();
     }
 }

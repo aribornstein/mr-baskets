@@ -11,6 +11,7 @@ export const state = {
     isHoldingBall: false,
     roomSetupComplete: false,
     gameClock: 0,
+    score:0,
     BALL_RADIUS: 0.12,
     HOOP_RADIUS: 0.3,
     HOOP_HEIGHT: 1.8,

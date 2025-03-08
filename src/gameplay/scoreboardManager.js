@@ -31,7 +31,6 @@ const SHADOW_BLUR = 10;
 export class Scoreboard {
     constructor() {
         // Single player: only "homeScore" + "level"
-        this.homeScore = 0;
         this.level = 1;
         this.gameClockDisplay = "00:00"; // Display string
 
@@ -116,7 +115,7 @@ export class Scoreboard {
         // ========== Draw HOME Score ==========
         ctx.font = "bold 50px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_HOME;
-        ctx.fillText(String(this.homeScore).padStart(3, "0"), centerX - 160, 90);
+        ctx.fillText(String(state.score).padStart(3, "0"), centerX - 160, 90);
 
         // ========== Draw LEVEL number ==========
         ctx.fillStyle = COLOR_LEVEL;
@@ -169,7 +168,7 @@ export class Scoreboard {
 
     // Increment home score method
     increment() {
-        this.homeScore++;
+        state.score++;
         this.updateTexture();
     }
 

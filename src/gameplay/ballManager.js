@@ -154,3 +154,7 @@ export function removeBall() {
     ballRigidBody = null;
   }
 }
+
+export function getBallMesh() {
+  return basketballMesh;
+}

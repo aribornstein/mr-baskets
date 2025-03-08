@@ -10,9 +10,10 @@ import { state } from "./managers/stateManager.js";
 import { RealityAccelerator } from "ratk";
 import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./managers/spawnManager.js";
-import { registerBallInput, updateBall } from "./gameplay/ballManager.js";
+import { registerBallInput, updateBall, getBallMesh } from "./gameplay/ballManager.js";
 import { isBasket, updateHoopMovement} from "./gameplay/hoopManager.js";
 import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound } from "./effects/audioManager.js";
+import { addFlameEffectToBall } from "./effects/particles.js";
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
 let ratk;
@@ -94,6 +95,14 @@ function animate() {
                 scoreboardManager.incrementScore();
                 scoreboardManager.resetShotClock();
                 moveHoopToNewPosition(state);
+                if (state.score > 0 && state.score % 5 === 0) {
+                    // Add flame effect to ball every 5 points
+                    // Replace this with power up logic (flames, ice, etc.)
+                    const ballMesh = getBallMesh();
+                    if (ballMesh) {
+                        addFlameEffectToBall(ballMesh);
+                    }
+                }
             }
 
             // Check for collisions between ball and ground using userData markers.

@@ -262,7 +262,7 @@ export function moveHoop(newPos) {
 
 export function updateHoopMovement() {
   if (state.moveHoopBackAndForth) {
-    const elapsedTime = clock.getElapsedTime();
+    const elapsedTime = state.gameClock;
     
     // Calculate the maximum allowable amplitude based on room boundaries
     const roomBoundary = state.roomBoundary;

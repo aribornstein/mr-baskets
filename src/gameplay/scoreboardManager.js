@@ -33,7 +33,6 @@ export class Scoreboard {
         // Single player: only "homeScore" + "level"
         this.homeScore = 0;
         this.level = 1;
-        this.gameClock = 0; // Changed to seconds
         this.gameClockDisplay = "00:00"; // Display string
 
         // Shot clock logic
@@ -143,8 +142,8 @@ export class Scoreboard {
 
     // Method to update the displayed game clock
     updateGameClockDisplay() {
-        const minutes = Math.floor(this.gameClock / 60);
-        const seconds = this.gameClock % 60;
+        const minutes = Math.floor(state.gameClock/ 60);
+        const seconds = state.gameClock% 60;
         this.gameClockDisplay = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         this.updateTexture();
     }
@@ -152,7 +151,7 @@ export class Scoreboard {
     // Start the game clock
     startGameClock() {
         this.gameClockInterval = setInterval(() => {
-            this.gameClock++;
+            state.gameClock++;
             this.updateGameClockDisplay();
         }, 1000);
     }
@@ -164,7 +163,7 @@ export class Scoreboard {
 
     // Reset the game clock
     resetGameClock() {
-        this.gameClock = 0;
+        state.gameClock= 0;
         this.updateGameClockDisplay();
     }
 

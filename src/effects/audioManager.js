@@ -61,7 +61,7 @@ export async function playBackgroundMusic() {
         const buffer = await loadAudioTrack(currentTrack);
         audio.setBuffer(buffer);
         audio.setLoop(false); // Disable looping, we'll handle track switching
-        audio.setVolume(0.4);
+        audio.setVolume(0.3);
         audio.play();
 
         // Automatically play the next track when the current one ends
@@ -91,7 +91,7 @@ export async function loadBounceSound() {
     const buffer = await loadAudioTrack('src/assets/ball-bounce.mp3');
     bounceSound.setBuffer(buffer);
     bounceSound.setLoop(false);
-    bounceSound.setVolume(0.8);
+    bounceSound.setVolume(1.0);
 }
 
 // Add this function to play the bounce sound

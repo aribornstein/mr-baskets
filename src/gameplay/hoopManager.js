@@ -272,7 +272,7 @@ export function updateHoopMovement() {
       roomBoundary.max.x - hoopPos.x - state.HOOP_RADIUS
     );
 
-    const amplitude = Math.min(state.hoopMovementAmplitude || 1.0, maxAmplitude); // Default amplitude if not set
+    const amplitude = Math.min(state.hoopMovementAmplitude || 100.0, maxAmplitude); // Default amplitude if not set
     const frequency = 0.5; // Adjust the frequency as needed
     const offsetX = amplitude * Math.sin(elapsedTime * frequency * Math.PI * 2);
     

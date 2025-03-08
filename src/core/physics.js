@@ -27,7 +27,8 @@ export function createGroundPhysics(floorOffset) {
   const groundColliderDesc = RAPIER.ColliderDesc.cuboid(5, 0.1, 5)
     .setRestitution(0.7)
     .setFriction(0.8);
-  world.createCollider(groundColliderDesc, groundBody);
+  const groundCollider = world.createCollider(groundColliderDesc, groundBody);
+  groundCollider.userData = "ground";
   return groundBody;
 }
 

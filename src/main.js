@@ -96,13 +96,11 @@ function animate() {
                 moveHoopToNewPosition(state);
             }
 
-            // Check for collisions between ball and ground
-            if (started && (collider1 === ballCollider || collider2 === ballCollider)) {
-                const otherCollider = collider1 === ballCollider ? collider2 : collider1;
-                if (otherCollider === groundCollider) {
-                    console.log("Ball hit the ground!");
-                    playBounceSound();
-                }
+            // Check for collisions between ball and ground using userData markers.
+            if (started && ((collider1.userData === "ball" && collider2.userData === "ground") ||
+                            (collider1.userData === "ground" && collider2.userData === "ball"))) {
+                console.log("Ball hit the ground!");
+                playBounceSound();
             }
         });
 

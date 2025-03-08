@@ -23,6 +23,7 @@ export function createBallPhysics(pos) {
     .setFriction(0.7)
     
   ballCollider = world.createCollider(colliderDesc, ballRigidBody);
+  ballCollider.userData = "ball";
 }
 
 export function createBallVisual(pos) {

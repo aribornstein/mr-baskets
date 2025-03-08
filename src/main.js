@@ -1,17 +1,17 @@
 // src/main.js
 import * as THREE from "three";
-import { eventBus } from "../core/eventBus.js";
-import { initEngine, getRenderer, getScene, getCamera } from "../core/engine.js";
-import { initPhysics, getWorld, getEventQueue, stepPhysics } from "../core/physics.js";
-import { initInputManager, getControllers } from "../managers/inputManager.js";
-import { initSceneManager } from "../managers/sceneManager.js";
-import { handleSurfaceAdded } from "../managers/surfaceManager.js";
-import { state } from "../managers/stateManager.js";
+import { eventBus } from "./core/eventBus.js";
+import { initEngine, getRenderer, getScene, getCamera } from "./core/engine.js";
+import { initPhysics, getWorld, getEventQueue, stepPhysics } from "./core/physics.js";
+import { initInputManager, getControllers } from "./managers/inputManager.js";
+import { initSceneManager } from "./managers/sceneManager.js";
+import { handleSurfaceAdded } from "./managers/surfaceManager.js";
+import { state } from "./managers/stateManager.js";
 import { RealityAccelerator } from "ratk";
-import { ScoreboardManager } from "../gameplay/scoreboardManager.js";
+import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "../managers/spawnManager.js";
-import { registerBallInput, updateBall } from "../gameplay/ballManager.js";
-import { isBasket } from "../gameplay/hoopManager.js";
+import { registerBallInput, updateBall } from "./gameplay/ballManager.js";
+import { isBasket } from "./gameplay/hoopManager.js";
 import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound } from "../effects/audioManager.js";
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;

@@ -49,8 +49,8 @@ export function addFlameEffectToBall(ballMesh) {
         requestAnimationFrame(animate);
     }
     animate();
-    // Remove the effect after 3 seconds
+    // Remove the effect after 5 seconds
     setTimeout(() => {
         ballMesh.remove(flameParticles);
-    }, 3000);
+    }, 5000);
 }

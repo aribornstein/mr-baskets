@@ -130,7 +130,7 @@ export class Scoreboard {
         ctx.font = "bold 30px 'DSEG14 Classic', Arial";
         ctx.fillStyle = "red";
         const missedText = "MISSED: " + "X".repeat(state.game.missedShots);
-        ctx.fillText(missedText, centerX, centerY + 160);
+        ctx.fillText(missedText, centerX - 160, centerY + 100);
 
         this.texture.needsUpdate = true;
     }

@@ -90,13 +90,16 @@ export async function loadBounceSound() {
     bounceSound = new THREE.Audio(audioListener);
     const buffer = await loadAudioTrack('src/assets/ball-bounce.mp3');
     bounceSound.setBuffer(buffer);
-    bounceSound.setLoop(false);
-    bounceSound.setVolume(1.0);
 }
 
 // Add this function to play the bounce sound
 export function playBounceSound() {
     if (bounceSound) {
+        if (bounceSound.isPlaying) {
+            bounceSound.stop(); // Stop if already playing
+        }
+        bounceSound.setLoop(false);
+        bounceSound.setVolume(1.0);
         bounceSound.play();
     }
 }

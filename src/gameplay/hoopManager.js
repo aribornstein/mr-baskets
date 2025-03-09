@@ -294,6 +294,7 @@ export function updateHoopMovement() {
   // and then gradually increases with each level (capped at 1).
   const levelMultiplier = Math.min(0.2 + (state.game.level - 1) * 0.05, 1);
   const freqMultiplier = Math.min(0.2 + (state.game.level - 1) * 0.05, 1);
+  
 
   // Map axis keys to their movement flags.
   const axes = {
@@ -314,6 +315,9 @@ export function updateHoopMovement() {
       const allowedMin = base - minBound - radius;
       const allowedMax = maxBound - base - radius;
       maxAllowed = Math.min(movementAmplitude, allowedMin, allowedMax);
+    }
+    if (axis === "y") {
+      effectiveAmplitude *= 0.5;
     }
     // Apply level multiplier to amplitude and frequency.
     const effectiveAmplitude = maxAllowed * levelMultiplier;

@@ -93,6 +93,7 @@ function animate() {
             const collider2 = world.getCollider(handle2);
             if (isBasket(collider1, collider2)) {
                 console.log("Basket made!");
+                state.game.shotAttempt = false;
                 scoreboardManager.incrementScore();
                 scoreboardManager.resetShotClock();
                 moveHoopToNewPosition(state);

@@ -128,8 +128,8 @@ function onRelease(event, controller) {
     basketballMesh.position.copy(worldPos);
     createBallPhysics({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
     const throwVelocity = controller.userData.velocity || new THREE.Vector3();
-    // Register a shot attempt only if the throw's magnitude exceeds 0.5
-    if (throwVelocity.length() > 0.5) {
+    // Register shot attempt only if upward (Y) velocity exceeds threshold
+    if (throwVelocity.y > 0.3) {
       state.game.shotAttempt = true;
     } else {
       state.game.shotAttempt = false;

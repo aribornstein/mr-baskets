@@ -99,7 +99,7 @@ export function playBounceSound() {
             bounceSound.stop(); // Stop if already playing
         }
         bounceSound.setLoop(false);
-        bounceSound.setVolume(1.0);
+        bounceSound.setVolume(3.0);
         bounceSound.play();
     }
 }

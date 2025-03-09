@@ -108,6 +108,11 @@ function animate() {
             // Check for collisions between ball and ground using userData markers.
             if (started && ((collider1.userData === "ball" && collider2.userData === "ground") ||
                             (collider1.userData === "ground" && collider2.userData === "ball"))) {
+                if (state.game.shotAttempt) {
+                    state.game.missedShots++;
+                    console.log("Intentional shot missed! Total missed:", state.game.missedShots);
+                    state.game.shotAttempt = false; // Reset once counted
+                }
                 playBounceSound();
             }
         });
@@ -156,7 +161,6 @@ function animate() {
             updateIceParticles(ballMesh.userData.iceParticles);
         }
     }
-
     
     getRenderer().render(getScene(), getCamera());
 }

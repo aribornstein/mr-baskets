@@ -316,11 +316,12 @@ export function updateHoopMovement() {
       const allowedMax = maxBound - base - radius;
       maxAllowed = Math.min(movementAmplitude, allowedMin, allowedMax);
     }
-    if (axis === "y") {
-      effectiveAmplitude *= 0.5;
-    }
+
     // Apply level multiplier to amplitude and frequency.
     const effectiveAmplitude = maxAllowed * levelMultiplier;
+    // if (axis === "y") {
+    //   effectiveAmplitude *= 0.5;
+    // }
     const offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
     newPos[axis] = base + offset;
   });

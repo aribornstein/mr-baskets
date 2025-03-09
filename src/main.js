@@ -63,15 +63,11 @@ async function initGame() {
     eventBus.on("newLevel", (state)=> {    
 
         playCheerSound(); // Play cheer sound when level changes
-        if (state.game.level >= 24) {
-            // Increase amplitude and frequency gradually.
-            state.objects.hoop.movementAmplitude += 0.05;
-            state.objects.hoop.movementFrequency += 0.1;
-        }
-        // Shave one second off of the shot clock for every 5 points scored after level 3 with a three second minimum.
-        if (state.game.level >= 3 && (state.game.score % 5) === 0 && state.shotClockInit > 3) {
-            state.shotClockInit -= 1;
-        }
+        // if (state.game.level >= 24) {
+        //     // Increase amplitude and frequency gradually.
+        //     state.objects.hoop.movementAmplitude += 0.05;
+        //     state.objects.hoop.movementFrequency += 0.1;
+        // }
         
         // Random chance to trigger a power-up
         const ballMesh = getBallMesh();
@@ -129,9 +125,11 @@ function animate() {
                 state.game.shotAttempt = false;
                 // Score increment (and potentially doubling in fire mode)
                 scoreboardManager.resetShotClock();
+                state.shotClockInit = Math.max(24 - Math.floor(currentScore / 5), 3);
                 scoreboardManager.incrementScore();
                 updateLevel();
                 moveHoopToNewPosition(state);
+
             }
 
             // Check for collisions between ball and ground using userData markers.

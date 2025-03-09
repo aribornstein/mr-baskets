@@ -274,11 +274,11 @@ export function moveHoop(newPos) {
 }
 
 export function updateHoopMovement() {
-  if ((state.objects.hoop.moveBackAndForth || state.objects.hoop.moveUpAndDown) && initialHoopPos) {
+  if ((state.objects.hoop.moveLeftAndRight || state.objects.hoop.moveUpAndDown) && initialHoopPos) {
     const elapsedTime = performance.now() / 1000;
     const newPos = { ...initialHoopPos };
 
-    if (state.objects.hoop.moveBackAndForth) {
+    if (state.objects.hoop.moveLeftAndRight) {
       const roomBoundary = state.environment.roomBoundary;
       const baseX = initialHoopPos.x;
       const maxAmplitude = roomBoundary
@@ -287,7 +287,7 @@ export function updateHoopMovement() {
             roomBoundary.max.x - baseX - state.objects.hoop.radius
           )
         : 100.0;
-      const amplitude = Math.min(state.objects.hoop.movementAmplitude || 100.0, maxAmplitude);
+      const amplitude = Math.min(state.objects.hoop.movementAmplitude || 0.2 , maxAmplitude);
       const frequency =  state.objects.hoop.movementFrequency || 0.5; // Adjust frequency as needed for horizontal movement
       const offsetX = amplitude * Math.sin(elapsedTime * frequency * Math.PI * 2);
       newPos.x = baseX + offsetX;
@@ -299,6 +299,14 @@ export function updateHoopMovement() {
       const verticalFrequency = state.objects.hoop.movementFrequency || 0.5; // Adjust if needed
       const offsetY = verticalAmplitude * Math.sin(elapsedTime * verticalFrequency * Math.PI * 2);
       newPos.y = baseY + offsetY;
+    }
+
+    if (state.objects.hoop.moveBackAndForth) {
+      const baseZ = initialHoopPos.z;
+      const depthAmplitude = state.objects.hoop.movementAmplitude || 0.2;
+      const depthFrequency = state.objects.hoop.movementFrequency || 0.5; // Adjust if needed
+      const offsetZ = depthAmplitude * Math.sin(elapsedTime * depthFrequency * Math.PI * 2);
+      newPos.z = baseZ + offsetZ;
     }
 
     moveHoop(newPos);

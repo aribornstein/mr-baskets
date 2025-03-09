@@ -22,7 +22,8 @@ export const state = {
             movementAmplitude: null,
             movementFrequency: null,
             moveBackAndForth: false,
-            moveUpAndDown: true,
+            moveUpAndDown: false,
+            moveLeftAndRight: true,
         },
         walls: {
             created: false,

@@ -63,7 +63,7 @@ async function initGame() {
     eventBus.on("newLevel", (state)=> {    
 
         playCheerSound(); // Play cheer sound when level changes
-        if (state.game.level >= 7) {
+        if (state.game.level >= 24) {
             // Increase amplitude and frequency gradually.
             state.objects.hoop.movementAmplitude += 0.05;
             state.objects.hoop.movementFrequency += 0.1;
@@ -231,6 +231,7 @@ function resetGame() {
     state.game.missedShots = 0;
     state.game.shotAttempt = false;
     state.game.level = 1;
+    state.game.shotClockInit = 24;
     state.objects.hoop.moveLeftAndRight = false;
     state.objects.hoop.moveUpAndDown = false;
     state.objects.hoop.moveBackAndForth = false;

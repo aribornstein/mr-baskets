@@ -116,7 +116,7 @@ export class Scoreboard {
             ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
 
             // Calculate line height and starting Y position for vertical centering.
-            const lineHeight = fontSize * 1.2;
+            const lineHeight = fontSize * 2.0;
             const textBlockHeight = lineHeight * lines.length;
             let startY = centerY - textBlockHeight / 2 + lineHeight / 2;
 
@@ -159,9 +159,9 @@ export class Scoreboard {
         // Draw MISSED SHOTS as X's centered underneath the label
         ctx.font = "bold 30px 'DSEG14 Classic', Arial";
         ctx.fillStyle = "red";
-        ctx.fillText("MISSED:", centerX, centerY - 120);
+        ctx.fillText("MISSED:", centerX, centerY - 100);
         const missedX = "X".repeat(state.game.missedShots);
-        ctx.fillText(missedX, centerX, centerY - 80);
+        ctx.fillText(missedX, centerX, centerY - 70);
 
         this.texture.needsUpdate = true;
     }

@@ -22,7 +22,6 @@ const COLOR_LEVEL = "rgb(0, 255, 0)";     // green
 const COLOR_LABEL = "#ffff00";            // yellow for labels
 const COLOR_MAIN_CLOCK = "#ffffff";       // white for main game clock
 const COLOR_SHOT_CLOCK = "#00ffcc";       // teal for shot clock
-const GAME_OVER_TEXT = "Game Over! Press the A Button to Play Again!";
 
 // Shadow settings for LED glow effect
 const SHADOW_COLOR = "rgba(0, 255, 255, 0.8)"; // cyan-ish glow
@@ -83,7 +82,7 @@ export class Scoreboard {
         // Game over display
         if (state.game.gameOver) {
             // Build dynamic game over text with the current level and score.
-            let gameOverDisplayText = `Game Over! Level: ${state.game.level} Score: ${String(state.game.score).padStart(3, '0')}. Press the A Button to Play Again!`;
+            let gameOverDisplayText = `Game Over! \n Score: ${String(state.game.score)} Level: ${state.game.level} . \n Press the A Button to Play Again!`;
             ctx.fillStyle = "red";
             let fontSize = 30;
             const minFontSize = 16;
@@ -132,7 +131,7 @@ export class Scoreboard {
         ctx.font = "bold 30px 'DSEG14 Classic', Arial";
         ctx.fillStyle = "red";
         const missedText = "MISSED: " + "X".repeat(state.game.missedShots);
-        ctx.fillText(missedText, centerX - 160, centerY + 100);
+        ctx.fillText(missedText, centerX, centerY - 100);
 
         this.texture.needsUpdate = true;
     }

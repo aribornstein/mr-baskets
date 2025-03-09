@@ -16,7 +16,7 @@ function createBall(state) {
     }
     createBallPhysics(ballPos);
     createBallVisual(ballPos);
-    state.ballCreated = true;
+    state.objects.ball.created = true;
     return ballPos;
 }
 
@@ -25,7 +25,7 @@ function createHoop(state) {
     const hoopOffset = new THREE.Vector3(0, 0, -2.5);
     hoopOffset.applyQuaternion(camera.quaternion);
     const hoopPos = camera.position.clone().add(hoopOffset);
-    hoopPos.y = state.objects.hoop.height + state.floorOffset;
+    hoopPos.y = state.objects.hoop.height + state.environment.floorOffset;
     if (state.environment.roomBoundary) {
         hoopPos.x = THREE.MathUtils.clamp(hoopPos.x, state.environment.roomBoundary.min.x + state.objects.hoop.radius, state.environment.roomBoundary.max.x - state.objects.hoop.radius);
         hoopPos.z = THREE.MathUtils.clamp(hoopPos.z, state.environment.roomBoundary.min.z + state.objects.hoop.radius, state.environment.roomBoundary.max.z - state.objects.hoop.radius);

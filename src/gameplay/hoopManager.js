@@ -290,6 +290,11 @@ export function updateHoopMovement() {
   const newPos = { ...initialHoopPos };
   const roomBoundary = state.environment.roomBoundary;
 
+  // Define level-based multipliers so that initial movement is only 20%
+  // and then gradually increases with each level (capped at 1).
+  const levelMultiplier = Math.min(0.2 + (state.game.level - 1) * 0.05, 1);
+  const freqMultiplier = Math.min(0.2 + (state.game.level - 1) * 0.05, 1);
+
   // Map axis keys to their movement flags.
   const axes = {
     x: moveLeftAndRight,
@@ -301,19 +306,18 @@ export function updateHoopMovement() {
     if (!shouldMove) return;
 
     const base = initialHoopPos[axis];
-    let effectiveAmplitude = movementAmplitude;
-
+    let maxAllowed = movementAmplitude;
     if (roomBoundary) {
       const minBound = roomBoundary.min[axis];
       const maxBound = roomBoundary.max[axis];
       // Use hoop radius as a buffer on both sides.
-      const maxAmpLimitedByMin = base - minBound - radius;
-      const maxAmpLimitedByMax = maxBound - base - radius;
-      const maxAllowed = Math.min(maxAmpLimitedByMin, maxAmpLimitedByMax);
-      effectiveAmplitude = Math.min(movementAmplitude, maxAllowed);
+      const allowedMin = base - minBound - radius;
+      const allowedMax = maxBound - base - radius;
+      maxAllowed = Math.min(movementAmplitude, allowedMin, allowedMax);
     }
-
-    const offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * Math.PI * 2);
+    // Apply level multiplier to amplitude and frequency.
+    const effectiveAmplitude = maxAllowed * levelMultiplier;
+    const offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
     newPos[axis] = base + offset;
   });
 

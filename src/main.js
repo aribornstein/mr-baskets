@@ -63,12 +63,7 @@ async function initGame() {
     eventBus.on("newLevel", (state)=> {    
 
         playCheerSound(); // Play cheer sound when level changes
-        // if (state.game.level >= 24) {
-        //     // Increase amplitude and frequency gradually.
-        //     state.objects.hoop.movementAmplitude += 0.05;
-        //     state.objects.hoop.movementFrequency += 0.1;
-        // }
-        
+
         // Random chance to trigger a power-up
         const ballMesh = getBallMesh();
         const chance = Math.random();

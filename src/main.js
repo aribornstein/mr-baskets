@@ -13,7 +13,10 @@ import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./m
 import { registerBallInput, updateBall, getBallMesh } from "./gameplay/ballManager.js";
 import { isBasket, updateHoopMovement} from "./gameplay/hoopManager.js";
 import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound, playBuzzerSound, loadBuzzerSound } from "./effects/audioManager.js";
-import { addFlameEffectToBall, updateFlameParticles, addIceEffectToBall, updateIceParticles } from "./effects/particles.js";
+import { updateFlameParticles, updateIceParticles } from "./effects/particles.js";
+import { applyFirePowerUp, applyIcePowerUp } from "./gameplay/powerUpManager.js";
+import { updateLevel } from "../managers/levelManager.js";
+
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
 let ratk;
@@ -96,14 +99,22 @@ function animate() {
             if (isBasket(collider1, collider2)) {
                 console.log("Basket made!");
                 state.game.shotAttempt = false;
-                scoreboardManager.incrementScore();
+                // Score increment (and potentially doubling in fire mode)
                 scoreboardManager.resetShotClock();
+                scoreboardManager.incrementScore();
+                updateLevel();
                 moveHoopToNewPosition(state);
-                if (state.game.score > 0 && state.game.score % 5 === 0) {
-                    // Add flame effect to ball every 5 points
-                    // Replace this with power up logic (flames, ice, etc.)
-                    if (ballMesh) {
-                        addIceEffectToBall(ballMesh, getScene(), getCamera(), getRenderer());
+
+                // Random chance to trigger a power-up
+                const chance = Math.random();
+                if (ballMesh) {
+                    // e.g., 30% chance to trigger a power-up after a basket
+                    if (chance < 0.15) {
+                       // Trigger the fire power-up: double score points and play flame effect.
+                       applyFirePowerUp(ballMesh, state, scoreboardManager);
+                    } else if (chance < 0.30) {
+                       // Trigger the ice power-up: pause shot clock and play ice effect.
+                       applyIcePowerUp(ballMesh, scoreboardManager);
                     }
                 }
             }
@@ -204,6 +215,13 @@ function resetGame() {
     state.game.score = 0;
     state.game.missedShots = 0;
     state.game.shotAttempt = false;
+    state.game.level = 1;
+    state.objects.hoop.moveLeftAndRight = false;
+    state.objects.hoop.moveUpAndDown = false;
+    state.objects.hoop.moveBackAndForth = false;
+    state.objects.hoop.movementAmplitude = 0.2;
+    state.objects.hoop.movementFrequency = 0.5;
+
     
     // Reset scoreboard
     scoreboardManager.resetShotClock();

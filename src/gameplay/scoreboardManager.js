@@ -10,7 +10,6 @@ const CANVAS_HEIGHT = 256;
 const PLANE_WIDTH = 2.0;
 const PLANE_HEIGHT = 1.0;
 
-const SHOT_CLOCK_INITIAL = 24;
 const SHOT_CLOCK_INTERVAL_MS = 1000;
 const SCOREBOARD_HEIGHT_ABOVE_FLOOR = 2.5;
 const SCOREBOARD_POSITION_OFFSET = 0.1;
@@ -34,7 +33,7 @@ export class Scoreboard {
         this.gameClockDisplay = "00:00"; // Display string
 
         // Shot clock logic
-        this.shotClock = SHOT_CLOCK_INITIAL;
+        this.shotClock = state.game.shotClockInit;
         this.shotClockInterval = null;
         this.gameClockInterval = null; // Interval for the game clock
 
@@ -213,7 +212,7 @@ export class Scoreboard {
 
     // Shot clock control
     startShotClock() {
-        this.shotClock = SHOT_CLOCK_INITIAL;
+        this.shotClock = state.game.shotClockInit;
         this.updateTexture();
         this.shotClockInterval = setInterval(() => {
             if (this.shotClock > 0) {
@@ -232,7 +231,7 @@ export class Scoreboard {
     }
 
     resetShotClock() {
-        this.shotClock = SHOT_CLOCK_INITIAL;
+        this.shotClock = state.game.shotClockInit;
         this.updateTexture();
     }
 }
@@ -359,7 +358,7 @@ export class ScoreboardManager {
         }
     }
 
-    // Increment the Home score
+    // Increment the Home score and check for level-up conditions
     incrementScore() {
         this.scoreboard.increment();
     }

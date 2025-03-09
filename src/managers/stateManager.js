@@ -39,6 +39,7 @@ export const state = {
         roomSetupComplete: false,
         gameOver: false,
         gameStarted: false,
+        shotClockInit: 24,
         shotAttempt: false,    // Flag to track intentional shots
         missedShots: 0,        // Count of intentional missed shots
     },

@@ -276,8 +276,6 @@ export function moveHoop(newPos) {
 export function updateHoopMovement() {
   if (state.moveHoopBackAndForth && initialHoopPos) {
     const elapsedTime = state.gameClock;
-    
-    // Calculate the maximum allowable amplitude based on room boundaries relative to the initial position
     const roomBoundary = state.roomBoundary;
     const baseX = initialHoopPos.x;
     const maxAmplitude = Math.min(
@@ -285,13 +283,15 @@ export function updateHoopMovement() {
       roomBoundary.max.x - baseX - state.HOOP_RADIUS
     );
 
-    const amplitude = Math.min(state.hoopMovementAmplitude || 1000.0, maxAmplitude); // Default amplitude if not set
-    const frequency = 0.5; // Adjust the frequency as needed
+    const amplitude = Math.min(state.hoopMovementAmplitude || 1000.0, maxAmplitude);
+    const frequency = 0.5; // Adjust frequency as needed
     const offsetX = amplitude * Math.sin(elapsedTime * frequency * Math.PI * 2);
-    
-    // Calculate new position based on the initial hoop position plus the oscillation offset
-    const newPos = { ...initialHoopPos };
-    newPos.x += offsetX;
+
+    // Debug logs to verify computed values
+    console.log(`updateHoopMovement - elapsedTime: ${elapsedTime}`);
+    console.log(`BaseX: ${baseX}, amplitude: ${amplitude}, offsetX: ${offsetX}`);
+
+    const newPos = { ...initialHoopPos, x: baseX + offsetX };
     moveHoop(newPos);
   }
 }

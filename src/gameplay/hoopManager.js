@@ -237,7 +237,7 @@ export function moveHoop(newPos) {
     const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
     const hoopQuat = dummy.quaternion.clone().multiply(correction);
     
-    // Update both position and orientation of hoop body using setNextKinematicTranslation
+    // Update hoop body position and orientation using setNextKinematicTranslation
     hoopBody.setNextKinematicTranslation(new RAPIER.Vector3(newPos.x, newPos.y, newPos.z));
     hoopBody.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
@@ -260,6 +260,17 @@ export function moveHoop(newPos) {
     backboardMesh.position.copy(newPos);
     backboardMesh.updateMatrix();
     backboardMesh.updateMatrixWorld();
+
+    // Update physics backboard (boardBody) so it blocks the ball properly too
+    if (boardBody) {
+        boardBody.setNextKinematicTranslation(new RAPIER.Vector3(newPos.x, newPos.y, newPos.z - 0.05));
+        boardBody.setRotation({
+            x: backboardDummy.quaternion.x,
+            y: backboardDummy.quaternion.y,
+            z: backboardDummy.quaternion.z,
+            w: backboardDummy.quaternion.w
+        });
+    }
 }
 
 export function updateHoopMovement() {

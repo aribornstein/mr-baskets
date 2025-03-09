@@ -16,7 +16,7 @@ export const state = {
     HOOP_RADIUS: 0.3,
     HOOP_HEIGHT: 1.8,
 
-    moveHoopBackAndForth:false,
+    moveHoopBackAndForth:true,
     // Callbacks for input events
     onGrab: null,
     onRelease: null,

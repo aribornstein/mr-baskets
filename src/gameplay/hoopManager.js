@@ -11,11 +11,13 @@ let netMesh = null;
 let hoopBody = null, boardBody = null, netBody = null;
 let sensor;
 let sensorCooldown = false; // Add this line to define sensorCooldown
+let initialHoopPos = null;
+
 
 
 export function createHoopPhysics(pos) {
   const world = getWorld();
-
+  initialHoopPos = { x: pos.x, y: pos.y, z: pos.z };
   // -------------------------
   // Hoop ring physics
   // -------------------------
@@ -261,22 +263,23 @@ export function moveHoop(newPos) {
 }
 
 export function updateHoopMovement() {
-  if (state.moveHoopBackAndForth) {
+  if (state.moveHoopBackAndForth && initialHoopPos) {
     const elapsedTime = state.gameClock;
     
-    // Calculate the maximum allowable amplitude based on room boundaries
+    // Calculate the maximum allowable amplitude based on room boundaries relative to the initial position
     const roomBoundary = state.roomBoundary;
-    const hoopPos = hoopBody.translation();
+    const baseX = initialHoopPos.x;
     const maxAmplitude = Math.min(
-      hoopPos.x - roomBoundary.min.x - state.HOOP_RADIUS,
-      roomBoundary.max.x - hoopPos.x - state.HOOP_RADIUS
+      baseX - roomBoundary.min.x - state.HOOP_RADIUS,
+      roomBoundary.max.x - baseX - state.HOOP_RADIUS
     );
 
     const amplitude = Math.min(state.hoopMovementAmplitude || 1000.0, maxAmplitude); // Default amplitude if not set
     const frequency = 0.5; // Adjust the frequency as needed
     const offsetX = amplitude * Math.sin(elapsedTime * frequency * Math.PI * 2);
     
-    const newPos = hoopBody.translation();
+    // Calculate new position based on the initial hoop position plus the oscillation offset
+    const newPos = { ...initialHoopPos };
     newPos.x += offsetX;
     moveHoop(newPos);
   }

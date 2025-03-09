@@ -23,6 +23,7 @@ let audioLoader;
 let currentTrack;
 let audioListener;
 let audio;
+let cheerAudio;
 let bounceSound; // Add this line
 let buzzerSound = null; // Add this near bounceSound declaration
 
@@ -144,7 +145,7 @@ export async function playCheerSound() {
         audioListener = initAudioListener();
     }
     const cheerTrack = cheerTracks[Math.floor(Math.random() * cheerTracks.length)];
-    const cheerAudio = new THREE.Audio(audioListener);
+    cheerAudio = new THREE.Audio(audioListener);
     try {
         const buffer = await loadAudioTrack(cheerTrack);
         cheerAudio.setBuffer(buffer);

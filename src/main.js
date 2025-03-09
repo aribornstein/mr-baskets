@@ -72,7 +72,7 @@ async function initGame() {
         // Random chance to trigger a power-up
         const ballMesh = getBallMesh();
         const chance = Math.random();
-        if (ballMesh) {
+        if (ballMesh && state.game.level > 5) {
             // e.g., 30% chance to trigger a power-up after a basket
             if (chance < 0.15) {
             // Trigger the fire power-up: double score points and play flame effect.
@@ -123,13 +123,11 @@ function animate() {
             if (isBasket(collider1, collider2)) {
                 console.log("Basket made!");
                 state.game.shotAttempt = false;
-                // Score increment (and potentially doubling in fire mode)
-                scoreboardManager.resetShotClock();
                 state.shotClockInit = Math.max(24 - Math.floor(currentScore / 5), 3);
+                scoreboardManager.resetShotClock();
                 scoreboardManager.incrementScore();
                 updateLevel();
                 moveHoopToNewPosition(state);
-
             }
 
             // Check for collisions between ball and ground using userData markers.

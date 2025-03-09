@@ -15,7 +15,7 @@ import { isBasket, updateHoopMovement} from "./gameplay/hoopManager.js";
 import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound, playBuzzerSound, loadBuzzerSound } from "./effects/audioManager.js";
 import { updateFlameParticles, updateIceParticles } from "./effects/particles.js";
 import { applyFirePowerUp, applyIcePowerUp } from "./gameplay/powerUpManager.js";
-import { updateLevel } from "../managers/levelManager.js";
+import { updateLevel } from "./managers/levelManager.js";
 
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;

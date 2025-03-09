@@ -3,9 +3,17 @@ import * as THREE from 'three';
 
 // Array of background music tracks
 const backgroundTracks = [
-    'src/assets/track1.mp3',
-    'src/assets/track2.mp3',
-    'src/assets/track3.mp3'
+    'src/assets/tracks/track1.mp3',
+    'src/assets/tracks/track2.mp3',
+    'src/assets/tracks/track3.mp3'
+];
+
+const cheerTracks = [
+    'src/assets/cheers/cheer1.wav',
+    'src/assets/cheers/cheer2.wav',
+    'src/assets/cheers/cheer3.wav',
+    'src/assets/cheers/cheer4.wav',
+    // Add more cheer files as needed
 ];
 
 let audioLoader;
@@ -89,7 +97,7 @@ export async function loadBounceSound() {
         audioLoader = new THREE.AudioLoader();
     }
     bounceSound = new THREE.Audio(audioListener);
-    const buffer = await loadAudioTrack('src/assets/ball-bounce.mp3');
+    const buffer = await loadAudioTrack('src/assets/sounds/ball-bounce.mp3');
     bounceSound.setBuffer(buffer);
 }
 
@@ -113,7 +121,7 @@ export async function loadBuzzerSound() {
         audioLoader = new THREE.AudioLoader();
     }
     buzzerSound = new THREE.Audio(audioListener);
-    const buffer = await loadAudioTrack('src/assets/buzzer.mp3');
+    const buffer = await loadAudioTrack('src/assets/sounds/buzzer.mp3');
     buzzerSound.setBuffer(buffer);
 }
 
@@ -125,5 +133,22 @@ export function playBuzzerSound() {
         buzzerSound.setLoop(false);
         buzzerSound.setVolume(1.0);
         buzzerSound.play();
+    }
+}
+
+export async function playCheerSound() {
+    if (!audioListener) {
+        audioListener = initAudioListener();
+    }
+    const cheerTrack = cheerTracks[Math.floor(Math.random() * cheerTracks.length)];
+    const cheerAudio = new THREE.Audio(audioListener);
+    try {
+        const buffer = await loadAudioTrack(cheerTrack);
+        cheerAudio.setBuffer(buffer);
+        cheerAudio.setLoop(false);
+        cheerAudio.setVolume(1.0);
+        cheerAudio.play();
+    } catch (error) {
+        console.error("Failed to play cheer sound:", error);
     }
 }

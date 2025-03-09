@@ -123,9 +123,9 @@ function animate() {
             if (isBasket(collider1, collider2)) {
                 console.log("Basket made!");
                 state.game.shotAttempt = false;
-                state.shotClockInit = Math.max(24 - Math.floor(currentScore / 5), 3);
-                scoreboardManager.resetShotClock();
                 scoreboardManager.incrementScore();
+                state.shotClockInit = Math.max(24 - Math.floor(state.game.score / 5), 3);
+                scoreboardManager.resetShotClock();
                 updateLevel();
                 moveHoopToNewPosition(state);
             }

@@ -13,11 +13,13 @@ let sensor;
 let sensorCooldown = false; // Add this line to define sensorCooldown
 let initialHoopPos = null;
 
-
+export function setInitialHoopPos(pos) {
+  initialHoopPos = { x: pos.x, y: pos.y, z: pos.z };
+}
 
 export function createHoopPhysics(pos) {
   const world = getWorld();
-  initialHoopPos = { x: pos.x, y: pos.y, z: pos.z };
+  setInitialHoopPos(pos);
   // -------------------------
   // Hoop ring physics
   // -------------------------
@@ -235,18 +237,16 @@ export function moveHoop(newPos) {
     const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
     const hoopQuat = dummy.quaternion.clone().multiply(correction);
     
-    // Update both position and orientation of hoop body
-    hoopBody.setTranslation(new RAPIER.Vector3(newPos.x, newPos.y, newPos.z));
+    // Update both position and orientation of hoop body using setNextKinematicTranslation
+    hoopBody.setNextKinematicTranslation(new RAPIER.Vector3(newPos.x, newPos.y, newPos.z));
     hoopBody.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
-    // Update sensor position and orientation
+    // Update sensor position and orientation using setNextKinematicTranslation
     const sensorYOffset = -0.01;
-    const sensorBodyDesc = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
-    
-    // Get the sensor body and update its translation and rotation
+    const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
     const sensorBody = sensor.parent();
     if (sensorBody) {
-        sensorBody.setTranslation(sensorBodyDesc);
+        sensorBody.setNextKinematicTranslation(sensorPos);
         sensorBody.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
     }
 
@@ -256,7 +256,7 @@ export function moveHoop(newPos) {
     backboardDummy.lookAt(getCamera().position);
     backboardMesh.quaternion.copy(backboardDummy.quaternion);
     
-    // Apply any needed offsets to visual elements
+    // Re-apply any needed offsets to visual elements
     backboardMesh.position.copy(newPos);
     backboardMesh.updateMatrix();
     backboardMesh.updateMatrixWorld();

@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { getCamera } from "../core/engine.js";
 import { createBallPhysics, createBallVisual, removeBall } from "../gameplay/ballManager.js";
-import { createHoopPhysics, createHoopVisual, removeHoop, moveHoop } from "../gameplay/hoopManager.js";
+import { setInitialHoopPos, createHoopPhysics, createHoopVisual, removeHoop, moveHoop } from "../gameplay/hoopManager.js";
 
 function createBall(state) {
     const camera = getCamera();
@@ -60,6 +60,7 @@ export function moveHoopToNewPosition(state, delay = 200) {
     const newHoopPos = findNewHoopPosition(state);
     // Wait for the specified delay before moving the hoop
     setTimeout(() => {
+        setInitialHoopPos(newHoopPos);
         moveHoop(newHoopPos);
         console.log("Hoop moved to a new position within room bounds.");
     }, delay);

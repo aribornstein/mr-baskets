@@ -31,7 +31,7 @@ const SHADOW_BLUR = 10;
 export class Scoreboard {
     constructor() {
         // Single player: only "homeScore" + "level"
-        this.level = 1;
+        state.level = 1;
         this.gameClockDisplay = "00:00"; // Display string
 
         // Shot clock logic
@@ -119,13 +119,12 @@ export class Scoreboard {
 
         // ========== Draw LEVEL number ==========
         ctx.fillStyle = COLOR_LEVEL;
-        ctx.fillText(String(this.level), centerX + 160, 90);
+        ctx.fillText(String(state.level), centerX + 160, 90);
 
         // ========== Draw main game clock ==========
         ctx.font = "bold 50px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_MAIN_CLOCK;
         ctx.fillText(this.gameClockDisplay, centerX, centerY);
-
         // ========== Draw SHOT CLOCK label and number ==========
         ctx.font = "bold 20px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_LABEL;
@@ -174,7 +173,7 @@ export class Scoreboard {
 
     // Advance level method
     nextLevel() {
-        this.level++;
+        state.level++;
         this.updateTexture();
     }
 

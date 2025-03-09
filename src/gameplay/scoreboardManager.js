@@ -31,7 +31,7 @@ const SHADOW_BLUR = 10;
 export class Scoreboard {
     constructor() {
         // Single player: only "homeScore" + "level"
-        state.level = 1;
+        state.game.level = 1;
         this.gameClockDisplay = "00:00"; // Display string
 
         // Shot clock logic
@@ -81,7 +81,7 @@ export class Scoreboard {
         const centerY = this.canvas.height / 2;
 
         // If game over, show only the game over message
-        if (state.gameOver) {
+        if (state.game.gameOver) {
             ctx.fillStyle = "red";
             let fontSize = 30; // Start with a default font size
             const minFontSize = 16; // Minimum font size
@@ -115,11 +115,11 @@ export class Scoreboard {
         // ========== Draw HOME Score ==========
         ctx.font = "bold 50px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_HOME;
-        ctx.fillText(String(state.score).padStart(3, "0"), centerX - 160, 90);
+        ctx.fillText(String(state.game.score).padStart(3, "0"), centerX - 160, 90);
 
         // ========== Draw LEVEL number ==========
         ctx.fillStyle = COLOR_LEVEL;
-        ctx.fillText(String(state.level), centerX + 160, 90);
+        ctx.fillText(String(state.game.level), centerX + 160, 90);
 
         // ========== Draw main game clock ==========
         ctx.font = "bold 50px 'DSEG14 Classic', Arial";
@@ -140,8 +140,8 @@ export class Scoreboard {
 
     // Method to update the displayed game clock
     updateGameClockDisplay() {
-        const minutes = Math.floor(state.gameClock/ 60);
-        const seconds = state.gameClock% 60;
+        const minutes = Math.floor(state.game.gameClock/ 60);
+        const seconds = state.game.gameClock% 60;
         this.gameClockDisplay = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         this.updateTexture();
     }
@@ -149,7 +149,7 @@ export class Scoreboard {
     // Start the game clock
     startGameClock() {
         this.gameClockInterval = setInterval(() => {
-            state.gameClock++;
+            state.game.gameClock++;
             this.updateGameClockDisplay();
         }, 1000);
     }
@@ -161,19 +161,19 @@ export class Scoreboard {
 
     // Reset the game clock
     resetGameClock() {
-        state.gameClock= 0;
+        state.game.gameClock= 0;
         this.updateGameClockDisplay();
     }
 
     // Increment home score method
     increment() {
-        state.score++;
+        state.game.score++;
         this.updateTexture();
     }
 
     // Advance level method
     nextLevel() {
-        state.level++;
+        state.game.level++;
         this.updateTexture();
     }
 
@@ -326,7 +326,7 @@ export class ScoreboardManager {
         });
 
         if (nearestWall) {
-            pos.y = state.floorOffset + SCOREBOARD_HEIGHT_ABOVE_FLOOR;
+            pos.y = state.environment.floorOffset + SCOREBOARD_HEIGHT_ABOVE_FLOOR;
             this.scoreboard.setPosition(pos, quat);
         }
     }

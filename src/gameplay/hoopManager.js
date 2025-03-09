@@ -27,7 +27,7 @@ export function createHoopPhysics(pos) {
   hoopBody = world.createRigidBody(hoopBodyDesc);
 
   // Create a torus geometry for the hoop ring
-  const torusGeometry = new THREE.TorusGeometry(state.HOOP_RADIUS, 0.02, 16, 100);
+  const torusGeometry = new THREE.TorusGeometry(state.objects.hoop.radius, 0.02, 16, 100);
   const vertices = [];
   const indices = [];
 
@@ -60,7 +60,7 @@ export function createHoopPhysics(pos) {
   const sensorThickness = 0.0001; // Extremely thin
   const sensorYOffset = -0.01; // Slightly below hoop center to detect ball passing through
 
-  const sensorDesc = RAPIER.ColliderDesc.cylinder(sensorThickness, state.HOOP_RADIUS * 0.9)
+  const sensorDesc = RAPIER.ColliderDesc.cylinder(sensorThickness, state.objects.hoop.radius * 0.9)
     .setSensor(true)
     .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
 
@@ -140,7 +140,7 @@ export function createHoopVisual(pos) {
     backboardMesh.translateY(0.1);
 
     // Hoop ring visual
-    const hoopGeometry = new THREE.TorusGeometry(state.HOOP_RADIUS, 0.02, 16, 100);
+    const hoopGeometry = new THREE.TorusGeometry(state.objects.hoop.radius, 0.02, 16, 100);
     const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
     hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
 
@@ -274,23 +274,33 @@ export function moveHoop(newPos) {
 }
 
 export function updateHoopMovement() {
-  if (state.moveHoopBackAndForth && initialHoopPos) {
-    // Use continuous time in seconds instead of state.gameClock
+  if ((state.objects.hoop.moveBackAndForth || state.objects.hoop.moveUpAndDown) && initialHoopPos) {
     const elapsedTime = performance.now() / 1000;
-    const roomBoundary = state.roomBoundary;
-    const baseX = initialHoopPos.x;
-    const maxAmplitude = Math.min(
-      baseX - roomBoundary.min.x - state.HOOP_RADIUS,
-      roomBoundary.max.x - baseX - state.HOOP_RADIUS
-    );
-    const amplitude = Math.min(state.hoopMovementAmplitude || 1000.0, maxAmplitude);
-    const frequency = 0.5; // Adjust frequency as needed
-    const offsetX = amplitude * Math.sin(elapsedTime * frequency * Math.PI * 2);
-    
-    console.log(`updateHoopMovement - elapsedTime: ${elapsedTime}`);
-    console.log(`BaseX: ${baseX}, amplitude: ${amplitude}, offsetX: ${offsetX}`);
-    
-    const newPos = { ...initialHoopPos, x: baseX + offsetX };
+    const newPos = { ...initialHoopPos };
+
+    if (state.objects.hoop.moveBackAndForth) {
+      const roomBoundary = state.environment.roomBoundary;
+      const baseX = initialHoopPos.x;
+      const maxAmplitude = roomBoundary
+        ? Math.min(
+            baseX - roomBoundary.min.x - state.objects.hoop.radius,
+            roomBoundary.max.x - baseX - state.objects.hoop.radius
+          )
+        : 100.0;
+      const amplitude = Math.min(state.objects.hoop.movementAmplitude || 100.0, maxAmplitude);
+      const frequency =  state.objects.hoop.movementFrequency || 0.5; // Adjust frequency as needed for horizontal movement
+      const offsetX = amplitude * Math.sin(elapsedTime * frequency * Math.PI * 2);
+      newPos.x = baseX + offsetX;
+    }
+
+    if (state.objects.hoop.moveUpAndDown) {
+      const baseY = initialHoopPos.y;
+      const verticalAmplitude = state.objects.hoop.movementAmplitude || 0.2;
+      const verticalFrequency = state.objects.hoop.movementFrequency || 0.5; // Adjust if needed
+      const offsetY = verticalAmplitude * Math.sin(elapsedTime * verticalFrequency * Math.PI * 2);
+      newPos.y = baseY + offsetY;
+    }
+
     moveHoop(newPos);
   }
 }

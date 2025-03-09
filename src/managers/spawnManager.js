@@ -9,10 +9,10 @@ function createBall(state) {
     const ballOffset = new THREE.Vector3(0, 0, -1);
     ballOffset.applyQuaternion(camera.quaternion);
     const ballPos = camera.position.clone().add(ballOffset);
-    ballPos.y = state.BALL_RADIUS + state.floorOffset;
-    if (state.roomBoundary) {
-        ballPos.x = THREE.MathUtils.clamp(ballPos.x, state.roomBoundary.min.x + state.BALL_RADIUS, state.roomBoundary.max.x - state.BALL_RADIUS);
-        ballPos.z = THREE.MathUtils.clamp(ballPos.z, state.roomBoundary.min.z + state.BALL_RADIUS, state.roomBoundary.max.z - state.BALL_RADIUS);
+    ballPos.y = state.objects.ball.radius + state.environment.floorOffset;
+    if (state.environment.roomBoundary) {
+        ballPos.x = THREE.MathUtils.clamp(ballPos.x, state.environment.roomBoundary.min.x + state.objects.ball.radius, state.environment.roomBoundary.max.x - state.objects.ball.radius);
+        ballPos.z = THREE.MathUtils.clamp(ballPos.z, state.environment.roomBoundary.min.z + state.objects.ball.radius, state.environment.roomBoundary.max.z - state.objects.ball.radius);
     }
     createBallPhysics(ballPos);
     createBallVisual(ballPos);
@@ -25,14 +25,14 @@ function createHoop(state) {
     const hoopOffset = new THREE.Vector3(0, 0, -2.5);
     hoopOffset.applyQuaternion(camera.quaternion);
     const hoopPos = camera.position.clone().add(hoopOffset);
-    hoopPos.y = state.HOOP_HEIGHT + state.floorOffset;
-    if (state.roomBoundary) {
-        hoopPos.x = THREE.MathUtils.clamp(hoopPos.x, state.roomBoundary.min.x + state.HOOP_RADIUS, state.roomBoundary.max.x - state.HOOP_RADIUS);
-        hoopPos.z = THREE.MathUtils.clamp(hoopPos.z, state.roomBoundary.min.z + state.HOOP_RADIUS, state.roomBoundary.max.z - state.HOOP_RADIUS);
+    hoopPos.y = state.objects.hoop.height + state.floorOffset;
+    if (state.environment.roomBoundary) {
+        hoopPos.x = THREE.MathUtils.clamp(hoopPos.x, state.environment.roomBoundary.min.x + state.objects.hoop.radius, state.environment.roomBoundary.max.x - state.objects.hoop.radius);
+        hoopPos.z = THREE.MathUtils.clamp(hoopPos.z, state.environment.roomBoundary.min.z + state.objects.hoop.radius, state.environment.roomBoundary.max.z - state.objects.hoop.radius);
     }
     createHoopPhysics(hoopPos);
     createHoopVisual(hoopPos);
-    state.hoopCreated = true;
+    state.objects.hoop.created = true;
     return hoopPos
 }
 
@@ -41,16 +41,16 @@ function findNewHoopPosition(state) {
     let newHoopPos = new THREE.Vector3();
 
     // Generate a random position within the room boundaries
-    if (state.roomBoundary) {
-        const x = THREE.MathUtils.randFloat(state.roomBoundary.min.x + state.HOOP_RADIUS, state.roomBoundary.max.x - state.HOOP_RADIUS);
-        const z = THREE.MathUtils.randFloat(state.roomBoundary.min.z + state.HOOP_RADIUS, state.roomBoundary.max.z - state.HOOP_RADIUS);
-        newHoopPos.set(x, state.HOOP_HEIGHT + state.floorOffset, z);
+    if (state.environment.roomBoundary) {
+        const x = THREE.MathUtils.randFloat(state.environment.roomBoundary.min.x + state.objects.hoop.radius, state.environment.roomBoundary.max.x - state.objects.hoop.radius);
+        const z = THREE.MathUtils.randFloat(state.environment.roomBoundary.min.z + state.objects.hoop.radius, state.environment.roomBoundary.max.z - state.objects.hoop.radius);
+        newHoopPos.set(x, state.objects.hoop.height + state.environment.floorOffset, z);
     } else {
         // If no room boundary, default to a position in front of the camera
         const hoopOffset = new THREE.Vector3(0, 0, -2.5);
         hoopOffset.applyQuaternion(camera.quaternion);
         newHoopPos = camera.position.clone().add(hoopOffset);
-        newHoopPos.y = state.HOOP_HEIGHT + state.floorOffset;
+        newHoopPos.y = state.objects.hoop.height + state.environment.floorOffset;
     }
 
     return newHoopPos;
@@ -75,8 +75,8 @@ export function createBallAndHoop(state) {
 export function removeBallAndHoop(state) {
     removeBall();
     removeHoop();
-    state.ballCreated = false;
-    state.hoopCreated = false;
+    state.objects.ball.created = false;
+    state.objects.hoop.created = false;
     console.log("Ball and hoop removed.");
 }
 

@@ -28,10 +28,10 @@ export function initInputManager(state) {
     });
     // Forward squeeze events to state callbacks
     controller.addEventListener("squeezestart", (e) => {
-      state.onGrab && state.onGrab(e, controller);
+      state.callbacks.onGrab && state.callbacks.onGrab(e, controller);
     });
     controller.addEventListener("squeezeend", (e) => {
-      state.onRelease && state.onRelease(e, controller);
+      state.callbacks.onRelease && state.callbacks.onRelease(e, controller);
     });
     getScene().add(controller);
     controllers.push(controller);

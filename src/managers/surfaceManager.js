@@ -10,34 +10,34 @@ export function handleSurfaceAdded(event, state) {
   console.log("Surface added:", label);
 
   // Floor detection
-  if (label === "floor" && !state.floorConfigured) {
+  if (label === "floor" && !state.environment.floorConfigured) {
     const box = new THREE.Box3().setFromObject(surfaceMesh);
-    state.floorOffset = box.min.y;
-    state.floorConfigured = true;
-    console.log("Floor configured at:", state.floorOffset);
-    if (!state.groundCreated) {
-      createGroundPhysics(state.floorOffset);
-      state.groundCreated = true;
+    state.environment.floorOffset = box.min.y;
+    state.environment.floorConfigured = true;
+    console.log("Floor configured at:", state.environment.floorOffset);
+    if (!state.objects.ground.created) {
+      createGroundPhysics(state.environment.floorOffset);
+      state.objects.ground.created = true;
     }
   }
   // Wall detection
   if (label === "wall") {
     const wallBox = new THREE.Box3().setFromObject(surfaceMesh);
-    if (!state.roomBoundary) {
-      state.roomBoundary = wallBox;
+    if (!state.environment.roomBoundary) {
+      state.environment.roomBoundary = wallBox;
     } else {
-      state.roomBoundary.union(wallBox);
+      state.environment.roomBoundary.union(wallBox);
     }
-    console.log("Updated room boundary:", state.roomBoundary);
+    console.log("Updated room boundary:", state.environment.roomBoundary);
     // Notify that room boundaries are available.
-    if (!state.wallsCreated && state.roomBoundary) {
+    if (!state.objects.walls.created && state.environment.roomBoundary) {
       createRoomWalls(state.roomBoundary);
-      state.wallsCreated = true;
-      eventBus.emit("roomBoundaryReady", state.roomBoundary);
+      state.objects.walls.created = true;
+      eventBus.emit("roomBoundaryReady", state.environment.roomBoundary);
     }
   }
-  if (state.groundCreated && state.wallsCreated) {
-    state.roomSetupComplete = true;
+  if (state.objects.ground.created && state.objects.walls.created) {
+    state.game.roomSetupComplete = true;
     eventBus.emit("roomSetupComplete", state);
   }
 }

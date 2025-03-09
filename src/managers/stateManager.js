@@ -1,27 +1,46 @@
 // src/managers/stateManager.js
 export const state = {
-    floorOffset: 0,
-    floorConfigured: false,
-    groundCreated: false,
-    ballCreated: false,
-    hoopCreated: false,
-    wallsCreated: false,
-    scoreboardCreated: false,
-    roomBoundary: null,
-    isHoldingBall: false,
-    roomSetupComplete: false,
-    level: 1,
-    gameClock: 0,
-    score:0,
-    BALL_RADIUS: 0.12,
-    HOOP_RADIUS: 0.3,
-    HOOP_HEIGHT: 1.8,
-
-    moveHoopBackAndForth:true,
-    // Callbacks for input events
-    onGrab: null,
-    onRelease: null,
-    gameOver: false,
-    gameStarted: false // ADD THIS LINE
-
-  };
+    environment: {
+        floorOffset: 0,
+        floorConfigured: false,
+        roomBoundary: null,
+    },
+    objects: {
+        ground: {
+            created: false,
+        },
+        ball: {
+            created: false,
+            isHeld: false,
+            radius: 0.12,
+            // BALL-specific values if needed
+        },
+        hoop: {
+            created: false,
+            radius: 0.3,
+            height: 1.8,
+            movementAmplitude: null,
+            movementFrequency: null,
+            moveBackAndForth: false,
+            moveUpAndDown: true,
+        },
+        walls: {
+            created: false,
+        },
+        scoreboard: {
+            created: false,
+        },
+    },
+    game: {
+        level: 1,
+        gameClock: 0,
+        score: 0,
+        roomSetupComplete: false,
+        gameOver: false,
+        gameStarted: false,
+    },
+    callbacks: {
+        onGrab: null,
+        onRelease: null,
+    },
+};

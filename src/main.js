@@ -43,14 +43,14 @@ async function initGame() {
     // Listen for game over event
     eventBus.on("gameOver", () => {
         console.log("Game Over - Resetting Game");
-        state.gameOver = true;
+        state.game.gameOver = true;
         scoreboardManager.scoreboard.updateTexture(); // Update scoreboard to show game over
         removeBallAndHoop(state);
         stopBackgroundMusic(); // Stop
     });
 
     eventBus.on("roomSetupComplete", (state) => {
-        if (!state.ballCreated && !state.hoopCreated) {
+        if (!state.objects.ball.created && !state.objects.hoop.created) {
             createBallAndHoop(state);
         }
     });
@@ -60,9 +60,9 @@ async function initGame() {
 }
 
 function startGame() {
-    if (!state.scoreboardCreated) {
+    if (!state.objects.scoreboard.created) {
         scoreboardManager = new ScoreboardManager(state);
-        state.scoreboardCreated = true;
+        state.objects.scoreboard.created = true;
     }
     else {
         scoreboardManager.startShotClock();
@@ -70,9 +70,9 @@ function startGame() {
     }
 
     // Create ball and hoop after floor is configured
-    if (state.roomSetupComplete && !state.gameStarted) {
+    if (state.game.roomSetupComplete && !state.game.gameStarted) {
         createBallAndHoop(state);
-        state.gameStarted = true;
+        state.game.gameStarted = true;
     }
 
     playBackgroundMusic(); // Start playing background music
@@ -95,7 +95,7 @@ function animate() {
                 scoreboardManager.incrementScore();
                 scoreboardManager.resetShotClock();
                 moveHoopToNewPosition(state);
-                if (state.score > 0 && state.score % 5 === 0) {
+                if (state.game.score > 0 && state.game.score % 5 === 0) {
                     // Add flame effect to ball every 5 points
                     // Replace this with power up logic (flames, ice, etc.)
                     const ballMesh = getBallMesh();
@@ -113,7 +113,7 @@ function animate() {
             }
         });
 
-        if (state.hoopCreated) {
+        if (state.objects.hoop.created) {
             updateHoopMovement(state);
         }
 
@@ -131,7 +131,7 @@ function animate() {
 
         if (controller.userData.inputSource && controller.userData.inputSource.gamepad && controller.userData.inputSource.gamepad.buttons) {
             for (let i = 0; i < controller.userData.inputSource.gamepad.buttons.length; i++) {
-                if (state.gameOver && controller.userData.inputSource.gamepad.buttons[4].pressed) {
+                if (state.game.gameOver && controller.userData.inputSource.gamepad.buttons[4].pressed) {
                     resetGame();
                 }
             }
@@ -145,8 +145,8 @@ function animate() {
     }
 
     // Update ball position based on physics if not held
-    if (state.ballCreated && !state.isHoldingBall) {
-        updateBall(delta, state.roomBoundary);
+    if (state.objects.ball.created && !state.objects.ball.isHeld) {
+        updateBall(delta, state.environment.roomBoundary);
     }
 
     getRenderer().render(getScene(), getCamera());
@@ -177,8 +177,8 @@ document.getElementById("ar-button").addEventListener("click", async () => {
 
 function resetGame() {
     // Reset game state
-    state.gameOver = false;
-    state.gameStarted = false;
+    state.game.gameOver = false;
+    state.game.gameStarted = false;
 
     // Reset scoreboard
     scoreboardManager.resetShotClock();

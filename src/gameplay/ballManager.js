@@ -17,7 +17,7 @@ export function createBallPhysics(pos) {
                   .setTranslation(pos.x, pos.y, pos.z)
                   
   ballRigidBody = world.createRigidBody(bodyDesc);
-  const colliderDesc = RAPIER.ColliderDesc.ball(state.BALL_RADIUS)
+  const colliderDesc = RAPIER.ColliderDesc.ball(state.objects.ball.radius)
     .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS) 
     .setRestitution(0.7)
     .setFriction(0.7)
@@ -30,14 +30,14 @@ export function createBallVisual(pos) {
   loadBasketballModel()
     .then(basketball => {
       basketballMesh = basketball;
-      basketballMesh.scale.set(state.BALL_RADIUS * 2.0, state.BALL_RADIUS * 2.0, state.BALL_RADIUS * 2.0); // Adjust scale if necessary
+      basketballMesh.scale.set(state.objects.ball.radius * 2.0, state.objects.ball.radius * 2.0, state.objects.ball.radius * 2.0); // Adjust scale if necessary
       basketballMesh.position.copy(pos);
       addObject(basketballMesh);
     })
     .catch(error => {
       console.error("Failed to load basketball model:", error);
       // Fallback to sphere geometry if loading fails
-      const geometry = new THREE.SphereGeometry(state.BALL_RADIUS, 32, 32);
+      const geometry = new THREE.SphereGeometry(state.objects.ball.radius, 32, 32);
       const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
       basketballMesh = new THREE.Mesh(geometry, material);
       basketballMesh.position.copy(pos);
@@ -58,8 +58,8 @@ export function updateBall(delta, roomBoundary) {
 function clampBallPosition(roomBoundary) {
   if (ballRigidBody && roomBoundary) {
     const t = ballRigidBody.translation();
-    const clampedX = THREE.MathUtils.clamp(t.x, roomBoundary.min.x + state.BALL_RADIUS, roomBoundary.max.x - state.BALL_RADIUS);
-    const clampedZ = THREE.MathUtils.clamp(t.z, roomBoundary.min.z + state.BALL_RADIUS, roomBoundary.max.z - state.BALL_RADIUS);
+    const clampedX = THREE.MathUtils.clamp(t.x, roomBoundary.min.x + state.objects.ball.radius, roomBoundary.max.x - state.objects.ball.radius);
+    const clampedZ = THREE.MathUtils.clamp(t.z, roomBoundary.min.z + state.objects.ball.radius, roomBoundary.max.z - state.objects.ball.radius);
     if (t.x !== clampedX || t.z !== clampedZ) {
       ballRigidBody.setTranslation({ x: clampedX, y: t.y, z: clampedZ }, true);
       ballRigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -69,8 +69,8 @@ function clampBallPosition(roomBoundary) {
 
 export function registerBallInput(state) {
   // Register onGrab and onRelease callbacks for controller events
-  state.onGrab = onGrab;
-  state.onRelease = onRelease;
+  state.callbacks.onGrab = onGrab;
+  state.callbacks.onRelease = onRelease;
 }
 
 function onGrab(event, controller) {
@@ -78,7 +78,7 @@ function onGrab(event, controller) {
     console.warn("No basketballMesh available to grab.");
     return;
   }
-  if (!state.isHoldingBall) {
+  if (!state.objects.ball.isHeld) {
     if (ballCollider){
       getWorld().removeCollider(ballCollider);
       ballCollider = null;
@@ -96,7 +96,7 @@ function onGrab(event, controller) {
     } else {
       basketballMesh.position.set(-0.1, 0.0, -0.08);
     }
-    state.isHoldingBall = true;
+    state.objects.ball.isHeld = true;
   } else {
     const currentHolder = basketballMesh.parent;
     if (currentHolder !== controller) {
@@ -116,8 +116,8 @@ function onRelease(event, controller) {
     console.warn("No basketballMesh available to release.");
     return;
   }
-  if (state.isHoldingBall) {
-    state.isHoldingBall = false;
+  if (state.objects.ball.isHeld) {
+    state.objects.ball.isHeld = false;
     basketballMesh.updateMatrixWorld();
     const worldPos = new THREE.Vector3();
     basketballMesh.getWorldPosition(worldPos);
@@ -135,12 +135,12 @@ function onRelease(event, controller) {
 export function removeBall() {
   const world = getWorld();
   if (basketballMesh) {
-    if (state.isHoldingBall) {
+    if (state.objects.ball.isHeld) {
       // If the ball is held, remove it from the controller first
       if (basketballMesh.parent) {
         basketballMesh.parent.remove(basketballMesh);
       }
-      state.isHoldingBall = false; // Update the state
+      state.objects.ball.isHeld = false; // Update the state
     }
     getScene().remove(basketballMesh);
     basketballMesh = null;

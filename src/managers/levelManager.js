@@ -19,13 +19,13 @@ function setLevelHoopMovement() {
     const level = state.game.level;
     if (level < 5) {
         state.objects.hoop.moveLeftAndRight = false;
-    } else if (level < 10) {
+    } else if (level < 7) {
         if (Math.random() < 0.5) {
             state.objects.hoop.moveLeftAndRight = true;
         } else {
             state.objects.hoop.moveLeftAndRight = false;
         }
-    } else if (level < 14) {
+    } else if (level < 9) {
         // Randomly enable either lateral or vertical movement.
         if (Math.random() < 0.5) {
             state.objects.hoop.moveLeftAndRight = true;
@@ -34,7 +34,7 @@ function setLevelHoopMovement() {
             state.objects.hoop.moveLeftAndRight = false;
             state.objects.hoop.moveUpAndDown = true;
         }
-    } else if (level < 20) {
+    } else if (level < 10) {
         // Randomly enable one of the three movements.
         if (Math.random() < 0.3) {
             state.objects.hoop.moveLeftAndRight = true;
@@ -53,7 +53,7 @@ function setLevelHoopMovement() {
 }
 // Call updateLevel each time the score updates.
 export function updateLevel() {
-    const threshold = fibonacci(state.game.level);
+    const threshold = fibonacci(state.game.level + 2);
 
     if (state.game.score >= threshold) {
         state.game.level++;

@@ -4,15 +4,6 @@
 import { state } from "./stateManager.js";
 import { eventBus } from "../core/eventBus.js";
 
-// Compute the nth Fibonacci number (starting with F(1)=1, F(2)=1)
-function fibonacci(n) {
-    if (n <= 2) return 1;
-    let a = 1, b = 1;
-    for (let i = 3; i <= n; i++) {
-        [a, b] = [b, a + b];
-    }
-    return b;
-}
 
 // Returns the hoop movement pattern based on the current level.
 function setLevelHoopMovement() {
@@ -53,7 +44,8 @@ function setLevelHoopMovement() {
 }
 // Call updateLevel each time the score updates.
 export function updateLevel() {
-    const threshold = fibonacci(state.game.level + 2);
+    
+    const threshold = Math.ceil(0.5 * Math.pow(state.game.level, 2));
 
     if (state.game.score >= threshold) {
         state.game.level++;

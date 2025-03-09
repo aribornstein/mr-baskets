@@ -318,7 +318,7 @@ export function updateHoopMovement() {
     }
 
     // Apply level multiplier to amplitude and frequency.
-    const effectiveAmplitude = maxAllowed * levelMultiplier;
+    let effectiveAmplitude = maxAllowed * levelMultiplier;
     if (axis === "y") {
       effectiveAmplitude *= 0.05; // Reduce vertical movement
     }

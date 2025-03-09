@@ -17,11 +17,15 @@ function fibonacci(n) {
 // Returns the hoop movement pattern based on the current level.
 function setLevelHoopMovement() {
     const level = state.game.level;
-    if (level >= 3) {
-        // Level 3+: Enable lateral movement.
-        state.objects.hoop.moveLeftAndRight = true;
-    } else if (level >= 5) {
-        // Level 5+: Enable vertical movement.
+    if (level < 5) {
+        state.objects.hoop.moveLeftAndRight = false;
+    } else if (level < 10) {
+        if (Math.random() < 0.5) {
+            state.objects.hoop.moveLeftAndRight = true;
+        } else {
+            state.objects.hoop.moveLeftAndRight = false;
+        }
+    } else if (level < 14) {
         // Randomly enable either lateral or vertical movement.
         if (Math.random() < 0.5) {
             state.objects.hoop.moveLeftAndRight = true;
@@ -30,8 +34,7 @@ function setLevelHoopMovement() {
             state.objects.hoop.moveLeftAndRight = false;
             state.objects.hoop.moveUpAndDown = true;
         }
-    } else if (level >= 7) {
-        // Level 10+: Depth movement is enabled.
+    } else if (level < 20) {
         // Randomly enable one of the three movements.
         if (Math.random() < 0.3) {
             state.objects.hoop.moveLeftAndRight = true;

@@ -12,7 +12,7 @@ import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./managers/spawnManager.js";
 import { registerBallInput, updateBall, getBallMesh } from "./gameplay/ballManager.js";
 import { isBasket, updateHoopMovement} from "./gameplay/hoopManager.js";
-import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound, playBuzzerSound, loadBuzzerSound, playCheerSound } from "./effects/audioManager.js";
+import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound, playBuzzerSound, loadBuzzerSound, playCheerSound, stopAllAudio } from "./effects/audioManager.js";
 import { updateFlameParticles, updateIceParticles } from "./effects/particles.js";
 import { applyFirePowerUp, applyIcePowerUp } from "./gameplay/powerUpManager.js";
 import { updateLevel } from "./managers/levelManager.js";
@@ -216,7 +216,7 @@ document.getElementById("ar-button").addEventListener("click", async () => {
         // Add event listener for session end
         session.addEventListener('end', () => {
             console.log("AR session ended.");
-            stopBackgroundMusic();
+            stopAllAudio();
         });
     } catch (err) {
         console.error("Failed to start AR session:", err);

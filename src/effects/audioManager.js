@@ -13,6 +13,9 @@ const cheerTracks = [
     'src/assets/cheers/cheer2.wav',
     'src/assets/cheers/cheer3.wav',
     'src/assets/cheers/cheer4.wav',
+    'src/assets/cheers/cheer5.wav',
+    'src/assets/cheers/cheer6.wav',
+    'src/assets/cheers/cheer7.wav',
     // Add more cheer files as needed
 ];
 
@@ -151,4 +154,18 @@ export async function playCheerSound() {
     } catch (error) {
         console.error("Failed to play cheer sound:", error);
     }
+}
+
+export function stopAllAudio() {
+    stopBackgroundMusic();
+    if (bounceSound && bounceSound.isPlaying) {
+        bounceSound.stop();
+    }
+    if (buzzerSound && buzzerSound.isPlaying) {
+        buzzerSound.stop();
+    }
+    if (cheerAudio && cheerAudio.isPlaying) {
+        cheerAudio.stop();
+    }
+    stopBackgroundMusic();
 }

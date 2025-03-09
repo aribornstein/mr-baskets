@@ -156,11 +156,12 @@ export class Scoreboard {
         ctx.fillStyle = COLOR_SHOT_CLOCK;
         ctx.fillText(String(this.shotClock), centerX, centerY + 100);
 
-        // Draw MISSED SHOTS as X's
+        // Draw MISSED SHOTS as X's centered underneath the label
         ctx.font = "bold 30px 'DSEG14 Classic', Arial";
         ctx.fillStyle = "red";
-        const missedText = "MISSED: " + "X".repeat(state.game.missedShots);
-        ctx.fillText(missedText, centerX, centerY - 100);
+        ctx.fillText("MISSED:", centerX, centerY - 120);
+        const missedX = "X".repeat(state.game.missedShots);
+        ctx.fillText(missedX, centerX, centerY - 80);
 
         this.texture.needsUpdate = true;
     }

@@ -53,7 +53,7 @@ function setLevelHoopMovement() {
 }
 // Call updateLevel each time the score updates.
 export function updateLevel() {
-    const threshold = fibonacci(state.game.level + 2);
+    const threshold = fibonacci(state.game.level + 1);
 
     if (state.game.score >= threshold) {
         state.game.level++;

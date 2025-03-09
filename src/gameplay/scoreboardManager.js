@@ -71,7 +71,7 @@ export class Scoreboard {
         ctx.fillStyle = SCOREBOARD_BACKGROUND_COLOR;
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Set up common text settings
+        // Common text settings
         ctx.textBaseline = "middle";
         ctx.textAlign = "center";
         ctx.shadowColor = SHADOW_COLOR;
@@ -80,52 +80,44 @@ export class Scoreboard {
         const centerX = this.canvas.width / 2;
         const centerY = this.canvas.height / 2;
 
-        // If game over, show only the game over message
+        // Game over display
         if (state.game.gameOver) {
             ctx.fillStyle = "red";
-            let fontSize = 30; // Start with a default font size
-            const minFontSize = 16; // Minimum font size
+            let fontSize = 30;
+            const minFontSize = 16;
             ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
-
-            // Measure the text width with the current font size
             let textWidth = ctx.measureText(GAME_OVER_TEXT).width;
-
-            // Reduce the font size until the text fits within the canvas width
             while (textWidth > this.canvas.width && fontSize > minFontSize) {
                 fontSize--;
                 ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
                 textWidth = ctx.measureText(GAME_OVER_TEXT).width;
             }
-
-             // Ensure the font size doesn't go below the minimum
-             fontSize = Math.max(fontSize, minFontSize);
-             ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
-
+            fontSize = Math.max(fontSize, minFontSize);
+            ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
             ctx.fillText(GAME_OVER_TEXT, centerX, centerY);
             this.texture.needsUpdate = true;
             return;
         }
 
-        // ========== Draw HOME / LEVEL labels ==========
+        // Draw HOME / LEVEL labels and scores
         ctx.font = "bold 30px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_LABEL;
         ctx.fillText("HOME", centerX - 160, 40);
         ctx.fillText("LEVEL", centerX + 160, 40);
 
-        // ========== Draw HOME Score ==========
         ctx.font = "bold 50px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_HOME;
         ctx.fillText(String(state.game.score).padStart(3, "0"), centerX - 160, 90);
 
-        // ========== Draw LEVEL number ==========
         ctx.fillStyle = COLOR_LEVEL;
         ctx.fillText(String(state.game.level), centerX + 160, 90);
 
-        // ========== Draw main game clock ==========
+        // Draw main game clock
         ctx.font = "bold 50px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_MAIN_CLOCK;
         ctx.fillText(this.gameClockDisplay, centerX, centerY);
-        // ========== Draw SHOT CLOCK label and number ==========
+
+        // Draw SHOT CLOCK
         ctx.font = "bold 20px 'DSEG14 Classic', Arial";
         ctx.fillStyle = COLOR_LABEL;
         ctx.fillText("SHOT CLOCK", centerX, centerY + 60);
@@ -134,7 +126,12 @@ export class Scoreboard {
         ctx.fillStyle = COLOR_SHOT_CLOCK;
         ctx.fillText(String(this.shotClock), centerX, centerY + 100);
 
-        // Update the texture
+        // Draw MISSED SHOTS as X's
+        ctx.font = "bold 30px 'DSEG14 Classic', Arial";
+        ctx.fillStyle = "red";
+        const missedText = "MISSED: " + "X".repeat(state.game.missedShots);
+        ctx.fillText(missedText, centerX, centerY + 160);
+
         this.texture.needsUpdate = true;
     }
 

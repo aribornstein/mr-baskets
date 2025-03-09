@@ -192,7 +192,10 @@ function resetGame() {
     // Reset game state
     state.game.gameOver = false;
     state.game.gameStarted = false;
-
+    state.game.score = 0;
+    state.game.missedShots = 0;
+    state.game.shotAttempt = false;
+    
     // Reset scoreboard
     scoreboardManager.resetShotClock();
     scoreboardManager.resetGameClock();

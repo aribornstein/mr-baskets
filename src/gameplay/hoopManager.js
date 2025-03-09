@@ -274,41 +274,48 @@ export function moveHoop(newPos) {
 }
 
 export function updateHoopMovement() {
-  if ((state.objects.hoop.moveLeftAndRight || state.objects.hoop.moveUpAndDown) && initialHoopPos) {
-    const elapsedTime = performance.now() / 1000;
-    const newPos = { ...initialHoopPos };
+  if (!initialHoopPos) return;
 
-    if (state.objects.hoop.moveLeftAndRight) {
-      const roomBoundary = state.environment.roomBoundary;
-      const baseX = initialHoopPos.x;
-      const maxAmplitude = roomBoundary
-        ? Math.min(
-            baseX - roomBoundary.min.x - state.objects.hoop.radius,
-            roomBoundary.max.x - baseX - state.objects.hoop.radius
-          )
-        : 100.0;
-      const amplitude = Math.min(state.objects.hoop.movementAmplitude || 0.2 , maxAmplitude);
-      const frequency =  state.objects.hoop.movementFrequency || 0.5; // Adjust frequency as needed for horizontal movement
-      const offsetX = amplitude * Math.sin(elapsedTime * frequency * Math.PI * 2);
-      newPos.x = baseX + offsetX;
+  const {
+    moveLeftAndRight,
+    moveUpAndDown,
+    moveBackAndForth,
+    movementAmplitude,
+    movementFrequency,
+    radius,
+  } = state.objects.hoop;
+  if (!(moveLeftAndRight || moveUpAndDown || moveBackAndForth)) return;
+
+  const elapsedTime = performance.now() / 1000;
+  const newPos = { ...initialHoopPos };
+  const roomBoundary = state.environment.roomBoundary;
+
+  // Map axis keys to their movement flags.
+  const axes = {
+    x: moveLeftAndRight,
+    y: moveUpAndDown,
+    z: moveBackAndForth,
+  };
+
+  Object.entries(axes).forEach(([axis, shouldMove]) => {
+    if (!shouldMove) return;
+
+    const base = initialHoopPos[axis];
+    let effectiveAmplitude = movementAmplitude;
+
+    if (roomBoundary) {
+      const minBound = roomBoundary.min[axis];
+      const maxBound = roomBoundary.max[axis];
+      // Use hoop radius as a buffer on both sides.
+      const maxAmpLimitedByMin = base - minBound - radius;
+      const maxAmpLimitedByMax = maxBound - base - radius;
+      const maxAllowed = Math.min(maxAmpLimitedByMin, maxAmpLimitedByMax);
+      effectiveAmplitude = Math.min(movementAmplitude, maxAllowed);
     }
 
-    if (state.objects.hoop.moveUpAndDown) {
-      const baseY = initialHoopPos.y;
-      const verticalAmplitude = state.objects.hoop.movementAmplitude || 0.2;
-      const verticalFrequency = state.objects.hoop.movementFrequency || 0.5; // Adjust if needed
-      const offsetY = verticalAmplitude * Math.sin(elapsedTime * verticalFrequency * Math.PI * 2);
-      newPos.y = baseY + offsetY;
-    }
+    const offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * Math.PI * 2);
+    newPos[axis] = base + offset;
+  });
 
-    if (state.objects.hoop.moveBackAndForth) {
-      const baseZ = initialHoopPos.z;
-      const depthAmplitude = state.objects.hoop.movementAmplitude || 0.2;
-      const depthFrequency = state.objects.hoop.movementFrequency || 0.5; // Adjust if needed
-      const offsetZ = depthAmplitude * Math.sin(elapsedTime * depthFrequency * Math.PI * 2);
-      newPos.z = baseZ + offsetZ;
-    }
-
-    moveHoop(newPos);
-  }
+  moveHoop(newPos);
 }

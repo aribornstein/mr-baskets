@@ -108,7 +108,6 @@ function animate() {
             // Check for collisions between ball and ground using userData markers.
             if (started && ((collider1.userData === "ball" && collider2.userData === "ground") ||
                             (collider1.userData === "ground" && collider2.userData === "ball"))) {
-                console.log("Ball hit the ground!");
                 playBounceSound();
             }
         });

@@ -13,7 +13,7 @@ import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./m
 import { registerBallInput, updateBall, getBallMesh } from "./gameplay/ballManager.js";
 import { isBasket, updateHoopMovement} from "./gameplay/hoopManager.js";
 import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound } from "./effects/audioManager.js";
-import { addFlameEffectToBall } from "./effects/particles.js";
+import { addFlameEffectToBall, addIceEffectToBall } from "./effects/particles.js";
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
 let ratk;
@@ -100,7 +100,7 @@ function animate() {
                     // Replace this with power up logic (flames, ice, etc.)
                     const ballMesh = getBallMesh();
                     if (ballMesh) {
-                        addFlameEffectToBall(ballMesh);
+                        addIceEffectToBall(ballMesh);
                     }
                 }
             }

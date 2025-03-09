@@ -13,7 +13,7 @@ import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./m
 import { registerBallInput, updateBall, getBallMesh } from "./gameplay/ballManager.js";
 import { isBasket, updateHoopMovement} from "./gameplay/hoopManager.js";
 import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound } from "./effects/audioManager.js";
-import { addFlameEffectToBall, addIceEffectToBall } from "./effects/particles.js";
+import { addFlameEffectToBall, updateFlameParticles, addIceEffectToBall, updateIceParticles } from "./effects/particles.js";
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
 let ratk;
@@ -80,6 +80,7 @@ function startGame() {
 }
 
 function animate() {
+    const ballMesh = getBallMesh();
     const delta = clockGame.getDelta();
     accumulator += delta;
     while (accumulator >= fixedTimeStep) {
@@ -98,7 +99,6 @@ function animate() {
                 if (state.game.score > 0 && state.game.score % 5 === 0) {
                     // Add flame effect to ball every 5 points
                     // Replace this with power up logic (flames, ice, etc.)
-                    const ballMesh = getBallMesh();
                     if (ballMesh) {
                         addIceEffectToBall(ballMesh, getScene(), getCamera(), getRenderer());
                     }
@@ -147,7 +147,17 @@ function animate() {
     if (state.objects.ball.created && !state.objects.ball.isHeld) {
         updateBall(delta, state.environment.roomBoundary);
     }
+    
+    if (ballMesh) {
+        if (ballMesh.userData.flameParticles) {
+            updateFlameParticles(ballMesh.userData.flameParticles);
+        }
+        if (ballMesh.userData.iceParticles) {
+            updateIceParticles(ballMesh.userData.iceParticles);
+        }
+    }
 
+    
     getRenderer().render(getScene(), getCamera());
 }
 

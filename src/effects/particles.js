@@ -40,19 +40,15 @@ export function updateFlameParticles(particles) {
     particles.geometry.attributes.position.needsUpdate = true;
 }
 
-export function addFlameEffectToBall(ballMesh, scene, camera, renderer) {
+export function addFlameEffectToBall(ballMesh) {
     const flameParticles = createFlameParticles();
     ballMesh.add(flameParticles);
-    // Start animation loop for flame particles with integrated rendering
-    function animate() {
-        updateFlameParticles(flameParticles);
-        renderer.render(scene, camera);
-        requestAnimationFrame(animate);
-    }
-    animate();
+    // Store reference for updates in the main animation loop
+    ballMesh.userData.flameParticles = flameParticles;
     // Remove the effect after 5 seconds
     setTimeout(() => {
         ballMesh.remove(flameParticles);
+        delete ballMesh.userData.flameParticles;
     }, 5000);
 }
 
@@ -95,18 +91,12 @@ export function updateIceParticles(particles) {
     particles.geometry.attributes.position.needsUpdate = true;
 }
 
-export function addIceEffectToBall(ballMesh, scene, camera, renderer) {
+export function addIceEffectToBall(ballMesh) {
     const iceParticles = createIceParticles();
     ballMesh.add(iceParticles);
-    // Start animation loop for ice particles with integrated rendering
-    function animate() {
-        updateIceParticles(iceParticles);
-        renderer.render(scene, camera);
-        requestAnimationFrame(animate);
-    }
-    animate();
-    // Remove the effect after 5 seconds
+    ballMesh.userData.iceParticles = iceParticles;
     setTimeout(() => {
         ballMesh.remove(iceParticles);
+        delete ballMesh.userData.iceParticles;
     }, 5000);
 }

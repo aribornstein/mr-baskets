@@ -21,7 +21,7 @@ export const state = {
             height: 1.8,
             movementAmplitude: 0.2,
             movementFrequency: 0.5,
-            moveBackAndForth: true,
+            moveBackAndForth: false,
             moveUpAndDown: false,
             moveLeftAndRight: false,
         },

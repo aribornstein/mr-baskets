@@ -275,22 +275,21 @@ export function moveHoop(newPos) {
 
 export function updateHoopMovement() {
   if (state.moveHoopBackAndForth && initialHoopPos) {
-    const elapsedTime = state.gameClock;
+    // Use continuous time in seconds instead of state.gameClock
+    const elapsedTime = performance.now() / 1000;
     const roomBoundary = state.roomBoundary;
     const baseX = initialHoopPos.x;
     const maxAmplitude = Math.min(
       baseX - roomBoundary.min.x - state.HOOP_RADIUS,
       roomBoundary.max.x - baseX - state.HOOP_RADIUS
     );
-
     const amplitude = Math.min(state.hoopMovementAmplitude || 1000.0, maxAmplitude);
     const frequency = 0.5; // Adjust frequency as needed
     const offsetX = amplitude * Math.sin(elapsedTime * frequency * Math.PI * 2);
-
-    // Debug logs to verify computed values
+    
     console.log(`updateHoopMovement - elapsedTime: ${elapsedTime}`);
     console.log(`BaseX: ${baseX}, amplitude: ${amplitude}, offsetX: ${offsetX}`);
-
+    
     const newPos = { ...initialHoopPos, x: baseX + offsetX };
     moveHoop(newPos);
   }

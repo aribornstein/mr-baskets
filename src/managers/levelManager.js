@@ -2,6 +2,7 @@
 // JavaScript
 
 import { state } from "./stateManager.js";
+import { eventBus } from "../core/eventBus.js";
 
 // Compute the nth Fibonacci number (starting with F(1)=1, F(2)=1)
 function fibonacci(n) {
@@ -54,16 +55,8 @@ export function updateLevel() {
     if (state.game.score >= threshold) {
         state.game.level++;
         console.log("Level Up to:", state.game.level);
-
-        if (state.game.level >= 7) {
-            // Increase amplitude and frequency gradually.
-            state.objects.hoop.movementAmplitude += 0.05;
-            state.objects.hoop.movementFrequency += 0.1;
-        }
-        // Shave one second off of the shot clock for every 5 points scored after level 3 with a three second minimum.
-        if (state.game.level >= 3 && (state.game.score % 5) === 0 && state.shotClockInit > 3) {
-            state.shotClockInit -= 1;
-        }
+        // Emit the newLevel event after updating the level.
+        eventBus.emit("newLevel", state);
     }
     // Update hoop movement pattern based on the level.
     setLevelHoopMovement();

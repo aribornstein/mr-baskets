@@ -12,7 +12,7 @@ import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./managers/spawnManager.js";
 import { registerBallInput, updateBall, getBallMesh } from "./gameplay/ballManager.js";
 import { isBasket, updateHoopMovement} from "./gameplay/hoopManager.js";
-import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound, playBuzzerSound, loadBuzzerSound } from "./effects/audioManager.js";
+import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound, playBuzzerSound, loadBuzzerSound, playCheerSound } from "./effects/audioManager.js";
 import { updateFlameParticles, updateIceParticles } from "./effects/particles.js";
 import { applyFirePowerUp, applyIcePowerUp } from "./gameplay/powerUpManager.js";
 import { updateLevel } from "./managers/levelManager.js";
@@ -60,6 +60,34 @@ async function initGame() {
         }
     });
 
+    eventBus.on("newLevel", (state)=> {    
+
+        playCheerSound(); // Play cheer sound when level changes
+        if (state.game.level >= 7) {
+            // Increase amplitude and frequency gradually.
+            state.objects.hoop.movementAmplitude += 0.05;
+            state.objects.hoop.movementFrequency += 0.1;
+        }
+        // Shave one second off of the shot clock for every 5 points scored after level 3 with a three second minimum.
+        if (state.game.level >= 3 && (state.game.score % 5) === 0 && state.shotClockInit > 3) {
+            state.shotClockInit -= 1;
+        }
+        
+        // Random chance to trigger a power-up
+        const ballMesh = getBallMesh();
+        const chance = Math.random();
+        if (ballMesh) {
+            // e.g., 30% chance to trigger a power-up after a basket
+            if (chance < 0.15) {
+            // Trigger the fire power-up: double score points and play flame effect.
+            applyFirePowerUp(ballMesh, state, scoreboardManager);
+            } else if (chance < 0.30) {
+            // Trigger the ice power-up: pause shot clock and play ice effect.
+            applyIcePowerUp(ballMesh, scoreboardManager);
+            }
+        }
+    });
+
     // Start the render loop
     getRenderer().setAnimationLoop(animate);
 }
@@ -104,19 +132,6 @@ function animate() {
                 scoreboardManager.incrementScore();
                 updateLevel();
                 moveHoopToNewPosition(state);
-
-                // Random chance to trigger a power-up
-                const chance = Math.random();
-                if (ballMesh) {
-                    // e.g., 30% chance to trigger a power-up after a basket
-                    if (chance < 0.15) {
-                       // Trigger the fire power-up: double score points and play flame effect.
-                       applyFirePowerUp(ballMesh, state, scoreboardManager);
-                    } else if (chance < 0.30) {
-                       // Trigger the ice power-up: pause shot clock and play ice effect.
-                       applyIcePowerUp(ballMesh, scoreboardManager);
-                    }
-                }
             }
 
             // Check for collisions between ball and ground using userData markers.

@@ -21,7 +21,7 @@ export function createHoopPhysics(pos) {
   // -------------------------
   // Hoop ring physics
   // -------------------------
-  const hoopBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z);
+  const hoopBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(pos.x, pos.y, pos.z);
   hoopBody = world.createRigidBody(hoopBodyDesc);
 
   // Create a torus geometry for the hoop ring
@@ -76,7 +76,7 @@ export function createHoopPhysics(pos) {
   // -------------------------
   // Backboard physics
   // -------------------------
-  const boardBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(pos.x, pos.y, pos.z - 0.05);
+  const boardBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(pos.x, pos.y, pos.z - 0.05);
   boardBody = world.createRigidBody(boardBodyDesc);
   const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.6, 0.4, 0.01)
     .setRestitution(0.3)

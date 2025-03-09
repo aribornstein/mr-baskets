@@ -195,6 +195,7 @@ export class Scoreboard {
     // Increment home score method
     increment() {
         state.game.score++;
+        state.shotClockInit = Math.max(24 - Math.floor(state.game.score / 5), 3);
         this.updateTexture();
     }
 

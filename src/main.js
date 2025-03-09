@@ -119,7 +119,6 @@ function animate() {
                 console.log("Basket made!");
                 state.game.shotAttempt = false;
                 scoreboardManager.incrementScore();
-                state.shotClockInit = Math.max(24 - Math.floor(state.game.score / 5), 3);
                 scoreboardManager.resetShotClock();
                 updateLevel();
                 moveHoopToNewPosition(state);

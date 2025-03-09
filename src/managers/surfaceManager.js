@@ -31,7 +31,7 @@ export function handleSurfaceAdded(event, state) {
     console.log("Updated room boundary:", state.environment.roomBoundary);
     // Notify that room boundaries are available.
     if (!state.objects.walls.created && state.environment.roomBoundary) {
-      createRoomWalls(state.roomBoundary);
+      createRoomWalls(state.environment.roomBoundary);
       state.objects.walls.created = true;
       eventBus.emit("roomBoundaryReady", state.environment.roomBoundary);
     }

@@ -82,19 +82,21 @@ export class Scoreboard {
 
         // Game over display
         if (state.game.gameOver) {
+            // Build dynamic game over text with the current level and score.
+            let gameOverDisplayText = `Game Over! Level: ${state.game.level} Score: ${String(state.game.score).padStart(3, '0')}. Press the A Button to Play Again!`;
             ctx.fillStyle = "red";
             let fontSize = 30;
             const minFontSize = 16;
             ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
-            let textWidth = ctx.measureText(GAME_OVER_TEXT).width;
+            let textWidth = ctx.measureText(gameOverDisplayText).width;
             while (textWidth > this.canvas.width && fontSize > minFontSize) {
                 fontSize--;
                 ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
-                textWidth = ctx.measureText(GAME_OVER_TEXT).width;
+                textWidth = ctx.measureText(gameOverDisplayText).width;
             }
             fontSize = Math.max(fontSize, minFontSize);
             ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
-            ctx.fillText(GAME_OVER_TEXT, centerX, centerY);
+            ctx.fillText(gameOverDisplayText, centerX, centerY);
             this.texture.needsUpdate = true;
             return;
         }

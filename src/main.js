@@ -12,7 +12,7 @@ import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./managers/spawnManager.js";
 import { registerBallInput, updateBall, getBallMesh } from "./gameplay/ballManager.js";
 import { isBasket, updateHoopMovement} from "./gameplay/hoopManager.js";
-import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound } from "./effects/audioManager.js";
+import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound, playBuzzerSound, loadBuzzerSound } from "./effects/audioManager.js";
 import { addFlameEffectToBall, updateFlameParticles, addIceEffectToBall, updateIceParticles } from "./effects/particles.js";
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
@@ -29,6 +29,7 @@ async function initGame() {
 
     // Load the bounce sound
     await loadBounceSound(); // Add this line
+    await loadBuzzerSound(); // Add this line
 
     // Setup RealityAccelerator for plane/mesh detection
     ratk = new RealityAccelerator(getRenderer().xr);
@@ -47,6 +48,7 @@ async function initGame() {
         scoreboardManager.scoreboard.updateTexture(); // Update scoreboard to show game over
         removeBallAndHoop(state);
         stopBackgroundMusic(); // Stop
+        playBuzzerSound(); 
     });
 
     eventBus.on("roomSetupComplete", (state) => {

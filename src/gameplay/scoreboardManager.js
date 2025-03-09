@@ -84,7 +84,7 @@ export class Scoreboard {
             // Build dynamic game over text using an array of lines.
             const lines = [
                 "Game Over!",
-                `Score: ${String(state.game.score)} Level: ${state.game.level}.`,
+                `Score: ${String(state.game.score)}.`,
                 "Press the A Button to Play Again!"
             ];
             ctx.fillStyle = "red";
@@ -159,7 +159,7 @@ export class Scoreboard {
         // Draw MISSED SHOTS as X's centered underneath the label
         ctx.font = "bold 30px 'DSEG14 Classic', Arial";
         ctx.fillStyle = "red";
-        ctx.fillText("MISSED:", centerX, centerY - 100);
+        ctx.fillText("MISS", centerX, centerY - 100);
         const missedX = "X".repeat(state.game.missedShots);
         ctx.fillText(missedX, centerX, centerY - 70);
 

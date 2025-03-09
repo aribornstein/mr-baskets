@@ -13,6 +13,7 @@ let currentTrack;
 let audioListener;
 let audio;
 let bounceSound; // Add this line
+let buzzerSound = null; // Add this near bounceSound declaration
 
 export function initAudioListener() {
     // Create an AudioListener and add it to the camera
@@ -101,5 +102,28 @@ export function playBounceSound() {
         bounceSound.setLoop(false);
         bounceSound.setVolume(3.0);
         bounceSound.play();
+    }
+}
+
+export async function loadBuzzerSound() {  
+    if (!audioListener) {
+        audioListener = initAudioListener();
+    }
+    if (!audioLoader) {
+        audioLoader = new THREE.AudioLoader();
+    }
+    buzzerSound = new THREE.Audio(audioListener);
+    const buffer = await loadAudioTrack('src/assets/buzzer.mp3');
+    buzzerSound.setBuffer(buffer);
+}
+
+export function playBuzzerSound() {
+    if (buzzerSound) {
+        if (buzzerSound.isPlaying) {
+            buzzerSound.stop();
+        }
+        buzzerSound.setLoop(false);
+        buzzerSound.setVolume(1.0);
+        buzzerSound.play();
     }
 }

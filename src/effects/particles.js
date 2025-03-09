@@ -108,6 +108,3 @@ export function addIceEffectToBall(ballMesh) {
         ballMesh.remove(iceParticles);
     }, 5000);
 }
-```  
-
-In this example, the ice particles drift downward at a slower rate compared to the flame's upward motion and use a blue color to distinguish the effect. Adjust the parameters as needed for your project.

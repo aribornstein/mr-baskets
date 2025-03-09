@@ -81,21 +81,50 @@ export class Scoreboard {
 
         // Game over display
         if (state.game.gameOver) {
-            // Build dynamic game over text with the current level and score.
-            let gameOverDisplayText = `Game Over! \n Score: ${String(state.game.score)} Level: ${state.game.level} . \n Press the A Button to Play Again!`;
+            // Build dynamic game over text using an array of lines.
+            const lines = [
+                "Game Over!",
+                `Score: ${String(state.game.score)} Level: ${state.game.level}.`,
+                "Press the A Button to Play Again!"
+            ];
             ctx.fillStyle = "red";
             let fontSize = 30;
             const minFontSize = 16;
             ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
-            let textWidth = ctx.measureText(gameOverDisplayText).width;
-            while (textWidth > this.canvas.width && fontSize > minFontSize) {
+
+            // Determine the maximum width of the lines
+            let maxWidth = 0;
+            for (const line of lines) {
+                const width = ctx.measureText(line).width;
+                if (width > maxWidth) {
+                    maxWidth = width;
+                }
+            }
+            // Reduce font size until the longest line fits within the canvas width.
+            while (maxWidth > this.canvas.width && fontSize > minFontSize) {
                 fontSize--;
                 ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
-                textWidth = ctx.measureText(gameOverDisplayText).width;
+                maxWidth = 0;
+                for (const line of lines) {
+                    const width = ctx.measureText(line).width;
+                    if (width > maxWidth) {
+                        maxWidth = width;
+                    }
+                }
             }
             fontSize = Math.max(fontSize, minFontSize);
             ctx.font = `bold ${fontSize}px 'DSEG14 Classic', Arial`;
-            ctx.fillText(gameOverDisplayText, centerX, centerY);
+
+            // Calculate line height and starting Y position for vertical centering.
+            const lineHeight = fontSize * 1.2;
+            const textBlockHeight = lineHeight * lines.length;
+            let startY = centerY - textBlockHeight / 2 + lineHeight / 2;
+
+            // Draw each line of text.
+            for (const line of lines) {
+                ctx.fillText(line, centerX, startY);
+                startY += lineHeight;
+            }
             this.texture.needsUpdate = true;
             return;
         }

@@ -100,7 +100,7 @@ function animate() {
                     // Replace this with power up logic (flames, ice, etc.)
                     const ballMesh = getBallMesh();
                     if (ballMesh) {
-                        addIceEffectToBall(ballMesh);
+                        addIceEffectToBall(ballMesh, getScene(), getCamera(), getRenderer());
                     }
                 }
             }

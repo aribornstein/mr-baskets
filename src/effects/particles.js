@@ -40,12 +40,13 @@ export function updateFlameParticles(particles) {
     particles.geometry.attributes.position.needsUpdate = true;
 }
 
-export function addFlameEffectToBall(ballMesh) {
+export function addFlameEffectToBall(ballMesh, scene, camera, renderer) {
     const flameParticles = createFlameParticles();
     ballMesh.add(flameParticles);
-    // Start animation loop for flame particles
+    // Start animation loop for flame particles with integrated rendering
     function animate() {
         updateFlameParticles(flameParticles);
+        renderer.render(scene, camera);
         requestAnimationFrame(animate);
     }
     animate();
@@ -94,12 +95,13 @@ export function updateIceParticles(particles) {
     particles.geometry.attributes.position.needsUpdate = true;
 }
 
-export function addIceEffectToBall(ballMesh) {
+export function addIceEffectToBall(ballMesh, scene, camera, renderer) {
     const iceParticles = createIceParticles();
     ballMesh.add(iceParticles);
-    // Start animation loop for ice particles
+    // Start animation loop for ice particles with integrated rendering
     function animate() {
         updateIceParticles(iceParticles);
+        renderer.render(scene, camera);
         requestAnimationFrame(animate);
     }
     animate();

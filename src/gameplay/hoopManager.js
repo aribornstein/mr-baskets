@@ -4,153 +4,87 @@ import { getScene, getCamera } from "../core/engine.js";
 import { getWorld } from "../core/physics.js";
 import { addObject } from "../managers/sceneManager.js";
 import { state } from "../managers/stateManager.js";
+import { loadHoopModel } from "../effects/graphics.js";
 
-let hoopMesh = null;
 let backboardMesh = null;
-let netMesh = null;
-let hoopBody = null, boardBody = null, netBody = null;
 let sensor;
-let sensorCooldown = false; // Add this line to define sensorCooldown
+let sensorCooldown = false;
 let initialHoopPos = null;
 
 export function setInitialHoopPos(pos) {
   initialHoopPos = { x: pos.x, y: pos.y, z: pos.z };
 }
 
+/**
+ * Loads the hoop model prefab and adds it to the scene.
+ * This replaces both the hoop ring and backboard visuals.
+ */
+export async function createHoopVisual(pos) {
+  console.log("Loading hoop prefab at:", pos);
+  try {
+    const hoopPrefab = await loadHoopModel(); // load prefab from graphics module
+    // Wrap in a group to allow unified transforms
+    backboardMesh = new THREE.Group();
+    backboardMesh.add(hoopPrefab);
+
+    // Position and orient the prefab to face the camera
+    backboardMesh.position.copy(pos);
+    const dummy = new THREE.Object3D();
+    dummy.position.copy(pos);
+    dummy.lookAt(getCamera().position);
+    backboardMesh.quaternion.copy(dummy.quaternion);
+
+    // (Optional) Apply any offsets if desired
+    backboardMesh.translateZ(-0.1);
+    backboardMesh.translateY(0.1);
+
+    addObject(backboardMesh);
+  } catch (error) {
+    console.error("Failed to load hoop prefab:", error);
+  }
+}
+
+/**
+ * Creates the physics for the hoop.
+ *
+ * The hoop model now contains the hoop ring and backboard colliders/geometry,
+ * so we remove their separate physics colliders.
+ * Only the sensor for basket detection is created here.
+ */
 export function createHoopPhysics(pos) {
   const world = getWorld();
   setInitialHoopPos(pos);
-  // -------------------------
-  // Hoop ring physics
-  // -------------------------
-  const hoopBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(pos.x, pos.y, pos.z);
-  hoopBody = world.createRigidBody(hoopBodyDesc);
 
-  // Create a torus geometry for the hoop ring
-  const torusGeometry = new THREE.TorusGeometry(state.objects.hoop.radius, 0.02, 16, 100);
-  const vertices = [];
-  const indices = [];
+  // Create sensor for basket detection
+  const sensorThickness = 0.0001; // Extremely thin sensor
+  const sensorYOffset = -0.01; // Slightly below the hoop center
 
-  // Extract vertices and indices from the torus geometry
-  torusGeometry.attributes.position.array.forEach((v, i) => {
-    vertices.push(v);
-  });
-  torusGeometry.index.array.forEach((i) => {
-    indices.push(i);
-  });
-
-  // Create a trimesh collider for the hoop ring
-  const ringColliderDesc = RAPIER.ColliderDesc.trimesh(vertices, indices)
-    .setRestitution(0.5)
-    .setFriction(0.8);
-
-  // Determine orientation so the hoop faces the camera
+  // Determine orientation to match the hoop model (so sensor rotates with it)
   const dummy = new THREE.Object3D();
   dummy.position.copy(pos);
   dummy.lookAt(getCamera().position);
-  const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
-  const hoopQuat = dummy.quaternion.clone().multiply(correction);
-  ringColliderDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
-  world.createCollider(ringColliderDesc, hoopBody);
+  const hoopQuat = dummy.quaternion.clone();
 
-  // -------------------------
-  // Sensor for basket detection
-  // -------------------------
-  // Improved sensor creation: very thin horizontal disk slightly below hoop
-  const sensorThickness = 0.0001; // Extremely thin
-  const sensorYOffset = -0.01; // Slightly below hoop center to detect ball passing through
-
-  const sensorDesc = RAPIER.ColliderDesc.cylinder(sensorThickness, state.objects.hoop.radius * 0.9)
+  const sensorDesc = RAPIER.ColliderDesc.cylinder(
+    sensorThickness,
+    state.objects.hoop.radius * 0.9
+  )
     .setSensor(true)
-    .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
-
-  // Apply the same orientation to the sensor as the hoop
-  sensorDesc.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
+    .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+  sensorDesc.setRotation({
+    x: hoopQuat.x,
+    y: hoopQuat.y,
+    z: hoopQuat.z,
+    w: hoopQuat.w,
+  });
 
   const sensorBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
     pos.x,
     pos.y + sensorYOffset,
     pos.z
-  ) // Set dominance group to a higher value
+  );
   const sensorBody = world.createRigidBody(sensorBodyDesc);
   sensor = world.createCollider(sensorDesc, sensorBody);
-
-  // -------------------------
-  // Backboard physics
-  // -------------------------
-  const boardBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(pos.x, pos.y, pos.z - 0.05);
-  boardBody = world.createRigidBody(boardBodyDesc);
-  const boardColliderDesc = RAPIER.ColliderDesc.cuboid(0.6, 0.4, 0.01)
-    .setRestitution(0.3)
-    .setFriction(0.8);
-    
-  // Orient the backboard
-  const backboardDummy = new THREE.Object3D();
-  backboardDummy.position.copy(pos);
-  backboardDummy.lookAt(getCamera().position);
-  const backboardQuat = backboardDummy.quaternion.clone();
-  boardColliderDesc.setRotation({ x: backboardQuat.x, y: backboardQuat.y, z: backboardQuat.z, w: backboardQuat.w });
-  world.createCollider(boardColliderDesc, boardBody);
-}
-
-export function createHoopVisual(pos) {
-    console.log("Creating hoop at:", pos);
-
-    // Backboard visual with multiple layers
-    backboardMesh = new THREE.Group();
-
-    // Main white backboard
-    const mainBoardGeom = new THREE.PlaneGeometry(0.6, 0.4);
-    const mainBoardMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-    const mainBoardMesh = new THREE.Mesh(mainBoardGeom, mainBoardMat);
-
-    // Red border
-    const frameThickness = 0.02;
-    const borderMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-
-    const topBorderGeom = new THREE.PlaneGeometry(0.6, frameThickness);
-    const topBorderMesh = new THREE.Mesh(topBorderGeom, borderMat);
-    topBorderMesh.position.set(0, 0.2, 0.001);
-
-    const bottomBorderMesh = topBorderMesh.clone();
-    bottomBorderMesh.position.set(0, -0.2, 0.001);
-
-    const sideBorderGeom = new THREE.PlaneGeometry(frameThickness, 0.4);
-    const leftBorderMesh = new THREE.Mesh(sideBorderGeom, borderMat);
-    leftBorderMesh.position.set(-0.3, 0, 0.001);
-
-    const rightBorderMesh = leftBorderMesh.clone();
-    rightBorderMesh.position.set(0.3, 0, 0.001);
-
-    // Shooter's square
-    const shooterBoxGeom = new THREE.PlaneGeometry(0.2, 0.15);
-    const shooterBoxMesh = new THREE.Mesh(shooterBoxGeom, borderMat);
-    shooterBoxMesh.position.set(0, 0, 0.002);
-
-    backboardMesh.add(mainBoardMesh, topBorderMesh, bottomBorderMesh, leftBorderMesh, rightBorderMesh, shooterBoxMesh);
-
-    //Orient the backboard
-    backboardMesh.position.copy(pos);
-    const backboardDummy = new THREE.Object3D();
-    backboardDummy.position.copy(pos);
-    backboardDummy.lookAt(getCamera().position);
-    backboardMesh.quaternion.copy(backboardDummy.quaternion);
-
-    backboardMesh.translateZ(-0.1);
-    backboardMesh.translateY(0.1);
-
-    // Hoop ring visual
-    const hoopGeometry = new THREE.TorusGeometry(state.objects.hoop.radius, 0.02, 16, 100);
-    const hoopMaterial = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
-    hoopMesh = new THREE.Mesh(hoopGeometry, hoopMaterial);
-
-    //Orient the hoop
-    hoopMesh.rotation.x = Math.PI / 2;
-    hoopMesh.position.set(0, -0.15, 0.1); //Position the hoop relative to the backboard
-
-    backboardMesh.add(hoopMesh); // Add the hoop to the backboard
-
-    addObject(backboardMesh); // Add the backboard (with the hoop) to the scene
 }
 
 export function isBasket(collider1, collider2) {
@@ -185,29 +119,9 @@ export function isBasket(collider1, collider2) {
 
 export function removeHoop() {
     const world = getWorld();
-    if (hoopMesh) {
-        getScene().remove(hoopMesh);
-        hoopMesh = null;
-    }
     if (backboardMesh) {
         getScene().remove(backboardMesh);
         backboardMesh = null;
-    }
-    if (netMesh) {
-        getScene().remove(netMesh);
-        netMesh = null;
-    }
-    if (hoopBody) {
-        world.removeRigidBody(hoopBody);
-        hoopBody = null;
-    }
-    if (boardBody) {
-        world.removeRigidBody(boardBody);
-        boardBody = null;
-    }
-    if (netBody) {
-        world.removeRigidBody(netBody);
-        netBody = null;
     }
     if (sensor){
         world.removeCollider(sensor);
@@ -225,7 +139,7 @@ export function reorientHoop(pos) {
 }
 
 export function moveHoop(newPos) {
-    if (!backboardMesh || !hoopBody || !sensor) return;
+    if (!backboardMesh || !sensor) return;
 
     // Update visual position
     backboardMesh.position.copy(newPos);
@@ -236,10 +150,6 @@ export function moveHoop(newPos) {
     dummy.lookAt(getCamera().position);
     const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
     const hoopQuat = dummy.quaternion.clone().multiply(correction);
-    
-    // Update hoop body position and orientation using setNextKinematicTranslation
-    hoopBody.setNextKinematicTranslation(new RAPIER.Vector3(newPos.x, newPos.y, newPos.z));
-    hoopBody.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
 
     // Update sensor position and orientation using setNextKinematicTranslation
     const sensorYOffset = -0.01;
@@ -255,22 +165,11 @@ export function moveHoop(newPos) {
     backboardDummy.position.copy(newPos);
     backboardDummy.lookAt(getCamera().position);
     backboardMesh.quaternion.copy(backboardDummy.quaternion);
-    
+
     // Re-apply any needed offsets to visual elements
     backboardMesh.position.copy(newPos);
     backboardMesh.updateMatrix();
     backboardMesh.updateMatrixWorld();
-
-    // Update physics backboard (boardBody) so it blocks the ball properly too
-    if (boardBody) {
-        boardBody.setNextKinematicTranslation(new RAPIER.Vector3(newPos.x, newPos.y, newPos.z - 0.05));
-        boardBody.setRotation({
-            x: backboardDummy.quaternion.x,
-            y: backboardDummy.quaternion.y,
-            z: backboardDummy.quaternion.z,
-            w: backboardDummy.quaternion.w
-        });
-    }
 }
 
 export function updateHoopMovement() {

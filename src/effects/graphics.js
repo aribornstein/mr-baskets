@@ -19,4 +19,12 @@ export function loadBasketballModel() {
   });
 }
 
+export function loadHoopModel() {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader();
+    const url = "src/assets/hoop.glb";
+    loader.load(url, (gltf) => resolve(gltf.scene), undefined, (error) => reject(error));
+  });
+}
+
 // Additional functions for particle effects or debugging overlays can be added here.

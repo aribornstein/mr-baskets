@@ -23,6 +23,8 @@ export async function createHoopVisual(pos) {
   console.log("Loading hoop prefab at:", pos);
   try {
     const hoopPrefab = await loadHoopModel(); // load prefab from graphics module
+    // Scale the prefab
+    hoopPrefab.scale.set(0.1, 0.1, 0.1);
     // Wrap in a group to allow unified transforms
     backboardMesh = new THREE.Group();
     backboardMesh.add(hoopPrefab);

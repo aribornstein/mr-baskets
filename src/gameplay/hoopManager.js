@@ -6,7 +6,7 @@ import { addObject } from "../managers/sceneManager.js";
 import { state } from "../managers/stateManager.js";
 import { loadHoopModel } from "../effects/graphics.js";
 
-let backboardMesh = null;
+let hoopMesh = null;
 let sensor;
 let sensorCooldown = false;
 let initialHoopPos = null;
@@ -26,21 +26,21 @@ export async function createHoopVisual(pos) {
     // Scale the prefab
     hoopPrefab.scale.set(0.05, 0.05, 0.05);
     // Wrap in a group to allow unified transforms
-    backboardMesh = new THREE.Group();
-    backboardMesh.add(hoopPrefab);
+    hoopMesh = new THREE.Group();
+    hoopMesh.add(hoopPrefab);
 
     // Position and orient the prefab to face the camera
-    backboardMesh.position.copy(pos);
+    hoopMesh.position.copy(pos);
     const dummy = new THREE.Object3D();
     dummy.position.copy(pos);
     dummy.lookAt(getCamera().position);
-    backboardMesh.quaternion.copy(dummy.quaternion);
+    hoopMesh.quaternion.copy(dummy.quaternion);
 
     // (Optional) Apply any offsets if desired
-    backboardMesh.translateZ(-0.1);
-    backboardMesh.translateY(0.1);
+    hoopMesh.translateZ(-0.1);
+    hoopMesh.translateY(0.1);
 
-    addObject(backboardMesh);
+    addObject(hoopMesh);
   } catch (error) {
     console.error("Failed to load hoop prefab:", error);
   }
@@ -121,9 +121,9 @@ export function isBasket(collider1, collider2) {
 
 export function removeHoop() {
     const world = getWorld();
-    if (backboardMesh) {
-        getScene().remove(backboardMesh);
-        backboardMesh = null;
+    if (hoopMesh) {
+        getScene().remove(hoopMesh);
+        hoopMesh = null;
     }
     if (sensor){
         world.removeCollider(sensor);
@@ -132,19 +132,19 @@ export function removeHoop() {
 }
 
 export function reorientHoop(pos) {
-    if (!backboardMesh) return;
+    if (!hoopMesh) return;
 
-    const backboardDummy = new THREE.Object3D();
-    backboardDummy.position.copy(pos);
-    backboardDummy.lookAt(getCamera().position);
-    backboardMesh.quaternion.copy(backboardDummy.quaternion);
+    const hoopDummy = new THREE.Object3D();
+    hoopDummy.position.copy(pos);
+    hoopDummy.lookAt(getCamera().position);
+    hoopMesh.quaternion.copy(hoopDummy.quaternion);
 }
 
 export function moveHoop(newPos) {
-    if (!backboardMesh || !sensor) return;
+    if (!hoopMesh || !sensor) return;
 
     // Update visual position
-    backboardMesh.position.copy(newPos);
+    hoopMesh.position.copy(newPos);
 
     // Calculate proper orientation to face camera (same as in createHoopPhysics)
     const dummy = new THREE.Object3D();
@@ -163,15 +163,15 @@ export function moveHoop(newPos) {
     }
 
     // Update backboard orientation
-    const backboardDummy = new THREE.Object3D();
-    backboardDummy.position.copy(newPos);
-    backboardDummy.lookAt(getCamera().position);
-    backboardMesh.quaternion.copy(backboardDummy.quaternion);
+    const hoopDummy = new THREE.Object3D();
+    hoopDummy.position.copy(newPos);
+    hoopDummy.lookAt(getCamera().position);
+    hoopMesh.quaternion.copy(hoopDummy.quaternion);
 
     // Re-apply any needed offsets to visual elements
-    backboardMesh.position.copy(newPos);
-    backboardMesh.updateMatrix();
-    backboardMesh.updateMatrixWorld();
+    hoopMesh.position.copy(newPos);
+    hoopMesh.updateMatrix();
+    hoopMesh.updateMatrixWorld();
 }
 
 export function updateHoopMovement() {

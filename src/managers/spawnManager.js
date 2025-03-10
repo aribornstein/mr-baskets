@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { getCamera } from "../core/engine.js";
 import { createBallPhysics, createBallVisual, removeBall } from "../gameplay/ballManager.js";
-import { setInitialHoopPos, createHoopPhysics, createHoopVisual, removeHoop, moveHoop } from "../gameplay/hoopManager.js";
+import { setInitialHoopPos, createHoopObject, removeHoop, moveHoop } from "../gameplay/hoopManager.js";
 
 function createBall(state) {
     const camera = getCamera();
@@ -30,8 +30,7 @@ function createHoop(state) {
         hoopPos.x = THREE.MathUtils.clamp(hoopPos.x, state.environment.roomBoundary.min.x + state.objects.hoop.radius, state.environment.roomBoundary.max.x - state.objects.hoop.radius);
         hoopPos.z = THREE.MathUtils.clamp(hoopPos.z, state.environment.roomBoundary.min.z + state.objects.hoop.radius, state.environment.roomBoundary.max.z - state.objects.hoop.radius);
     }
-    createHoopPhysics(hoopPos);
-    createHoopVisual(hoopPos);
+    createHoopObject(hoopPos);
     state.objects.hoop.created = true;
     return hoopPos
 }

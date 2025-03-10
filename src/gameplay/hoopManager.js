@@ -177,7 +177,7 @@ export function removeHoop() {
 }
 
 export function moveHoop(newPos) {
-  if (!hoopMesh || !sensor) return;
+  if (!hoopMesh || !sensor || !hoopColliderRB) return;
   
   // First update the visual mesh position and orientation
   hoopMesh.position.copy(newPos);
@@ -188,7 +188,7 @@ export function moveHoop(newPos) {
   const hoopMeshQuat = hoopDummy.quaternion.clone();
   hoopMesh.quaternion.copy(hoopMeshQuat);
   
-  // Update matrices before recreating collider
+  // Update matrices before updating physics
   hoopMesh.updateMatrix();
   hoopMesh.updateMatrixWorld();
 
@@ -212,14 +212,20 @@ export function moveHoop(newPos) {
     });
   }
 
-  // Remove old collider and create a new one based on the updated mesh position
-  const world = getWorld();
+  // Update the hoop collider's position and rotation instead of recreating it
   if (hoopColliderRB) {
-    world.removeRigidBody(hoopColliderRB);
+    // Update position
+    const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
+    hoopColliderRB.setNextKinematicTranslation(colliderPos);
+    
+    // Update rotation
+    hoopColliderRB.setRotation({
+      x: hoopMeshQuat.x,
+      y: hoopMeshQuat.y,
+      z: hoopMeshQuat.z,
+      w: hoopMeshQuat.w,
+    });
   }
-  
-  // Recreate the collider at the new position
-  createHoopCollider(hoopMesh);
 }
 
 export function updateHoopMovement() {

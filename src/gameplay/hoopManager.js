@@ -186,44 +186,30 @@ export function moveHoop(newPos) {
   // Update visual position for hoopMesh.
   hoopMesh.position.copy(newPos);
 
-  // Use a single dummy to compute the desired orientation.
-  const dummy = new THREE.Object3D();
-  dummy.position.copy(newPos);
-  dummy.lookAt(getCamera().position);
-
-  // (Optionally apply a correction if required for alignment)
-  // If a correction is necessary, apply it once to use the same value for both.
+  // (Existing sensor and orientation update code follows.)
+  const sensorDummy = new THREE.Object3D();
+  sensorDummy.position.copy(newPos);
+  sensorDummy.lookAt(getCamera().position);
   const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
-  dummy.quaternion.multiply(correction);
+  const hoopQuat = sensorDummy.quaternion.clone().multiply(correction);
 
-  // Update both the visual mesh and the collider with the same quaternion.
-  hoopMesh.quaternion.copy(dummy.quaternion);
-
-  // Update the sensor's translation and rotation.
   const sensorYOffset = -0.01;
   const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
   const sensorBody = sensor.parent();
   if (sensorBody) {
     sensorBody.setNextKinematicTranslation(sensorPos);
-    sensorBody.setRotation({
-      x: dummy.quaternion.x,
-      y: dummy.quaternion.y,
-      z: dummy.quaternion.z,
-      w: dummy.quaternion.w,
-    });
+    sensorBody.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
   }
+  
 
-  // Update collider rigid body.
-  if (hoopColliderRB) {
-    const newTranslation = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
-    hoopColliderRB.setNextKinematicTranslation(newTranslation);
-    hoopColliderRB.setNextKinematicRotation({
-      x: dummy.quaternion.x,
-      y: dummy.quaternion.y,
-      z: dummy.quaternion.z,
-      w: dummy.quaternion.w,
-    });
-  }
+  const hoopDummy = new THREE.Object3D();
+  hoopDummy.position.copy(newPos);
+  hoopDummy.lookAt(getCamera().position);
+  hoopMesh.quaternion.copy(hoopDummy.quaternion);
+
+  // Update the collider's rigid body position
+  hoopColliderRB.setNextKinematicTranslation(newPos.x, newPos.y, newPos.z);
+  hoopColliderRB.quaternion.copy(hoopDummy.quaternion);
 
   hoopMesh.updateMatrix();
   hoopMesh.updateMatrixWorld();

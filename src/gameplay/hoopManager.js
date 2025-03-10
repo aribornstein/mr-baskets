@@ -183,9 +183,6 @@ export function reorientHoop(pos) {
 export function moveHoop(newPos) {
   if (!hoopMesh || !sensor || !hoopColliderRB) return;
 
-  // Update visual position for hoopMesh.
-  hoopMesh.position.copy(newPos);
-
   // Update sensor orientation and position.
   const sensorDummy = new THREE.Object3D();
   sensorDummy.position.copy(newPos);
@@ -210,16 +207,18 @@ export function moveHoop(newPos) {
   const hoopDummy = new THREE.Object3D();
   hoopDummy.position.copy(newPos);
   hoopDummy.lookAt(getCamera().position);
-  hoopMesh.quaternion.copy(hoopDummy.quaternion);
+  const hoopMeshQuat = hoopDummy.quaternion.clone(); // Get the quaternion
+
+  hoopMesh.quaternion.copy(hoopMeshQuat);
 
   // Update the collider's kinematic body to match the new position.
   const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
   hoopColliderRB.setNextKinematicTranslation(colliderPos);
   hoopColliderRB.setRotation({
-    x: hoopDummy.quaternion.x,
-    y: hoopDummy.quaternion.y,
-    z: hoopDummy.quaternion.z,
-    w: hoopDummy.quaternion.w,
+    x: hoopMeshQuat.x,
+    y: hoopMeshQuat.y,
+    z: hoopMeshQuat.z,
+    w: hoopMeshQuat.w,
   });
 
   // Re-apply any additional needed offsets and update matrices.
@@ -277,7 +276,17 @@ export function updateHoopMovement() {
     if (axis === "y") {
       effectiveAmplitude *= 0.1; // Reduce vertical movement
     }
-    const offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
+    let offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
+
+    // Clamp the new position to stay within the allowed bounds
+    let minPos = initialHoopPos[axis] - maxAllowed;
+    let maxPos = initialHoopPos[axis] + maxAllowed;
+    if (roomBoundary) {
+      minPos = Math.max(minPos, roomBoundary.min[axis] + radius);
+      maxPos = Math.min(maxPos, roomBoundary.max[axis] - radius);
+    }
+    offset = Math.max(Math.min(offset, maxPos - base), minPos - base);
+
     newPos[axis] = base + offset;
   });
 

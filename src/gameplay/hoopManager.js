@@ -186,7 +186,7 @@ export function moveHoop(newPos) {
   // Update visual position for hoopMesh.
   hoopMesh.position.copy(newPos);
 
-  // (Existing sensor and orientation update code follows.)
+  // Update sensor orientation and position.
   const sensorDummy = new THREE.Object3D();
   sensorDummy.position.copy(newPos);
   sensorDummy.lookAt(getCamera().position);
@@ -198,19 +198,32 @@ export function moveHoop(newPos) {
   const sensorBody = sensor.parent();
   if (sensorBody) {
     sensorBody.setNextKinematicTranslation(sensorPos);
-    sensorBody.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
+    sensorBody.setRotation({
+      x: hoopQuat.x,
+      y: hoopQuat.y,
+      z: hoopQuat.z,
+      w: hoopQuat.w,
+    });
   }
-  
 
+  // Update hoopMesh orientation.
   const hoopDummy = new THREE.Object3D();
   hoopDummy.position.copy(newPos);
   hoopDummy.lookAt(getCamera().position);
   hoopMesh.quaternion.copy(hoopDummy.quaternion);
 
-  // Update the collider's rigid body position
-  hoopColliderRB.setNextKinematicTranslation(newPos.x, newPos.y, newPos.z);
-  hoopColliderRB.quaternion.copy(hoopDummy.quaternion);
+  // Update the collider's kinematic body to match the new position.
+  const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
+  hoopColliderRB.setNextKinematicTranslation(colliderPos);
+  hoopColliderRB.setRotation({
+    x: hoopDummy.quaternion.x,
+    y: hoopDummy.quaternion.y,
+    z: hoopDummy.quaternion.z,
+    w: hoopDummy.quaternion.w,
+  });
 
+  // Re-apply any additional needed offsets and update matrices.
+  hoopMesh.position.copy(newPos);
   hoopMesh.updateMatrix();
   hoopMesh.updateMatrixWorld();
 }

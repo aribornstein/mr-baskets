@@ -84,12 +84,14 @@ export function createHoopCollider(hoopPrefab) {
   // Traverse the hoopPrefab to extract mesh data for a trimesh collider
   hoopPrefab.traverse((child) => {
     if (child.isMesh) {
+      child.updateWorldMatrix(true, false); // Update matrix before extracting vertices
       const geometry = child.geometry;
       const positionAttribute = geometry.attributes.position;
 
-      // Extract vertices from the mesh
+      // Extract vertices from the mesh, converting to world space
       for (let i = 0; i < positionAttribute.count; i++) {
         const vertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
+        vertex.applyMatrix4(child.matrixWorld);
         vertices.push(vertex.x, vertex.y, vertex.z);
       }
 

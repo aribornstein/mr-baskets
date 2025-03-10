@@ -22,6 +22,7 @@ export function setInitialHoopPos(pos) {
 export async function createHoopObject(pos) {
   console.log("Loading hoop prefab at:", pos);
   try {
+    const world = getWorld();
     const hoopPrefab = await loadHoopModel(); // load prefab from graphics module
     // Scale the prefab
     hoopPrefab.scale.set(0.05, 0.05, 0.05);

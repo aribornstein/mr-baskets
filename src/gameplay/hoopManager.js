@@ -31,7 +31,6 @@ export async function createHoopObject(pos) {
     hoopMesh = new THREE.Group();
     hoopMesh.add(hoopPrefab);
 
-
     // Position and orient the prefab to face the camera
     hoopMesh.position.copy(pos);
     const dummy = new THREE.Object3D();
@@ -57,10 +56,10 @@ export async function createHoopObject(pos) {
       .setSensor(true)
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
     sensorDesc.setRotation({
-      x: hoopMesh.x,
-      y: hoopMesh.y,
-      z: hoopMesh.z,
-      w: hoopMesh.w,
+      x: hoopMesh.quaternion.x,
+      y: hoopMesh.quaternion.y,
+      z: hoopMesh.quaternion.z,
+      w: hoopMesh.quaternion.w,
     });
 
     const sensorBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(

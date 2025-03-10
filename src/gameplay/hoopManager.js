@@ -10,6 +10,8 @@ let hoopMesh = null;
 let sensor;
 let sensorCooldown = false;
 let initialHoopPos = null;
+let hoopColliderRB = null;
+
 
 export function setInitialHoopPos(pos) {
   initialHoopPos = { x: pos.x, y: pos.y, z: pos.z };
@@ -90,18 +92,16 @@ export function createHoopCollider(hoopPrefab) {
   // Traverse the hoopPrefab to extract mesh data for a trimesh collider
   hoopPrefab.traverse((child) => {
     if (child.isMesh) {
-      child.updateWorldMatrix(true, false); // Update matrix before extracting vertices
+      child.updateWorldMatrix(true, false);
       const geometry = child.geometry;
       const positionAttribute = geometry.attributes.position;
 
-      // Extract vertices from the mesh, converting to world space
       for (let i = 0; i < positionAttribute.count; i++) {
         const vertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
         vertex.applyMatrix4(child.matrixWorld);
         vertices.push(vertex.x, vertex.y, vertex.z);
       }
 
-      // Extract indices, or create them if they don't exist
       if (geometry.index) {
         for (let i = 0; i < geometry.index.count; i++) {
           indices.push(geometry.index.getX(i));
@@ -114,18 +114,16 @@ export function createHoopCollider(hoopPrefab) {
     }
   });
 
-  // Convert arrays to TypedArrays required by RAPIER
   const verticesArray = new Float32Array(vertices);
   const indicesArray = new Uint32Array(indices);
 
-  // Create a kinematic rigid body in the physics world
   const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
   const rigidBody = world.createRigidBody(rigidBodyDesc);
+  
+  // Store the hoop collider's rigid body for updating on move.
+  hoopColliderRB = rigidBody;
 
-  // Create a trimesh collider descriptor from the vertex and index data
   const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indicesArray);
-
-  // Attach the collider to the rigid body
   const collider = world.createCollider(colliderDesc, rigidBody);
 
   return { rigidBody, collider };
@@ -185,17 +183,21 @@ export function reorientHoop(pos) {
 export function moveHoop(newPos) {
   if (!hoopMesh || !sensor) return;
 
-  // Update visual position
+  // Update visual position for hoopMesh.
   hoopMesh.position.copy(newPos);
+  // Update hoop collider's position if it exists.
+  if (hoopColliderRB) {
+    const newTranslation = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
+    hoopColliderRB.setNextKinematicTranslation(newTranslation);
+  }
 
-  // Calculate proper orientation to face camera (same as in createHoopPhysics)
+  // (Existing sensor and orientation update code follows.)
   const dummy = new THREE.Object3D();
   dummy.position.copy(newPos);
   dummy.lookAt(getCamera().position);
   const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
   const hoopQuat = dummy.quaternion.clone().multiply(correction);
 
-  // Update sensor position and orientation using setNextKinematicTranslation
   const sensorYOffset = -0.01;
   const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
   const sensorBody = sensor.parent();
@@ -204,13 +206,23 @@ export function moveHoop(newPos) {
     sensorBody.setRotation({ x: hoopQuat.x, y: hoopQuat.y, z: hoopQuat.z, w: hoopQuat.w });
   }
 
-  // Update backboard orientation
   const hoopDummy = new THREE.Object3D();
   hoopDummy.position.copy(newPos);
   hoopDummy.lookAt(getCamera().position);
   hoopMesh.quaternion.copy(hoopDummy.quaternion);
 
-  // Re-apply any needed offsets to visual elements
+  if (hoopColliderRB) {
+    const colliderDummy = new THREE.Object3D();
+    colliderDummy.position.copy(newPos);
+    colliderDummy.lookAt(getCamera().position);
+    hoopColliderRB.setNextKinematicRotation({
+      x: colliderDummy.quaternion.x,
+      y: colliderDummy.quaternion.y,
+      z: colliderDummy.quaternion.z,
+      w: colliderDummy.quaternion.w,
+    });
+  }
+
   hoopMesh.position.copy(newPos);
   hoopMesh.updateMatrix();
   hoopMesh.updateMatrixWorld();

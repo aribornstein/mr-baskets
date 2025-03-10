@@ -12,6 +12,7 @@ let sensorCooldown = false;
 let initialHoopPos = null;
 let hoopColliderRB = null;
 
+let hoopColliders = []; // Track all colliders associated with the hoop
 
 export function setInitialHoopPos(pos) {
   initialHoopPos = { x: pos.x, y: pos.y, z: pos.z };
@@ -42,7 +43,6 @@ export async function createHoopObject(pos) {
 
     // (Optional) Apply any offsets if desired
     hoopMesh.translateZ(-0.1);
-    hoopMesh.translateY(0.1);
 
     addObject(hoopMesh);
     setInitialHoopPos(pos);
@@ -85,6 +85,7 @@ export async function createHoopObject(pos) {
 }
 export function createHoopCollider(hoopPrefab) {
   const world = getWorld();
+  hoopColliders = []; // Reset colliders list
 
   let vertices = [];
   let indices = [];
@@ -92,6 +93,7 @@ export function createHoopCollider(hoopPrefab) {
   // Traverse the hoopPrefab to extract mesh data for a trimesh collider
   hoopPrefab.traverse((child) => {
     if (child.isMesh) {
+      // Extract mesh data as before
       child.updateWorldMatrix(true, false);
       const geometry = child.geometry;
       const positionAttribute = geometry.attributes.position;
@@ -125,6 +127,9 @@ export function createHoopCollider(hoopPrefab) {
 
   const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indicesArray);
   const collider = world.createCollider(colliderDesc, rigidBody);
+  
+  // Store this collider
+  hoopColliders.push({ rigidBody, collider });
 
   return { rigidBody, collider };
 }
@@ -177,7 +182,7 @@ export function removeHoop() {
 }
 
 export function moveHoop(newPos) {
-  if (!hoopMesh || !sensor || !hoopColliderRB) return;
+  if (!hoopMesh) return;
   
   // First update the visual mesh position and orientation
   hoopMesh.position.copy(newPos);
@@ -192,39 +197,44 @@ export function moveHoop(newPos) {
   hoopMesh.updateMatrix();
   hoopMesh.updateMatrixWorld();
 
-  // Update sensor orientation and position
-  const sensorDummy = new THREE.Object3D();
-  sensorDummy.position.copy(newPos);
-  sensorDummy.lookAt(getCamera().position);
-  const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
-  const hoopQuat = sensorDummy.quaternion.clone().multiply(correction);
-
-  const sensorYOffset = -0.01;
-  const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
-  const sensorBody = sensor.parent();
-  if (sensorBody) {
-    sensorBody.setNextKinematicTranslation(sensorPos);
-    sensorBody.setRotation({
-      x: hoopQuat.x,
-      y: hoopQuat.y,
-      z: hoopQuat.z,
-      w: hoopQuat.w,
-    });
+  // Create a RAPIER position and rotation
+  const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
+  const rapierRotation = {
+    x: hoopMeshQuat.x,
+    y: hoopMeshQuat.y,
+    z: hoopMeshQuat.z,
+    w: hoopMeshQuat.w,
+  };
+  
+  // Update hoopColliderRB position and rotation
+  if (hoopColliderRB) {
+    // Make sure to wakeUp the body to ensure updates are applied
+    hoopColliderRB.wakeUp();
+    hoopColliderRB.setNextKinematicTranslation(colliderPos);
+    hoopColliderRB.setRotation(rapierRotation);
   }
 
-  // Update the hoop collider's position and rotation instead of recreating it
-  if (hoopColliderRB) {
-    // Update position
-    const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
-    hoopColliderRB.setNextKinematicTranslation(colliderPos);
-    
-    // Update rotation
-    hoopColliderRB.setRotation({
-      x: hoopMeshQuat.x,
-      y: hoopMeshQuat.y,
-      z: hoopMeshQuat.z,
-      w: hoopMeshQuat.w,
-    });
+  // Update sensor orientation and position
+  if (sensor) {
+    const sensorDummy = new THREE.Object3D();
+    sensorDummy.position.copy(newPos);
+    sensorDummy.lookAt(getCamera().position);
+    const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+    const hoopQuat = sensorDummy.quaternion.clone().multiply(correction);
+
+    const sensorYOffset = -0.01;
+    const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
+    const sensorBody = sensor.parent();
+    if (sensorBody) {
+      sensorBody.wakeUp(); // Make sure it's awake
+      sensorBody.setNextKinematicTranslation(sensorPos);
+      sensorBody.setRotation({
+        x: hoopQuat.x,
+        y: hoopQuat.y,
+        z: hoopQuat.z,
+        w: hoopQuat.w,
+      });
+    }
   }
 }
 

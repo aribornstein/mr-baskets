@@ -185,11 +185,6 @@ export function moveHoop(newPos) {
 
   // Update visual position for hoopMesh.
   hoopMesh.position.copy(newPos);
-  // Update hoop collider's position if it exists.
-  if (hoopColliderRB) {
-    const newTranslation = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
-    hoopColliderRB.setNextKinematicTranslation(newTranslation);
-  }
 
   // (Existing sensor and orientation update code follows.)
   const dummy = new THREE.Object3D();
@@ -212,14 +207,14 @@ export function moveHoop(newPos) {
   hoopMesh.quaternion.copy(hoopDummy.quaternion);
 
   if (hoopColliderRB) {
-    const colliderDummy = new THREE.Object3D();
-    colliderDummy.position.copy(newPos);
-    colliderDummy.lookAt(getCamera().position);
+
+    const newTranslation = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
+    hoopColliderRB.setNextKinematicTranslation(newTranslation);
     hoopColliderRB.setNextKinematicRotation({
-      x: colliderDummy.quaternion.x,
-      y: colliderDummy.quaternion.y,
-      z: colliderDummy.quaternion.z,
-      w: colliderDummy.quaternion.w,
+      x: hoopDummy.quaternion.x,
+      y: hoopDummy.quaternion.y,
+      z: hoopDummy.quaternion.z,
+      w: hoopDummy.quaternion.w,
     });
   }
 

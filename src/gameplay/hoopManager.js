@@ -26,7 +26,7 @@ export async function createHoopObject(pos) {
     const hoopPrefab = await loadHoopModel(); // load prefab from graphics module
     // Scale the prefab
     hoopPrefab.scale.set(0.05, 0.05, 0.05);
-    createHoopCollider(hoopPrefab);
+    // createHoopCollider(hoopPrefab);
     // Wrap in a group to allow unified transforms
     hoopMesh = new THREE.Group();
     hoopMesh.add(hoopPrefab);
@@ -44,6 +44,12 @@ export async function createHoopObject(pos) {
 
     addObject(hoopMesh);
     setInitialHoopPos(pos);
+
+    // Update the world matrix to include group transforms
+    hoopMesh.updateMatrixWorld(true);
+
+    // Now create the collider using hoopMesh rather than the raw prefab
+    createHoopCollider(hoopMesh);
 
     // Create sensor for basket detection
     const sensorThickness = 0.0001; // Extremely thin sensor

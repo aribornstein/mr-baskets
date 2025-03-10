@@ -169,21 +169,30 @@ export function removeHoop() {
     world.removeCollider(sensor);
     sensor = null;
   }
-}
-
-export function reorientHoop(pos) {
-  if (!hoopMesh) return;
-
-  const hoopDummy = new THREE.Object3D();
-  hoopDummy.position.copy(pos);
-  hoopDummy.lookAt(getCamera().position);
-  hoopMesh.quaternion.copy(hoopDummy.quaternion);
+  // Also remove the hoop collider rigid body
+  if (hoopColliderRB) {
+    world.removeRigidBody(hoopColliderRB);
+    hoopColliderRB = null;
+  }
 }
 
 export function moveHoop(newPos) {
-  if (!hoopMesh || !sensor || !hoopColliderRB) return;
+  if (!hoopMesh || !sensor) return;
+  
+  // First update the visual mesh position and orientation
+  hoopMesh.position.copy(newPos);
+  
+  const hoopDummy = new THREE.Object3D();
+  hoopDummy.position.copy(newPos);
+  hoopDummy.lookAt(getCamera().position);
+  const hoopMeshQuat = hoopDummy.quaternion.clone();
+  hoopMesh.quaternion.copy(hoopMeshQuat);
+  
+  // Update matrices before recreating collider
+  hoopMesh.updateMatrix();
+  hoopMesh.updateMatrixWorld();
 
-  // Update sensor orientation and position.
+  // Update sensor orientation and position
   const sensorDummy = new THREE.Object3D();
   sensorDummy.position.copy(newPos);
   sensorDummy.lookAt(getCamera().position);
@@ -203,28 +212,14 @@ export function moveHoop(newPos) {
     });
   }
 
-  // Update hoopMesh orientation.
-  const hoopDummy = new THREE.Object3D();
-  hoopDummy.position.copy(newPos);
-  hoopDummy.lookAt(getCamera().position);
-  const hoopMeshQuat = hoopDummy.quaternion.clone(); // Get the quaternion
-
-  hoopMesh.quaternion.copy(hoopMeshQuat);
-
-  // Update the collider's kinematic body to match the new position.
-  const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
-  hoopColliderRB.setNextKinematicTranslation(colliderPos);
-  hoopColliderRB.setRotation({
-    x: hoopMeshQuat.x,
-    y: hoopMeshQuat.y,
-    z: hoopMeshQuat.z,
-    w: hoopMeshQuat.w,
-  });
-
-  // Re-apply any additional needed offsets and update matrices.
-  hoopMesh.position.copy(newPos);
-  hoopMesh.updateMatrix();
-  hoopMesh.updateMatrixWorld();
+  // Remove old collider and create a new one based on the updated mesh position
+  const world = getWorld();
+  if (hoopColliderRB) {
+    world.removeRigidBody(hoopColliderRB);
+  }
+  
+  // Recreate the collider at the new position
+  createHoopCollider(hoopMesh);
 }
 
 export function updateHoopMovement() {

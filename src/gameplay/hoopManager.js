@@ -124,20 +124,23 @@ export function createHoopCollider(hoopPrefab) {
   const verticesArray = new Float32Array(vertices);
   const indicesArray = new Uint32Array(indices);
 
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
+  // Initialize the rigid body with the hoopMesh's current translation
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
+    .setTranslation(hoopMesh.position.x, hoopMesh.position.y, hoopMesh.position.z);
   const rigidBody = world.createRigidBody(rigidBodyDesc);
-
+  
   // Store the hoop collider's rigid body for updating on move.
   hoopColliderRB = rigidBody;
 
   const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indicesArray);
   const collider = world.createCollider(colliderDesc, rigidBody);
-
+  
   // Store this collider
   hoopColliders.push({ rigidBody, collider });
 
   return { rigidBody, collider };
 }
+
 
 
 

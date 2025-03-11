@@ -285,11 +285,10 @@ export function updateHoopMovement() {
       const allowedMin = base - minBound - radius;
       const allowedMax = maxBound - base - radius;
       maxAllowed = Math.min(movementAmplitude, allowedMin, allowedMax);
-    }
-
-    if (maxAllowed < 0.1) {
-      console.warn("Hoop movement amplitude is too small. Skipping movement. allowedMin {} , allowedMax {}, movementAmplitude{}", allowedMin, allowedMax, movementAmplitude);
-      return;
+      if (maxAllowed < 0.1) {
+        console.warn("Hoop movement amplitude is too small. Skipping movement. allowedMin {} , allowedMax {}, movementAmplitude{}", allowedMin, allowedMax, movementAmplitude);
+        return;
+      }
     }
 
     // Apply level multiplier to amplitude and frequency.

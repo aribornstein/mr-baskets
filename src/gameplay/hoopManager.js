@@ -27,8 +27,17 @@ export async function createHoopObject(pos) {
   try {
     const world = getWorld();
     const hoopPrefab = await loadHoopModel(); // load prefab from graphics module
+
     // Scale the prefab
     hoopPrefab.scale.set(0.05, 0.05, 0.05);
+
+    // Recenter each mesh geometry so that the pivot is at the center.
+    hoopPrefab.traverse((child) => {
+      if (child.isMesh) {
+        child.geometry.center();
+      }
+    });
+
     // Wrap in a group to allow unified transforms
     hoopMesh = new THREE.Group();
     hoopMesh.add(hoopPrefab);
@@ -40,7 +49,7 @@ export async function createHoopObject(pos) {
     dummy.lookAt(getCamera().position);
     hoopMesh.quaternion.copy(dummy.quaternion);
 
-    // Removed translateZ(-0.1) to avoid offset mismatch
+    // Removed extra translateZ to avoid offset mismatches
     // hoopMesh.translateZ(-0.1);
 
     addObject(hoopMesh);
@@ -49,7 +58,7 @@ export async function createHoopObject(pos) {
     // Update the world matrix to include group transforms
     hoopMesh.updateMatrixWorld(true);
 
-    // Now create the collider using hoopMesh rather than the raw prefab
+    // Now create the collider using hoopMesh (which now has centered geometry)
     createHoopCollider(hoopMesh);
 
     // Create sensor for basket detection
@@ -92,11 +101,11 @@ export function createHoopCollider(hoopPrefab) {
   // Traverse the hoopPrefab to extract mesh data for a trimesh collider
   hoopPrefab.traverse((child) => {
     if (child.isMesh) {
-      // Extract mesh data as before
       child.updateWorldMatrix(true, false);
       const geometry = child.geometry;
       const positionAttribute = geometry.attributes.position;
 
+      // Collect vertices (which now are centered because we called geometry.center())
       for (let i = 0; i < positionAttribute.count; i++) {
         const vertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
         vertex.applyMatrix4(child.matrixWorld);
@@ -118,15 +127,16 @@ export function createHoopCollider(hoopPrefab) {
   const verticesArray = new Float32Array(vertices);
   const indicesArray = new Uint32Array(indices);
 
+  // Create a kinematic rigid body with no extra translation (now the collider is centered)
   const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
   const rigidBody = world.createRigidBody(rigidBodyDesc);
-  
+
   // Store the hoop collider's rigid body for updating on move.
   hoopColliderRB = rigidBody;
 
   const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indicesArray);
   const collider = world.createCollider(colliderDesc, rigidBody);
-  
+
   // Store this collider
   hoopColliders.push({ rigidBody, collider });
 
@@ -138,18 +148,12 @@ export function isBasket(collider1, collider2) {
 
   // Check if one of the colliders is our sensor
   if (collider1 === sensor || collider2 === sensor) {
-    // Determine which collider is the ball
     const ballCollider = collider1 === sensor ? collider2 : collider1;
     const ballBody = ballCollider.parent();
 
-    // Get the ball's velocity
     if (ballBody) {
       const velocity = ballBody.linvel();
-
-      // Only count as a basket if the ball is moving downward (y velocity is negative)
-      // This ensures the ball came from above the hoop
       if (velocity.y < 0) {
-        // Start the cooldown
         sensorCooldown = true;
         setTimeout(() => {
           sensorCooldown = false;
@@ -173,7 +177,6 @@ export function removeHoop() {
     world.removeCollider(sensor);
     sensor = null;
   }
-  // Also remove the hoop collider rigid body
   if (hoopColliderRB) {
     world.removeRigidBody(hoopColliderRB);
     hoopColliderRB = null;
@@ -182,11 +185,6 @@ export function removeHoop() {
 
 export function moveHoop(newPos) {
   if (!hoopMesh || !sensor || !hoopColliderRB) return;
-  console.log("Prev Rapier Collider Position:", hoopColliderRB.translation());
-  console.log("Prev Three.js Mesh Position:", hoopMesh.position);
-
-  // Ensure the physics body is active
-  hoopColliderRB.wakeUp();
 
   // Compute quaternion to face the camera
   const hoopDummy = new THREE.Object3D();
@@ -217,7 +215,7 @@ export function moveHoop(newPos) {
       new RAPIER.Quaternion(hoopMeshQuat.x, hoopMeshQuat.y, hoopMeshQuat.z, hoopMeshQuat.w)
     );
   }
-  
+
   console.log("Rapier Collider Position:", hoopColliderRB.translation());
   console.log("Three.js Mesh Position:", hoopMesh.position);
 }
@@ -239,8 +237,6 @@ export function updateHoopMovement() {
   const newPos = { ...initialHoopPos };
   const roomBoundary = state.environment.roomBoundary;
 
-  // Define level-based multipliers so that initial movement is only 30%
-  // and then gradually increases with each level (capped at 1).
   const levelMultiplier = Math.min(0.5 + (state.game.level - 1) * 0.05, 2);
   const freqMultiplier = Math.min(0.5 + (state.game.level - 1) * 0.05, 2);
 
@@ -259,20 +255,17 @@ export function updateHoopMovement() {
     if (roomBoundary) {
       const minBound = roomBoundary.min[axis];
       const maxBound = roomBoundary.max[axis];
-      // Use hoop radius as a buffer on both sides.
       const allowedMin = base - minBound - radius;
       const allowedMax = maxBound - base - radius;
       maxAllowed = Math.min(movementAmplitude, allowedMin, allowedMax);
     }
 
-    // Apply level multiplier to amplitude and frequency.
     let effectiveAmplitude = maxAllowed * levelMultiplier;
     if (axis === "y") {
-      effectiveAmplitude *= 0.1; // Reduce vertical movement
+      effectiveAmplitude *= 0.1;
     }
     let offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
 
-    // Clamp the new position to stay within the allowed bounds
     let minPos = initialHoopPos[axis] - maxAllowed;
     let maxPos = initialHoopPos[axis] + maxAllowed;
     if (roomBoundary) {

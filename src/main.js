@@ -16,12 +16,13 @@ import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSo
 import { updateFlameParticles, updateIceParticles } from "./effects/particles.js";
 import { applyFirePowerUp, applyIcePowerUp } from "./gameplay/powerUpManager.js";
 import { updateLevel } from "./managers/levelManager.js";
-
+import { Debugger } from "./core/debugger.js";
 
 let clockGame, accumulator = 0, fixedTimeStep = 1 / 60;
 let ratk;
 let scoreboardManager;
 let world;
+let debuggerInstance; // Add this line
 
 async function initGame() {
     clockGame = new THREE.Clock();
@@ -43,6 +44,11 @@ async function initGame() {
 
     // Get the world 
     world = getWorld();
+
+    // Initialize the debugger
+    debuggerInstance = new Debugger(world); // Add this line
+    debuggerInstance.enable(); // Enable debugger initially
+    getScene().add(debuggerInstance); // Add to scene
 
     // Listen for game over event
     eventBus.on("gameOver", () => {
@@ -186,6 +192,11 @@ function animate() {
             updateIceParticles(ballMesh.userData.iceParticles);
         }
     }
+
+    // Update the debugger
+    if (debuggerInstance && debuggerInstance.isEnabled()) { // Add this line
+        debuggerInstance.update(); // Add this line
+    } // Add this line
     
     getRenderer().render(getScene(), getCamera());
 }

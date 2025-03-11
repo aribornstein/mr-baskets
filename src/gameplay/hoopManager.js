@@ -87,52 +87,92 @@ export function createHoopCollider(hoopPrefab) {
   const world = getWorld();
   hoopColliders = []; // Reset colliders list
 
-  let vertices = [];
-  let indices = [];
+  // Create a kinematic rigid body for the compound collider.
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
+  const rigidBody = world.createRigidBody(rigidBodyDesc);
+  hoopColliderRB = rigidBody; // Store for later updates
 
-  // Traverse the hoopPrefab to extract mesh data for a trimesh collider
+  let backboardMesh = null;
+  let netMesh = null;
+
+  // Traverse hoopPrefab to identify the backboard and net meshes.
   hoopPrefab.traverse((child) => {
     if (child.isMesh) {
-      // Extract mesh data as before
-      child.updateWorldMatrix(true, false);
-      const geometry = child.geometry;
-      const positionAttribute = geometry.attributes.position;
-
-      for (let i = 0; i < positionAttribute.count; i++) {
-        const vertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
-        vertex.applyMatrix4(child.matrixWorld);
-        vertices.push(vertex.x, vertex.y, vertex.z);
-      }
-
-      if (geometry.index) {
-        for (let i = 0; i < geometry.index.count; i++) {
-          indices.push(geometry.index.getX(i));
-        }
-      } else {
-        for (let i = 0; i < positionAttribute.count; i++) {
-          indices.push(i);
-        }
+      const lowerName = child.name.toLowerCase();
+      if (lowerName.includes("board")) {
+        backboardMesh = child;
+        console.log(`✅ Detected Backboard: ${child.name}`);
+      } else if (lowerName.includes("net")) {
+        netMesh = child;
+        console.log(`✅ Detected Net: ${child.name}`);
       }
     }
   });
 
-  const verticesArray = new Float32Array(vertices);
-  const indicesArray = new Uint32Array(indices);
+  if (!backboardMesh) {
+    console.error("❌ Backboard not found! Check mesh names.");
+    return;
+  }
+  if (!netMesh) {
+    console.error("❌ Net not found! Check mesh names.");
+    return;
+  }
 
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
-  const rigidBody = world.createRigidBody(rigidBodyDesc);
+  // --- Backboard Collider ---
+  // Compute the bounding box and use a cuboid collider for the backboard.
+  backboardMesh.geometry.computeBoundingBox();
+  const bboxBoard = backboardMesh.geometry.boundingBox;
+  const boardWidth = (bboxBoard.max.x - bboxBoard.min.x) * backboardMesh.scale.x;
+  const boardHeight = (bboxBoard.max.y - bboxBoard.min.y) * backboardMesh.scale.y;
+  // We'll use a very thin depth for the backboard collider.
+  const boardDepth = 0.02;
+  // Adjust translation as needed if the backboard isn’t centered.
+  const backboardColliderDesc = RAPIER.ColliderDesc.cuboid(
+    boardWidth / 2,
+    boardHeight / 2,
+    boardDepth / 2
+  ).setTranslation(0, boardHeight / 2, 0);
+  world.createCollider(backboardColliderDesc, rigidBody);
+  hoopColliders.push({ rigidBody, collider: backboardColliderDesc });
+  console.log(`🎯 Backboard Collider: Width ${boardWidth.toFixed(3)}, Height ${boardHeight.toFixed(3)}`);
+
+  // --- Net Ring Collider ---
+  // Compute the net's bounding box to approximate the ring.
+  netMesh.geometry.computeBoundingBox();
+  const bboxNet = netMesh.geometry.boundingBox;
+  const netWidth = (bboxNet.max.x - bboxNet.min.x) * netMesh.scale.x;
+  const netDepth = (bboxNet.max.z - bboxNet.min.z) * netMesh.scale.z;
+  // Assume the net's opening is roughly circular.
+  const ringRadius = (netWidth + netDepth) / 4; // half of the average diameter
+  // Assume the top of the net is at the maximum Y of the bounding box.
+  const netTopY = bboxNet.max.y * netMesh.scale.y;
   
-  // Store the hoop collider's rigid body for updating on move.
-  hoopColliderRB = rigidBody;
+  // Parameters for the ring colliders:
+  const ringThickness = 0.05;    // how wide each small collider is
+  const ringColliderHeight = 0.02; // collider thickness in Y
+  const numColliders = 8;          // Increase for a smoother ring
 
-  const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indicesArray);
-  const collider = world.createCollider(colliderDesc, rigidBody);
-  
-  // Store this collider
-  hoopColliders.push({ rigidBody, collider });
+  console.log(`🎯 Net Collider: netWidth ${netWidth.toFixed(3)}, netDepth ${netDepth.toFixed(3)}, ringRadius ${ringRadius.toFixed(3)}, netTopY ${netTopY.toFixed(3)}`);
 
-  return { rigidBody, collider };
+  // Arrange small cuboid colliders around a circle.
+  for (let i = 0; i < numColliders; i++) {
+    const angle = (i / numColliders) * Math.PI * 2;
+    const offsetX = ringRadius * Math.cos(angle);
+    const offsetZ = ringRadius * Math.sin(angle);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(
+      ringThickness / 2,        // half-width
+      ringColliderHeight / 2,     // half-height
+      ringThickness / 2         // half-depth
+    ).setTranslation(offsetX, netTopY, offsetZ);
+    world.createCollider(colliderDesc, rigidBody);
+    hoopColliders.push({ rigidBody, collider: colliderDesc });
+    console.log(`🛠️ Added Net Ring Collider #${i + 1} at offset: (${offsetX.toFixed(3)}, ${netTopY.toFixed(3)}, ${offsetZ.toFixed(3)})`);
+  }
+
+  console.log("✅ Compound collider created: Backboard + Net Ring");
+  return { rigidBody };
 }
+
 
 export function isBasket(collider1, collider2) {
   if (sensorCooldown) return false;

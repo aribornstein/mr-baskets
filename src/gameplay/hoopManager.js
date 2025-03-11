@@ -272,9 +272,9 @@ export function updateHoopMovement() {
 
   // Map axis keys to their movement flags.
   const axes = {
-    x: moveLeftAndRight,
+    x: moveBackAndForth,
     y: moveUpAndDown,
-    z: moveBackAndForth,
+    z: moveLeftAndRight,
   };
 
   Object.entries(axes).forEach(([axis, shouldMove]) => {

@@ -126,24 +126,24 @@ export function createHoopCollider(hoopPrefab) {
 
   // Initialize the rigid body with the hoopMesh's current translation and rotation
   const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-    .setTranslation(hoopMesh.position.x, hoopMesh.position.y, hoopMesh.position.z)
-    .setNextKinematicRotation(
-      new RAPIER.Quaternion(
-        hoopMesh.quaternion.x,
-        hoopMesh.quaternion.y,
-        hoopMesh.quaternion.z,
-        hoopMesh.quaternion.w
-      )
-    );
-    
+    .setTranslation(hoopMesh.position.x, hoopMesh.position.y, hoopMesh.position.z);
+
+  rigidBody.setNextKinematicRotation(
+    new RAPIER.Quaternion(
+      hoopMesh.quaternion.x,
+      hoopMesh.quaternion.y,
+      hoopMesh.quaternion.z,
+      hoopMesh.quaternion.w)
+  );
+
   const rigidBody = world.createRigidBody(rigidBodyDesc);
-  
+
   // Store the hoop collider's rigid body for updating on move.
   hoopColliderRB = rigidBody;
 
   const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indicesArray);
   const collider = world.createCollider(colliderDesc, rigidBody);
-  
+
   // Store this collider
   hoopColliders.push({ rigidBody, collider });
 
@@ -237,7 +237,7 @@ export function moveHoop(newPos) {
       new RAPIER.Quaternion(hoopMeshQuat.x, hoopMeshQuat.y, hoopMeshQuat.z, hoopMeshQuat.w)
     );
   }
-  
+
   console.log("Rapier Collider Position:", hoopColliderRB.translation());
   console.log("Three.js Mesh Position:", hoopMesh.position);
 }

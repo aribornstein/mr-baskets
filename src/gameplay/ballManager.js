@@ -1,6 +1,7 @@
 // src/gameplay/ballManager.js
 import * as THREE from "three";
 import * as RAPIER from "rapier";
+import { eventBus } from "../core/eventBus.js";
 import { getScene, getCamera } from "../core/engine.js";
 import { getWorld } from "../core/physics.js";
 import { addObject } from "../managers/sceneManager.js";
@@ -77,6 +78,9 @@ function onGrab(event, controller) {
   if (!basketballMesh) {
     console.warn("No basketballMesh available to grab.");
     return;
+  }
+  if (state.game.shotAttempt) {
+    eventBus.emit("missedShot");
   }
   if (!state.objects.ball.isHeld) {
     if (ballCollider){

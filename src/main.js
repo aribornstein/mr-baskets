@@ -85,6 +85,18 @@ async function initGame() {
         }
     });
 
+    eventBus.on("missedShot", () => {
+        state.game.missedShots++;
+        console.log("Intentional shot missed! Total missed:", state.game.missedShots);
+        state.game.shotAttempt = false; // Reset once counted
+        
+        // End game if 3 missed shots have accumulated
+        if (state.game.missedShots >= 3) {
+            console.log("Game Over due to 3 missed shots.");
+            eventBus.emit("gameOver");
+        }
+    });
+
     // Start the render loop
     getRenderer().setAnimationLoop(animate);
 }
@@ -134,15 +146,7 @@ function animate() {
             if (started && ((collider1.userData === "ball" && collider2.userData === "ground") ||
                             (collider1.userData === "ground" && collider2.userData === "ball"))) {
                 if (state.game.shotAttempt) {
-                    state.game.missedShots++;
-                    console.log("Intentional shot missed! Total missed:", state.game.missedShots);
-                    state.game.shotAttempt = false; // Reset once counted
-                    
-                    // End game if 3 missed shots have accumulated
-                    if (state.game.missedShots >= 3) {
-                        console.log("Game Over due to 3 missed shots.");
-                        eventBus.emit("gameOver");
-                    }
+                  eventBus.emit("missedShot");
                 }
                 playBounceSound();
             }

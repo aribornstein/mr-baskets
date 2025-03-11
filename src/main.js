@@ -221,7 +221,35 @@ document.getElementById("ar-button").addEventListener("click", async () => {
         // Add event listener for session end
         session.addEventListener('end', () => {
             console.log("AR session ended.");
+            
+            eventBus.removeAllListeners();
             stopAllAudio();
+            resetGame(); // Ensure game state is reset
+
+            // Dispose of Three.js resources
+            const scene = getScene();
+            scene.traverse(object => {
+                if (object.isMesh) {
+                    object.geometry.dispose();
+                    if (object.material.map) object.material.map.dispose();
+                    object.material.dispose();
+                }
+            });
+
+            // Remove all objects from the scene
+            while(scene.children.length > 0){ 
+              scene.remove(scene.children[0]); 
+            }
+
+            // Dispose of physics world
+            if (world) {
+                world.free();
+                world = null;
+            }
+
+            // Clear references
+            scoreboardManager = null;
+            debuggerInstance = null;
         });
     } catch (err) {
         console.error("Failed to start AR session:", err);

@@ -29,7 +29,7 @@ export async function createHoopObject(pos) {
     const hoopPrefab = await loadHoopModel(); // load prefab from graphics module
     // Scale the prefab
     hoopPrefab.scale.set(0.05, 0.05, 0.05);
-    // createHoopCollider(hoopPrefab);
+    
     // Wrap in a group to allow unified transforms
     hoopMesh = new THREE.Group();
     hoopMesh.add(hoopPrefab);
@@ -41,8 +41,8 @@ export async function createHoopObject(pos) {
     dummy.lookAt(getCamera().position);
     hoopMesh.quaternion.copy(dummy.quaternion);
 
-    // (Optional) Apply any offsets if desired
-    hoopMesh.translateZ(-0.1);
+    // ❌ Removed the extra translateZ(-0.1) to keep the collider and mesh in sync
+    // hoopMesh.translateZ(-0.1);
 
     addObject(hoopMesh);
     setInitialHoopPos(pos);
@@ -81,8 +81,8 @@ export async function createHoopObject(pos) {
   } catch (error) {
     console.error("Failed to load hoop prefab:", error);
   }
-
 }
+
 export function createHoopCollider(hoopPrefab) {
   const world = getWorld();
   hoopColliders = []; // Reset colliders list
@@ -187,39 +187,39 @@ export function moveHoop(newPos) {
   // Ensure the physics body is active
   hoopColliderRB.wakeUp();
 
-  // Move the Rapier body
-  const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
-  hoopColliderRB.setNextKinematicTranslation(colliderPos);
-
   // Compute quaternion to face the camera
   const hoopDummy = new THREE.Object3D();
   hoopDummy.position.copy(newPos);
   hoopDummy.lookAt(getCamera().position);
   const hoopMeshQuat = hoopDummy.quaternion.clone();
 
+  // 1) Update the Three.js mesh
+  hoopMesh.position.copy(newPos);
+  hoopMesh.quaternion.copy(hoopMeshQuat);
+  hoopMesh.updateMatrixWorld(true);
+
+  // 2) Update the Rapier kinematic body to match
+  const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
+  hoopColliderRB.setNextKinematicTranslation(colliderPos);
   hoopColliderRB.setNextKinematicRotation(
     new RAPIER.Quaternion(hoopMeshQuat.x, hoopMeshQuat.y, hoopMeshQuat.z, hoopMeshQuat.w)
   );
 
-  // ✅ Sync the Three.js mesh
-  hoopMesh.position.copy(newPos);
-  hoopMesh.quaternion.copy(hoopMeshQuat);
-  hoopMesh.updateMatrixWorld();
-
-  // ✅ Update the sensor position
+  // 3) Update the sensor position and rotation
   const sensorYOffset = -0.01;
   const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
   const sensorBody = sensor.parent();
   if (sensorBody) {
     sensorBody.wakeUp();
     sensorBody.setNextKinematicTranslation(sensorPos);
+    sensorBody.setNextKinematicRotation(
+      new RAPIER.Quaternion(hoopMeshQuat.x, hoopMeshQuat.y, hoopMeshQuat.z, hoopMeshQuat.w)
+    );
   }
   
-  console.log(hoopColliderRB.translation()); // Ensure Rapier is actually moving it
-  console.log(hoopMesh.position); // Ensure Three.js follows it
-
+  console.log("Rapier Body:", hoopColliderRB.translation());
+  console.log("Three.js Mesh:", hoopMesh.position);
 }
-
 
 export function updateHoopMovement() {
   if (!initialHoopPos) return;
@@ -242,7 +242,6 @@ export function updateHoopMovement() {
   // and then gradually increases with each level (capped at 1).
   const levelMultiplier = Math.min(0.5 + (state.game.level - 1) * 0.05, 2);
   const freqMultiplier = Math.min(0.5 + (state.game.level - 1) * 0.05, 2);
-
 
   // Map axis keys to their movement flags.
   const axes = {

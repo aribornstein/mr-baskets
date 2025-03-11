@@ -83,65 +83,56 @@ export async function createHoopObject(pos) {
   }
 
 }
-export function createNetRingCollider(hoopPrefab) {
+export function createHoopCollider(hoopPrefab) {
   const world = getWorld();
+  hoopColliders = []; // Reset colliders list
 
-  // Find the net mesh (assuming its name contains "net")
-  let netMesh = null;
+  let vertices = [];
+  let indices = [];
+
+  // Traverse the hoopPrefab to extract mesh data for a trimesh collider
   hoopPrefab.traverse((child) => {
-    if (child.isMesh && child.name.toLowerCase().includes("net")) {
-      netMesh = child;
+    if (child.isMesh) {
+      // Extract mesh data as before
+      child.updateWorldMatrix(true, false);
+      const geometry = child.geometry;
+      const positionAttribute = geometry.attributes.position;
+
+      for (let i = 0; i < positionAttribute.count; i++) {
+        const vertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
+        vertex.applyMatrix4(child.matrixWorld);
+        vertices.push(vertex.x, vertex.y, vertex.z);
+      }
+
+      if (geometry.index) {
+        for (let i = 0; i < geometry.index.count; i++) {
+          indices.push(geometry.index.getX(i));
+        }
+      } else {
+        for (let i = 0; i < positionAttribute.count; i++) {
+          indices.push(i);
+        }
+      }
     }
   });
 
-  if (!netMesh) {
-    console.error("Net mesh not found in hoopPrefab!");
-    return;
-  }
+  const verticesArray = new Float32Array(vertices);
+  const indicesArray = new Uint32Array(indices);
 
-  // Ensure the net has an up-to-date bounding box.
-  netMesh.geometry.computeBoundingBox();
-  const bbox = netMesh.geometry.boundingBox;
-
-  // Determine the net dimensions.
-  const netWidth = bbox.max.x - bbox.min.x;
-  const netDepth = bbox.max.z - bbox.min.z;
-  // For a roughly circular net opening, take the average of width and depth to compute the ring radius.
-  const ringRadius = (netWidth + netDepth) / 4;
-  // Assume the top of the net is at bbox.max.y (relative to the net mesh local coordinates)
-  const netTopY = bbox.max.y;
-
-  // Parameters for the ring collider.
-  const ringThickness = 0.05;    // How wide the ring is (collider width)
-  const ringColliderHeight = 0.02; // Collider thickness in the Y-axis
-
-  console.log(`Net dimensions: width ${netWidth.toFixed(3)}, depth ${netDepth.toFixed(3)}, computed ring radius: ${ringRadius.toFixed(3)}, net top Y: ${netTopY.toFixed(3)}`);
-
-  // Create a kinematic rigid body for the ring collider.
   const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
-  const ringRigidBody = world.createRigidBody(rigidBodyDesc);
+  const rigidBody = world.createRigidBody(rigidBodyDesc);
+  
+  // Store the hoop collider's rigid body for updating on move.
+  hoopColliderRB = rigidBody;
 
-  // Create several small cuboid colliders arranged in a circle to form the ring.
-  const numColliders = 8; // Increase for a smoother ring
-  for (let i = 0; i < numColliders; i++) {
-    const angle = (i / numColliders) * Math.PI * 2;
-    const offsetX = ringRadius * Math.cos(angle);
-    const offsetZ = ringRadius * Math.sin(angle);
-    // Create a small cuboid collider.
-    const colliderDesc = RAPIER.ColliderDesc.cuboid(
-      ringThickness / 2,      // half-width
-      ringColliderHeight / 2,   // half-height
-      ringThickness / 2       // half-depth
-    ).setTranslation(offsetX, netTopY, offsetZ);
-    world.createCollider(colliderDesc, ringRigidBody);
+  const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indicesArray);
+  const collider = world.createCollider(colliderDesc, rigidBody);
+  
+  // Store this collider
+  hoopColliders.push({ rigidBody, collider });
 
-    console.log(`Added ring collider #${i+1} at offset: (${offsetX.toFixed(3)}, ${netTopY.toFixed(3)}, ${offsetZ.toFixed(3)})`);
-  }
-
-  // Optionally, store ringRigidBody for later updates (e.g., if you want the net to move).
-  return ringRigidBody;
+  return { rigidBody, collider };
 }
-
 
 export function isBasket(collider1, collider2) {
   if (sensorCooldown) return false;

@@ -182,7 +182,7 @@ export function removeHoop() {
 }
 
 export function moveHoop(newPos) {
-  if (!hoopMesh || !hoopColliderRB) return;
+  if (!hoopMesh || !sensor || !hoopColliderRB) return;
 
   // Ensure the physics body is active
   hoopColliderRB.wakeUp();
@@ -215,30 +215,32 @@ export function moveHoop(newPos) {
   hoopMesh.updateMatrixWorld();
 
   // ✅ Update sensor position and orientation
-  if (sensor) {
-    const sensorDummy = new THREE.Object3D();
-    sensorDummy.position.copy(newPos);
-    sensorDummy.lookAt(getCamera().position);
-    
-    // Correct the orientation by 90 degrees
-    const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
-    const hoopQuat = sensorDummy.quaternion.clone().multiply(correction);
+  const sensorDummy = new THREE.Object3D();
+  sensorDummy.position.copy(newPos);
+  sensorDummy.lookAt(getCamera().position);
+  
+  // Correct the orientation by 90 degrees
+  const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+  const hoopQuat = sensorDummy.quaternion.clone().multiply(correction);
 
-    const sensorYOffset = -0.01;
-    const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
+  const sensorYOffset = -0.01;
+  const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
 
-    const sensorBody = sensor.parent();
-    if (sensorBody) {
-      sensorBody.wakeUp();
-      sensorBody.setNextKinematicTranslation(sensorPos);
-      sensorBody.setNextKinematicRotation({
-        x: hoopQuat.x,
-        y: hoopQuat.y,
-        z: hoopQuat.z,
-        w: hoopQuat.w,
-      });
-    }
+  const sensorBody = sensor.parent();
+  if (sensorBody) {
+    sensorBody.wakeUp();
+    sensorBody.setNextKinematicTranslation(sensorPos);
+    sensorBody.setNextKinematicRotation({
+      x: hoopQuat.x,
+      y: hoopQuat.y,
+      z: hoopQuat.z,
+      w: hoopQuat.w,
+    });
   }
+  
+  console.log(hoopColliderRB.translation()); // Ensure Rapier is actually moving it
+  console.log(hoopMesh.position); // Ensure Three.js follows it
+
 }
 
 

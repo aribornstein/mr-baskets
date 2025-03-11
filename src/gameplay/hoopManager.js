@@ -129,7 +129,7 @@ export function createHoopCollider(hoopPrefab) {
     .setTranslation(hoopMesh.position.x, hoopMesh.position.y, hoopMesh.position.z);
 
   const rigidBody = world.createRigidBody(rigidBodyDesc);
-  
+
   // Set the initial rotation on the rigid body to match the hoopMesh.
   rigidBody.setNextKinematicRotation(
     new RAPIER.Quaternion(
@@ -139,7 +139,7 @@ export function createHoopCollider(hoopPrefab) {
       hoopMesh.quaternion.w
     )
   );
-  
+
   // Store the hoop collider's rigid body for updating on move.
   hoopColliderRB = rigidBody;
 
@@ -289,9 +289,9 @@ export function updateHoopMovement() {
 
     // Apply level multiplier to amplitude and frequency.
     let effectiveAmplitude = maxAllowed * levelMultiplier;
-    if (axis === "y") {
-      effectiveAmplitude *= 0.1; // Reduce vertical movement
-    }
+    // if (axis === "y") {
+    //   effectiveAmplitude *= 0.1; // Reduce vertical movement
+    // }
     let offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
 
     // Clamp the new position to stay within the allowed bounds

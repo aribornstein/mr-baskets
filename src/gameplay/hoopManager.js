@@ -26,33 +26,33 @@ export async function createHoopObject(pos) {
     const world = getWorld();
     const hoopPrefab = await loadHoopModel(); // load prefab from graphics module
 
-    // Scale the prefab
+    // Scale the prefab (this affects the world scale of its children)
     hoopPrefab.scale.set(0.05, 0.05, 0.05);
 
-    // Wrap in a group to allow unified transforms
+    // Wrap in a group for unified transforms.
     hoopMesh = new THREE.Group();
     hoopMesh.add(hoopPrefab);
 
-    // Position and orient the prefab to face the camera
+    // Position and orient the prefab to face the camera.
     hoopMesh.position.copy(pos);
     const dummy = new THREE.Object3D();
     dummy.position.copy(pos);
     dummy.lookAt(getCamera().position);
     hoopMesh.quaternion.copy(dummy.quaternion);
 
-    // Optional offset
+    // Optional offset.
     hoopMesh.translateZ(-0.1);
 
     addObject(hoopMesh);
     setInitialHoopPos(pos);
 
-    // Update world matrix to include group transforms
+    // Update world matrix.
     hoopMesh.updateMatrixWorld(true);
 
-    // Create the compound collider (backboard + rim)
+    // Create the compound collider (backboard + rim) using the scaled prefab.
     createHoopCompoundCollider(hoopMesh);
 
-    // Create the sensor for basket detection
+    // Create the sensor for basket detection.
     const sensorData = createHoopSensor(hoopMesh);
     if (sensorData) {
       sensor = sensorData.sensorCollider;
@@ -68,10 +68,16 @@ export async function createHoopObject(pos) {
  * Creates a compound collider for the hoop.
  * This function creates a cuboid collider for the backboard and a ring
  * of small cuboid colliders (arranged in a circle) for the rim.
+ * It uses the effective (world) scale of the hoopPrefab so that colliders
+ * match the scaled-down visuals.
  */
 export function createHoopCompoundCollider(hoopPrefab) {
   const world = getWorld();
   hoopColliders = []; // Reset colliders list
+
+  // Get effective scale from the prefab.
+  const effectiveScale = new THREE.Vector3();
+  hoopPrefab.getWorldScale(effectiveScale);
 
   // Create a kinematic rigid body for the compound collider.
   const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
@@ -107,9 +113,10 @@ export function createHoopCompoundCollider(hoopPrefab) {
   // --- Backboard Collider ---
   backboardMesh.geometry.computeBoundingBox();
   const bboxBoard = backboardMesh.geometry.boundingBox;
-  const boardWidth = (bboxBoard.max.x - bboxBoard.min.x) * backboardMesh.scale.x;
-  const boardHeight = (bboxBoard.max.y - bboxBoard.min.y) * backboardMesh.scale.y;
-  const boardDepth = 0.02; // Thin depth
+  // Multiply bounding box dimensions by effective scale.
+  const boardWidth = (bboxBoard.max.x - bboxBoard.min.x) * effectiveScale.x;
+  const boardHeight = (bboxBoard.max.y - bboxBoard.min.y) * effectiveScale.y;
+  const boardDepth = 0.02; // Use a thin depth for the backboard collider.
   const backboardColliderDesc = RAPIER.ColliderDesc.cuboid(
     boardWidth / 2,
     boardHeight / 2,
@@ -122,16 +129,16 @@ export function createHoopCompoundCollider(hoopPrefab) {
   // --- Rim (Net Ring) Colliders ---
   netMesh.geometry.computeBoundingBox();
   const bboxNet = netMesh.geometry.boundingBox;
-  const netWidth = (bboxNet.max.x - bboxNet.min.x) * netMesh.scale.x;
-  const netDepth = (bboxNet.max.z - bboxNet.min.z) * netMesh.scale.z;
+  const netWidth = (bboxNet.max.x - bboxNet.min.x) * effectiveScale.x;
+  const netDepth = (bboxNet.max.z - bboxNet.min.z) * effectiveScale.z;
   // Estimate the rim opening as roughly circular.
   const ringRadius = (netWidth + netDepth) / 4; // half of average diameter
-  const netTopY = bboxNet.max.y * netMesh.scale.y; // top of net
+  const netTopY = bboxNet.max.y * effectiveScale.y; // top of net
   
   // Parameters for the rim colliders.
-  const ringThickness = 0.05;    // width of each small collider
-  const ringColliderHeight = 0.02; // thickness in Y
-  const numColliders = 8;          // number of colliders for the ring
+  const ringThickness = 0.05;    // Width of each small collider.
+  const ringColliderHeight = 0.02; // Thickness in Y.
+  const numColliders = 8;          // Number of colliders for the ring.
 
   console.log(`🎯 Net Collider: netWidth ${netWidth.toFixed(3)}, netDepth ${netDepth.toFixed(3)}, ringRadius ${ringRadius.toFixed(3)}, netTopY ${netTopY.toFixed(3)}`);
 
@@ -161,6 +168,10 @@ export function createHoopCompoundCollider(hoopPrefab) {
 export function createHoopSensor(hoopPrefab) {
   const world = getWorld();
 
+  // Get effective scale.
+  const effectiveScale = new THREE.Vector3();
+  hoopPrefab.getWorldScale(effectiveScale);
+
   let netMesh = null;
   hoopPrefab.traverse((child) => {
     if (child.isMesh && child.name.toLowerCase().includes("net")) {
@@ -174,11 +185,11 @@ export function createHoopSensor(hoopPrefab) {
 
   netMesh.geometry.computeBoundingBox();
   const bboxNet = netMesh.geometry.boundingBox;
-  const netWidth = (bboxNet.max.x - bboxNet.min.x) * netMesh.scale.x;
-  const netDepth = (bboxNet.max.z - bboxNet.min.z) * netMesh.scale.z;
+  const netWidth = (bboxNet.max.x - bboxNet.min.x) * effectiveScale.x;
+  const netDepth = (bboxNet.max.z - bboxNet.min.z) * effectiveScale.z;
   // Sensor radius is 90% of the rim's computed radius.
   const sensorRadius = ((netWidth + netDepth) / 4) * 0.9;
-  const netTopY = bboxNet.max.y * netMesh.scale.y;
+  const netTopY = bboxNet.max.y * effectiveScale.y;
 
   // Create a sensor collider – using a very thin cylinder.
   const sensorThickness = 0.0001;
@@ -224,7 +235,7 @@ export function isBasket(collider1, collider2) {
         const ballPos = ballBody.translation();
         const horizontalDist = Math.hypot(ballPos.x - sensorPos.x, ballPos.z - sensorPos.z);
         
-        // Use the stored sensor radius for comparison.
+        // Use the stored sensor radius.
         const sensorRadius = sensor._sensorRadius || 0.1;
         if (horizontalDist < sensorRadius * 0.9) {
           sensorCooldown = true;

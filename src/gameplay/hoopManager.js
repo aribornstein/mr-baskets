@@ -297,7 +297,7 @@ export function updateHoopMovement() {
     // Clamp the new position to stay within the allowed bounds
     let minPos = initialHoopPos[axis] - maxAllowed;
     let maxPos = initialHoopPos[axis] + maxAllowed;
-    if (axis != y && roomBoundary ) {
+    if (axis !== "y" && roomBoundary ) {
       minPos = Math.max(minPos, roomBoundary.min[axis] + radius);
       maxPos = Math.min(maxPos, roomBoundary.max[axis] - radius);
     }

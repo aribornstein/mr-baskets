@@ -38,11 +38,42 @@ function createHoop(state) {
 function findNewHoopPosition(state) {
     const camera = getCamera();
     let newHoopPos = new THREE.Vector3();
+    const safeRadius = 3; // Define a safe radius around the player
 
-    // Generate a random position within the room boundaries
+    // Generate a random position within the room boundaries, ensuring it's outside the safe radius
     if (state.environment.roomBoundary) {
-        const x = THREE.MathUtils.randFloat(state.environment.roomBoundary.min.x + state.objects.hoop.radius, state.environment.roomBoundary.max.x - state.objects.hoop.radius);
-        const z = THREE.MathUtils.randFloat(state.environment.roomBoundary.min.z + state.objects.hoop.radius, state.environment.roomBoundary.max.z - state.objects.hoop.radius);
+        const roomMinX = state.environment.roomBoundary.min.x + state.objects.hoop.radius;
+        const roomMaxX = state.environment.roomBoundary.max.x - state.objects.hoop.radius;
+        const roomMinZ = state.environment.roomBoundary.min.z + state.objects.hoop.radius;
+        const roomMaxZ = state.environment.roomBoundary.max.z - state.objects.hoop.radius;
+
+        const cameraX = camera.position.x;
+        const cameraZ = camera.position.z;
+
+        let minX, maxX, minZ, maxZ;
+
+        // Calculate valid X range
+        if (cameraX - roomMinX > roomMaxX - cameraX) {
+            minX = roomMinX;
+            maxX = Math.max(cameraX - safeRadius, roomMinX);
+        } else {
+            minX = Math.min(cameraX + safeRadius, roomMaxX);
+            maxX = roomMaxX;
+        }
+
+        // Calculate valid Z range
+        if (cameraZ - roomMinZ > roomMaxZ - cameraZ) {
+            minZ = roomMinZ;
+            maxZ = Math.max(cameraZ - safeRadius, roomMinZ);
+        } else {
+            minZ = Math.min(cameraZ + safeRadius, roomMaxZ);
+            maxZ = roomMaxZ;
+        }
+
+        // Generate random x and z within the calculated ranges
+        const x = THREE.MathUtils.randFloat(minX, maxX);
+        const z = THREE.MathUtils.randFloat(minZ, maxZ);
+
         newHoopPos.set(x, state.objects.hoop.height + state.environment.floorOffset, z);
     } else {
         // If no room boundary, default to a position in front of the camera

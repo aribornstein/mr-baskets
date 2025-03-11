@@ -87,52 +87,71 @@ export function createHoopCollider(hoopPrefab) {
   const world = getWorld();
   hoopColliders = []; // Reset colliders list
 
-  let vertices = [];
-  let indices = [];
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
+  const rigidBody = world.createRigidBody(rigidBodyDesc);
+  hoopColliderRB = rigidBody; // Store the main rigid body
 
-  // Traverse the hoopPrefab to extract mesh data for a trimesh collider
+  let torusMesh = null;
+  let backboardMesh = null;
+
+  // 🔍 Find the torus and backboard meshes inside hoopPrefab
   hoopPrefab.traverse((child) => {
     if (child.isMesh) {
-      // Extract mesh data as before
-      child.updateWorldMatrix(true, false);
-      const geometry = child.geometry;
-      const positionAttribute = geometry.attributes.position;
-
-      for (let i = 0; i < positionAttribute.count; i++) {
-        const vertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
-        vertex.applyMatrix4(child.matrixWorld);
-        vertices.push(vertex.x, vertex.y, vertex.z);
-      }
-
-      if (geometry.index) {
-        for (let i = 0; i < geometry.index.count; i++) {
-          indices.push(geometry.index.getX(i));
-        }
-      } else {
-        for (let i = 0; i < positionAttribute.count; i++) {
-          indices.push(i);
-        }
+      if (child.geometry.type === "TorusGeometry") {
+        torusMesh = child;
+      } else if (child.geometry.boundingBox) {
+        backboardMesh = child; // Assuming a plane or box mesh for the backboard
       }
     }
   });
 
-  const verticesArray = new Float32Array(vertices);
-  const indicesArray = new Uint32Array(indices);
+  if (!torusMesh || !backboardMesh) {
+    console.error("Could not find hoop components! Check the model structure.");
+    return;
+  }
 
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
-  const rigidBody = world.createRigidBody(rigidBodyDesc);
-  
-  // Store the hoop collider's rigid body for updating on move.
-  hoopColliderRB = rigidBody;
+  // 🔧 Get actual torus dimensions
+  const torusGeometry = torusMesh.geometry;
+  const radius = torusGeometry.parameters.radius * hoopPrefab.scale.x;
+  const tubeRadius = torusGeometry.parameters.tube * hoopPrefab.scale.x;
+  const height = tubeRadius * 2;
 
-  const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indicesArray);
-  const collider = world.createCollider(colliderDesc, rigidBody);
-  
-  // Store this collider
-  hoopColliders.push({ rigidBody, collider });
+  // ✅ Approximate the hoop rim with 4 cylinders
+  const offsets = [
+    { x: radius, y: 0, z: 0 },
+    { x: -radius, y: 0, z: 0 },
+    { x: 0, y: 0, z: radius },
+    { x: 0, y: 0, z: -radius },
+  ];
 
-  return { rigidBody, collider };
+  offsets.forEach((offset) => {
+    const colliderDesc = RAPIER.ColliderDesc.cylinder(height, tubeRadius)
+      .setTranslation(offset.x, offset.y, offset.z);
+    const collider = world.createCollider(colliderDesc, rigidBody);
+    hoopColliders.push({ rigidBody, collider });
+  });
+
+  // ✅ Create a box collider for the backboard
+  backboardMesh.geometry.computeBoundingBox();
+  const bbox = backboardMesh.geometry.boundingBox;
+  const backboardWidth = (bbox.max.x - bbox.min.x) * hoopPrefab.scale.x;
+  const backboardHeight = (bbox.max.y - bbox.min.y) * hoopPrefab.scale.y;
+  const backboardDepth = 0.02; // Thin depth for a flat backboard
+
+  const backboardColliderDesc = RAPIER.ColliderDesc.cuboid(
+    backboardWidth / 2,
+    backboardHeight / 2,
+    backboardDepth / 2
+  ).setTranslation(0, backboardHeight / 2, -radius); // Position the backboard behind the hoop
+
+  world.createCollider(backboardColliderDesc, rigidBody);
+  hoopColliders.push({ rigidBody, collider: backboardColliderDesc });
+
+  console.log("Colliders Created: Rim + Backboard");
+
+  return { rigidBody };
 }
+
 
 export function isBasket(collider1, collider2) {
   if (sensorCooldown) return false;

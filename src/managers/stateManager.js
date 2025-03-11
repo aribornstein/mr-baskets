@@ -24,6 +24,13 @@ export const state = {
             moveBackAndForth: false,
             moveUpAndDown: false,
             moveLeftAndRight: false,
+            amplitudeX: 0,
+            amplitudeY: 0,
+            amplitudeZ: 0,
+            phaseX: 0,
+            phaseY: 0,
+            phaseZ: 0,
+            centerPosition: { x: 0, y: 0, z: 0 },
         },
         walls: {
             created: false,

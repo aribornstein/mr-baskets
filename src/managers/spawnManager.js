@@ -130,15 +130,36 @@ export function moveHoopToNewPosition(state, delay = 200) {
     if (state.environment.roomBoundary) {
         const roomMinX = state.environment.roomBoundary.min.x + state.objects.hoop.radius;
         const roomMaxX = state.environment.roomBoundary.max.x - state.objects.hoop.radius;
+        const roomMinY = state.environment.roomBoundary.min.y + state.objects.hoop.radius;
+        const roomMaxY = state.environment.roomBoundary.max.y - state.objects.hoop.radius;
         const roomMinZ = state.environment.roomBoundary.min.z + state.objects.hoop.radius;
         const roomMaxZ = state.environment.roomBoundary.max.z - state.objects.hoop.radius;
 
-        // Calculate maximum allowed amplitude for X and Z axes
-        const maxAmplitudeX = Math.min(newHoopPos.x - roomMinX, roomMaxX - newHoopPos.x);
-        const maxAmplitudeZ = Math.min(newHoopPos.z - roomMinZ, roomMaxZ - newHoopPos.z);
+        // Calculate the ranges
+        const rangeX = roomMaxX - roomMinX;
+        const rangeY = roomMaxY - roomMinY;
+        const rangeZ = roomMaxZ - roomMinZ;
 
-        // Choose the smaller of the two amplitudes to ensure the hoop stays within bounds
-        state.objects.hoop.movementAmplitude = Math.min(maxAmplitudeX, maxAmplitudeZ, 0.2); // Use 0.2 as a default/max value
+        // Define amplitudes as fractions of the ranges
+        state.objects.hoop.amplitudeX = rangeX * 0.25; // 25% of X range
+        state.objects.hoop.amplitudeY = rangeY * 0.10; // 10% of Y range
+        state.objects.hoop.amplitudeZ = rangeZ * 0.30; // 30% of Z range
+
+        // Calculate center positions
+        const centerX = (roomMinX + roomMaxX) / 2;
+        const centerY = (roomMinY + roomMaxY) / 2;
+        const centerZ = (roomMinZ + roomMaxZ) / 2;
+
+        // Store the center position
+        state.objects.hoop.centerPosition = { x: centerX, y: centerY, z: centerZ };
+
+        // Calculate initial phase relative to center
+        state.objects.hoop.phaseX = (newHoopPos.x - centerX) / state.objects.hoop.amplitudeX;
+        state.objects.hoop.phaseY = (newHoopPos.y - centerY) / state.objects.hoop.amplitudeY;
+        state.objects.hoop.phaseZ = (newHoopPos.z - centerZ) / state.objects.hoop.amplitudeZ;
+
+        // Set the initial hoop position to the center
+        newHoopPos.set(centerX, centerY, centerZ);
     }
 
     // Wait for the specified delay before moving the hoop

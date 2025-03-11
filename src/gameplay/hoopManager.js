@@ -251,15 +251,19 @@ export function updateHoopMovement() {
     moveLeftAndRight,
     moveUpAndDown,
     moveBackAndForth,
-    movementAmplitude,
+    amplitudeX,
+    amplitudeY,
+    amplitudeZ,
     movementFrequency,
-    radius,
+    phaseX,
+    phaseY,
+    phaseZ,
+    centerPosition,
   } = state.objects.hoop;
   if (!(moveLeftAndRight || moveUpAndDown || moveBackAndForth)) return;
 
   const elapsedTime = performance.now() / 1000;
   const newPos = { ...initialHoopPos };
-  const roomBoundary = state.environment.roomBoundary;
 
   // Define level-based multipliers so that initial movement is only 30%
   // and then gradually increases with each level (capped at 1).
@@ -276,16 +280,23 @@ export function updateHoopMovement() {
   Object.entries(axes).forEach(([axis, shouldMove]) => {
     if (!shouldMove) return;
 
-    const base = initialHoopPos[axis];
+    let offset = 0;
+    let effectiveAmplitude = 0;
+    let phase = 0;
 
-    // Apply level multiplier to amplitude and frequency.
-    let effectiveAmplitude = movementAmplitude * levelMultiplier;
-    if (axis === "y") {
-      effectiveAmplitude *= 0.1; // Reduce vertical movement
+    if (axis === "x") {
+      effectiveAmplitude = amplitudeX * levelMultiplier;
+      phase = phaseX;
+    } else if (axis === "y") {
+      effectiveAmplitude = amplitudeY * levelMultiplier * 0.1; // Reduce vertical movement
+      phase = phaseY;
+    } else if (axis === "z") {
+      effectiveAmplitude = amplitudeZ * levelMultiplier;
+      phase = phaseZ;
     }
-    let offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
-    
-    newPos[axis] = base + offset;
+
+    offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2 + phase);
+    newPos[axis] = centerPosition[axis] + offset;
   });
 
   moveHoop(newPos);

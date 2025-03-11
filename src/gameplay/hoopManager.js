@@ -83,6 +83,7 @@ export async function createHoopObject(pos) {
   }
 
 }
+
 export function createHoopCollider(hoopPrefab) {
   let torusMesh = null;
   let backboardMesh = null;

@@ -289,15 +289,15 @@ export function updateHoopMovement() {
 
     // Apply level multiplier to amplitude and frequency.
     let effectiveAmplitude = maxAllowed * levelMultiplier;
-    // if (axis === "y") {
-    //   effectiveAmplitude *= 0.1; // Reduce vertical movement
-    // }
+    if (axis === "y") {
+      effectiveAmplitude *= 0.1; // Reduce vertical movement
+    }
     let offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
 
     // Clamp the new position to stay within the allowed bounds
     let minPos = initialHoopPos[axis] - maxAllowed;
     let maxPos = initialHoopPos[axis] + maxAllowed;
-    if (roomBoundary) {
+    if (axis != y && roomBoundary ) {
       minPos = Math.max(minPos, roomBoundary.min[axis] + radius);
       maxPos = Math.min(maxPos, roomBoundary.max[axis] - radius);
     }

@@ -287,6 +287,11 @@ export function updateHoopMovement() {
       maxAllowed = Math.min(movementAmplitude, allowedMin, allowedMax);
     }
 
+    if (maxAllowed < 0.1) {
+      console.warn("Hoop movement amplitude is too small. Skipping movement. allowedMin {} , allowedMax {}, movementAmplitude{}", allowedMin, allowedMax, movementAmplitude);
+      return;
+    }
+
     // Apply level multiplier to amplitude and frequency.
     let effectiveAmplitude = maxAllowed * levelMultiplier;
     if (axis === "y") {

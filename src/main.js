@@ -46,9 +46,12 @@ async function initGame() {
     world = getWorld();
 
     // Initialize the debugger
-    debuggerInstance = new Debugger(world); // Add this line
-    debuggerInstance.enable(); // Enable debugger initially
-    getScene().add(debuggerInstance); // Add to scene
+    if (state.debugger){
+        debuggerInstance = new Debugger(world); // Add this line
+        debuggerInstance.enable(); // Enable debugger initially
+        getScene().add(debuggerInstance); // Add to scene
+    }
+
 
     // Listen for game over event
     eventBus.on("gameOver", () => {
@@ -86,6 +89,10 @@ async function initGame() {
     });
 
     eventBus.on("missedShot", () => {
+        if (state.debugger){
+            debuggerInstance.log("Missed Shot");
+            return;
+        }
         state.game.missedShots++;
         console.log("Intentional shot missed! Total missed:", state.game.missedShots);
         state.game.shotAttempt = false; // Reset once counted

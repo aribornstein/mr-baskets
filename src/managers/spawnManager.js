@@ -158,10 +158,9 @@ export function moveHoopToNewPosition(state, delay = 200) {
         state.objects.hoop.phaseY = (newHoopPos.y - centerY) / state.objects.hoop.amplitudeY;
         state.objects.hoop.phaseZ = (newHoopPos.z - centerZ) / state.objects.hoop.amplitudeZ;
 
-        // Set the initial hoop position to the center
-        newHoopPos.set(centerX, centerY, centerZ);
-
-        // Update initialHoopPos with the new center position
+        // Update initialHoopPos with the new position
+        setInitialHoopPos(newHoopPos);
+    } else {
         setInitialHoopPos(newHoopPos);
     }
 

@@ -19,6 +19,15 @@ const cheerTracks = [
     // Add more cheer files as needed
 ];
 
+const tauntTracks = [
+    'src/assets/taunts/taunt1.wav',
+    'src/assets/taunts/taunt2.wav',
+    'src/assets/taunts/taunt3.wav',
+    'src/assets/taunts/taunt4.wav',
+    'src/assets/taunts/taunt5.wav',
+    // Add more taunt files as needed
+];
+
 let audioLoader;
 let currentTrack;
 let audioListener;
@@ -117,7 +126,7 @@ export function playBounceSound() {
     }
 }
 
-export async function loadBuzzerSound() {  
+export async function loadBuzzerSound() {
     if (!audioListener) {
         audioListener = initAudioListener();
     }
@@ -157,6 +166,23 @@ export async function playCheerSound() {
     }
 }
 
+export async function playTauntSound() {
+    if (!audioListener) {
+        audioListener = initAudioListener();
+    }
+    const tauntTrack = tauntTracks[Math.floor(Math.random() * tauntTracks.length)];
+    tauntAudio = new THREE.Audio(audioListener);
+    try {
+        const buffer = await loadAudioTrack(tauntTrack);
+        tauntAudio.setBuffer(buffer);
+        tauntAudio.setLoop(false);
+        tauntAudio.setVolume(1.0);
+        tauntAudio.play();
+    } catch (error) {
+        console.error("Failed to play taunt sound:", error);
+    }
+}
+
 export function stopAllAudio() {
     stopBackgroundMusic();
     if (bounceSound && bounceSound.isPlaying) {
@@ -167,6 +193,9 @@ export function stopAllAudio() {
     }
     if (cheerAudio && cheerAudio.isPlaying) {
         cheerAudio.stop();
+    }
+    if (tauntAudio && tauntAudio.isPlaying) {
+        tauntAudio.stop();
     }
     stopBackgroundMusic();
 }

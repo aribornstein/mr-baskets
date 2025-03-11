@@ -12,7 +12,7 @@ import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./managers/spawnManager.js";
 import { registerBallInput, updateBall, getBallMesh } from "./gameplay/ballManager.js";
 import { isBasket, updateHoopMovement} from "./gameplay/hoopManager.js";
-import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound, playBuzzerSound, loadBuzzerSound, playCheerSound, stopAllAudio } from "./effects/audioManager.js";
+import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound, playBuzzerSound, loadBuzzerSound, playCheerSound, playTauntSound, stopAllAudio } from "./effects/audioManager.js";
 import { updateFlameParticles, updateIceParticles } from "./effects/particles.js";
 import { applyFirePowerUp, applyIcePowerUp } from "./gameplay/powerUpManager.js";
 import { updateLevel } from "./managers/levelManager.js";
@@ -94,9 +94,9 @@ async function initGame() {
             return;
         }
         state.game.missedShots++;
-        console.log("Intentional shot missed! Total missed:", state.game.missedShots);
         state.game.shotAttempt = false; // Reset once counted
-        
+        playTauntSound();
+
         // End game if 3 missed shots have accumulated
         if (state.game.missedShots >= 3) {
             console.log("Game Over due to 3 missed shots.");

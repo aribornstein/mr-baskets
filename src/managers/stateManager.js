@@ -17,8 +17,8 @@ export const state = {
         },
         hoop: {
             created: false,
-            radius: 0.3,
-            height: 1.8,
+            radius: 0.25,
+            height: 1.75,
             movementAmplitude: 0.2,
             movementFrequency: 0.5,
             moveBackAndForth: false,

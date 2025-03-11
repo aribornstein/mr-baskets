@@ -33,6 +33,7 @@ let currentTrack;
 let audioListener;
 let audio;
 let cheerAudio;
+let tauntAudio;
 let bounceSound; // Add this line
 let buzzerSound = null; // Add this near bounceSound declaration
 

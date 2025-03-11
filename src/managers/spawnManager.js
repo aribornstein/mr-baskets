@@ -4,6 +4,8 @@ import { getCamera } from "../core/engine.js";
 import { createBallPhysics, createBallVisual, removeBall } from "../gameplay/ballManager.js";
 import { setInitialHoopPos, createHoopObject, removeHoop, moveHoop } from "../gameplay/hoopManager.js";
 
+let previousRegionIndex = -1;
+
 function createBall(state) {
     const camera = getCamera();
     const ballOffset = new THREE.Vector3(0, 0, -1);
@@ -38,7 +40,7 @@ function createHoop(state) {
 function findNewHoopPosition(state) {
     const camera = getCamera();
     let newHoopPos = new THREE.Vector3();
-    const safeRadius = 1; // Define a safe radius around the player
+    const safeRadius = 3; // Define a safe radius around the player
 
     // Generate a random position within the room boundaries, ensuring it's outside the safe radius
     if (state.environment.roomBoundary) {
@@ -84,9 +86,30 @@ function findNewHoopPosition(state) {
         minZ = Math.max(minZ, roomMinZ);
         maxZ = Math.min(maxZ, roomMaxZ);
 
-       // Generate random x and z within the calculated ranges
-        let x = THREE.MathUtils.randFloat(minX, maxX);
-        let z = THREE.MathUtils.randFloat(minZ, maxZ);
+        // Divide the spawning area into regions
+        const numRegionsX = 3; // Number of regions along the X axis
+        const numRegionsZ = 3; // Number of regions along the Z axis
+        const regionWidth = (maxX - minX) / numRegionsX;
+        const regionHeight = (maxZ - minZ) / numRegionsZ;
+
+        // Select a random region index that is different from the previous one
+        let regionIndex;
+        do {
+            regionIndex = Math.floor(Math.random() * numRegionsX * numRegionsZ);
+        } while (regionIndex === previousRegionIndex);
+        previousRegionIndex = regionIndex;
+
+        // Calculate the region's boundaries
+        const regionX = regionIndex % numRegionsX;
+        const regionZ = Math.floor(regionIndex / numRegionsX);
+        const regionMinX = minX + regionX * regionWidth;
+        const regionMaxX = regionMinX + regionWidth;
+        const regionMinZ = minZ + regionZ * regionHeight;
+        const regionMaxZ = regionMinZ + regionHeight;
+
+        // Generate random x and z within the selected region
+        let x = THREE.MathUtils.randFloat(regionMinX, regionMaxX);
+        let z = THREE.MathUtils.randFloat(regionMinZ, regionMaxZ);
 
         newHoopPos.set(x, state.objects.hoop.height + state.environment.floorOffset, z);
     } else {

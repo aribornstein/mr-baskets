@@ -160,11 +160,13 @@ export function moveHoopToNewPosition(state, delay = 200) {
 
         // Set the initial hoop position to the center
         newHoopPos.set(centerX, centerY, centerZ);
+
+        // Update initialHoopPos with the new center position
+        setInitialHoopPos(newHoopPos);
     }
 
     // Wait for the specified delay before moving the hoop
     setTimeout(() => {
-        setInitialHoopPos(newHoopPos);
         moveHoop(newHoopPos);
         console.log("Hoop moved to a new position within room bounds.");
     }, delay);

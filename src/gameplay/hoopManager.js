@@ -44,7 +44,7 @@ export async function createHoopObject(pos) {
     // hoopMesh.translateZ(-0.1);
 
     addObject(hoopMesh);
-    setInitialHoopPos(pos);
+    // setInitialHoopPos(pos); // Remove this line
 
     // Update the world matrix to include group transforms
     hoopMesh.updateMatrixWorld(true);

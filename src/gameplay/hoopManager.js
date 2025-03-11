@@ -128,7 +128,7 @@ export function createHoopCollider(hoopPrefab) {
   const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
     .setTranslation(hoopMesh.position.x, hoopMesh.position.y, hoopMesh.position.z);
 
-  rigidBody.setNextKinematicRotation(
+  rigidBodyDesc.setNextKinematicRotation(
     new RAPIER.Quaternion(
       hoopMesh.quaternion.x,
       hoopMesh.quaternion.y,

@@ -83,53 +83,63 @@ export async function createHoopObject(pos) {
   }
 
 }
+export function createNetRingCollider(hoopPrefab) {
+  const world = getWorld();
 
-export function createHoopCollider(hoopPrefab) {
-  let torusMesh = null;
-  let backboardMesh = null;
+  // Find the net mesh (assuming its name contains "net")
   let netMesh = null;
-
-  console.log("🔍 Scanning hoopPrefab for meshes...");
-
   hoopPrefab.traverse((child) => {
-    if (child.isMesh) {
-      child.geometry.computeBoundingBox();
-      const bbox = child.geometry.boundingBox;
-      const width = bbox.max.x - bbox.min.x;
-      const height = bbox.max.y - bbox.min.y;
-      const depth = bbox.max.z - bbox.min.z;
-
-      console.log(`🔎 Mesh: ${child.name} | Width: ${width.toFixed(3)}, Height: ${height.toFixed(3)}, Depth: ${depth.toFixed(3)}`);
-
-      // Detect the rim by its shape (wide and thin)
-      if (width > 5 && width < 20 && height < 1.0 && depth < 5) {
-        torusMesh = child;
-        console.log(`✅ Detected Rim (Backup Detection): ${child.name}`);
-      }
-
-      // Detect the backboard
-      if (height > width * 1.5 && depth < 1.0) {
-        backboardMesh = child;
-        console.log(`✅ Detected Backboard: ${child.name}`);
-      }
-
-      // Detect the net
-      if (width < 10 && height < 10 && depth < 10 && height > 3) {
-        netMesh = child;
-        console.log(`✅ Detected Net: ${child.name}`);
-      }
+    if (child.isMesh && child.name.toLowerCase().includes("net")) {
+      netMesh = child;
     }
   });
 
-  if (!torusMesh) {
-    console.error("❌ Rim (hoop ring) still not found! Send me the full console log.");
+  if (!netMesh) {
+    console.error("Net mesh not found in hoopPrefab!");
     return;
   }
 
-  if (!backboardMesh) {
-    console.error("❌ Backboard not found! Check mesh names.");
-    return;
+  // Ensure the net has an up-to-date bounding box.
+  netMesh.geometry.computeBoundingBox();
+  const bbox = netMesh.geometry.boundingBox;
+
+  // Determine the net dimensions.
+  const netWidth = bbox.max.x - bbox.min.x;
+  const netDepth = bbox.max.z - bbox.min.z;
+  // For a roughly circular net opening, take the average of width and depth to compute the ring radius.
+  const ringRadius = (netWidth + netDepth) / 4;
+  // Assume the top of the net is at bbox.max.y (relative to the net mesh local coordinates)
+  const netTopY = bbox.max.y;
+
+  // Parameters for the ring collider.
+  const ringThickness = 0.05;    // How wide the ring is (collider width)
+  const ringColliderHeight = 0.02; // Collider thickness in the Y-axis
+
+  console.log(`Net dimensions: width ${netWidth.toFixed(3)}, depth ${netDepth.toFixed(3)}, computed ring radius: ${ringRadius.toFixed(3)}, net top Y: ${netTopY.toFixed(3)}`);
+
+  // Create a kinematic rigid body for the ring collider.
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
+  const ringRigidBody = world.createRigidBody(rigidBodyDesc);
+
+  // Create several small cuboid colliders arranged in a circle to form the ring.
+  const numColliders = 8; // Increase for a smoother ring
+  for (let i = 0; i < numColliders; i++) {
+    const angle = (i / numColliders) * Math.PI * 2;
+    const offsetX = ringRadius * Math.cos(angle);
+    const offsetZ = ringRadius * Math.sin(angle);
+    // Create a small cuboid collider.
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(
+      ringThickness / 2,      // half-width
+      ringColliderHeight / 2,   // half-height
+      ringThickness / 2       // half-depth
+    ).setTranslation(offsetX, netTopY, offsetZ);
+    world.createCollider(colliderDesc, ringRigidBody);
+
+    console.log(`Added ring collider #${i+1} at offset: (${offsetX.toFixed(3)}, ${netTopY.toFixed(3)}, ${offsetZ.toFixed(3)})`);
   }
+
+  // Optionally, store ringRigidBody for later updates (e.g., if you want the net to move).
+  return ringRigidBody;
 }
 
 

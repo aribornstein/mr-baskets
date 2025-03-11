@@ -267,8 +267,8 @@ export function updateHoopMovement() {
 
   // Define level-based multipliers so that initial movement is only 30%
   // and then gradually increases with each level (capped at 1).
-  const levelMultiplier = Math.min(0.5 + (state.game.level - 1) * 0.05, 2);
-  const freqMultiplier = Math.min(0.5 + (state.game.level - 1) * 0.05, 2);
+  const levelMultiplier = Math.min(0.2 + (state.game.level - 1) * 0.05, 2);
+  const freqMultiplier = Math.min(0.2 + (state.game.level - 1) * 0.05, 2);
 
   // Map axis keys to their movement flags.
   const axes = {
@@ -288,7 +288,7 @@ export function updateHoopMovement() {
       effectiveAmplitude = amplitudeX * levelMultiplier;
       phase = phaseX;
     } else if (axis === "y") {
-      effectiveAmplitude = amplitudeY * levelMultiplier * 0.1; // Reduce vertical movement
+      effectiveAmplitude = amplitudeY * levelMultiplier;
       phase = phaseY;
     } else if (axis === "z") {
       effectiveAmplitude = amplitudeZ * levelMultiplier;

@@ -130,8 +130,8 @@ export function moveHoopToNewPosition(state, delay = 200) {
     if (state.environment.roomBoundary) {
         const roomMinX = state.environment.roomBoundary.min.x + state.objects.hoop.radius;
         const roomMaxX = state.environment.roomBoundary.max.x - state.objects.hoop.radius;
-        const roomMinY = state.environment.roomBoundary.min.y + state.objects.hoop.radius;
-        const roomMaxY = state.environment.roomBoundary.max.y - state.objects.hoop.radius;
+        const roomMinY = state.environment.floorOffset + state.objects.hoop.radius;
+        const roomMaxY = state.objects.hoop.height - state.objects.hoop.radius;
         const roomMinZ = state.environment.roomBoundary.min.z + state.objects.hoop.radius;
         const roomMaxZ = state.environment.roomBoundary.max.z - state.objects.hoop.radius;
 
@@ -141,9 +141,9 @@ export function moveHoopToNewPosition(state, delay = 200) {
         const rangeZ = roomMaxZ - roomMinZ;
 
         // Define amplitudes as fractions of the ranges
-        state.objects.hoop.amplitudeX = rangeX * 0.25; // 25% of X range
-        state.objects.hoop.amplitudeY = rangeY * 0.10; // 10% of Y range
-        state.objects.hoop.amplitudeZ = rangeZ * 0.30; // 30% of Z range
+        state.objects.hoop.amplitudeX = rangeX; 
+        state.objects.hoop.amplitudeY = rangeY;
+        state.objects.hoop.amplitudeZ = rangeZ;
 
         // Calculate center positions
         const centerX = (roomMinX + roomMaxX) / 2;

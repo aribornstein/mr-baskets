@@ -29,7 +29,6 @@ export async function createHoopObject(pos) {
     const hoopPrefab = await loadHoopModel(); // load prefab from graphics module
     // Scale the prefab
     hoopPrefab.scale.set(0.05, 0.05, 0.05);
-    
     // Wrap in a group to allow unified transforms
     hoopMesh = new THREE.Group();
     hoopMesh.add(hoopPrefab);
@@ -41,7 +40,7 @@ export async function createHoopObject(pos) {
     dummy.lookAt(getCamera().position);
     hoopMesh.quaternion.copy(dummy.quaternion);
 
-    // ❌ Removed the extra translateZ(-0.1) to keep the collider and mesh in sync
+    // Removed translateZ(-0.1) to avoid offset mismatch
     // hoopMesh.translateZ(-0.1);
 
     addObject(hoopMesh);
@@ -183,6 +182,8 @@ export function removeHoop() {
 
 export function moveHoop(newPos) {
   if (!hoopMesh || !sensor || !hoopColliderRB) return;
+  console.log("Prev Rapier Collider Position:", hoopColliderRB.translation());
+  console.log("Prev Three.js Mesh Position:", hoopMesh.position);
 
   // Ensure the physics body is active
   hoopColliderRB.wakeUp();
@@ -199,13 +200,13 @@ export function moveHoop(newPos) {
   hoopMesh.updateMatrixWorld(true);
 
   // 2) Update the Rapier kinematic body to match
-  const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
-  hoopColliderRB.setNextKinematicTranslation(colliderPos);
+  const finalColliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
+  hoopColliderRB.setNextKinematicTranslation(finalColliderPos);
   hoopColliderRB.setNextKinematicRotation(
     new RAPIER.Quaternion(hoopMeshQuat.x, hoopMeshQuat.y, hoopMeshQuat.z, hoopMeshQuat.w)
   );
 
-  // 3) Update the sensor position and rotation
+  // 3) Update the sensor position and rotation similarly
   const sensorYOffset = -0.01;
   const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
   const sensorBody = sensor.parent();
@@ -217,8 +218,8 @@ export function moveHoop(newPos) {
     );
   }
   
-  console.log("Rapier Body:", hoopColliderRB.translation());
-  console.log("Three.js Mesh:", hoopMesh.position);
+  console.log("Rapier Collider Position:", hoopColliderRB.translation());
+  console.log("Three.js Mesh Position:", hoopMesh.position);
 }
 
 export function updateHoopMovement() {

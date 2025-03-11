@@ -277,41 +277,13 @@ export function updateHoopMovement() {
     if (!shouldMove) return;
 
     const base = initialHoopPos[axis];
-    let maxAllowed = movementAmplitude;
-    if (roomBoundary) {
-      const minBound = roomBoundary.min[axis];
-      const maxBound = roomBoundary.max[axis];
-      // Use hoop radius as a buffer on both sides.
-      const allowedMin = base - minBound - radius;
-      const allowedMax = maxBound - base - radius;
-      maxAllowed = Math.min(movementAmplitude, allowedMin, allowedMax);
-      if (maxAllowed < 0.1) {
-        console.warn("Hoop movement amplitude is too small. Skipping movement. allowedMin {} , allowedMax {}, movementAmplitude{}", allowedMin, allowedMax, movementAmplitude);
-        return;
-      }
-    }
 
     // Apply level multiplier to amplitude and frequency.
-    let effectiveAmplitude = maxAllowed * levelMultiplier;
+    let effectiveAmplitude = movementAmplitude * levelMultiplier;
     if (axis === "y") {
       effectiveAmplitude *= 0.1; // Reduce vertical movement
     }
     let offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
-
-    // Clamp the new position to stay within the allowed bounds by reflecting the oscillation
-    let minPos = initialHoopPos[axis] - maxAllowed;
-    let maxPos = initialHoopPos[axis] + maxAllowed;
-    if (roomBoundary) {
-      minPos = Math.max(minPos, roomBoundary.min[axis] + radius);
-      maxPos = Math.min(maxPos, roomBoundary.max[axis] - radius);
-    }
-    let deltaMax = maxPos - base;
-    let deltaMin = minPos - base;
-    if (offset > deltaMax) {
-      offset = deltaMax - (offset - deltaMax);
-    } else if (offset < deltaMin) {
-      offset = deltaMin - (offset - deltaMin);
-    }
     
     newPos[axis] = base + offset;
   });

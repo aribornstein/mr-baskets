@@ -125,6 +125,22 @@ function findNewHoopPosition(state) {
 
 export function moveHoopToNewPosition(state, delay = 200) {
     const newHoopPos = findNewHoopPosition(state);
+
+    // Calculate allowed movement range based on new position
+    if (state.environment.roomBoundary) {
+        const roomMinX = state.environment.roomBoundary.min.x + state.objects.hoop.radius;
+        const roomMaxX = state.environment.roomBoundary.max.x - state.objects.hoop.radius;
+        const roomMinZ = state.environment.roomBoundary.min.z + state.objects.hoop.radius;
+        const roomMaxZ = state.environment.roomBoundary.max.z - state.objects.hoop.radius;
+
+        // Calculate maximum allowed amplitude for X and Z axes
+        const maxAmplitudeX = Math.min(newHoopPos.x - roomMinX, roomMaxX - newHoopPos.x);
+        const maxAmplitudeZ = Math.min(newHoopPos.z - roomMinZ, roomMaxZ - newHoopPos.z);
+
+        // Choose the smaller of the two amplitudes to ensure the hoop stays within bounds
+        state.objects.hoop.movementAmplitude = Math.min(maxAmplitudeX, maxAmplitudeZ, 0.2); // Use 0.2 as a default/max value
+    }
+
     // Wait for the specified delay before moving the hoop
     setTimeout(() => {
         setInitialHoopPos(newHoopPos);

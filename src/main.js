@@ -93,7 +93,9 @@ async function initGame() {
             console.log("Missed Shot");
             return;
         }
-        state.game.missedShots++;
+        if (state.game.missedShots < 3){
+            state.game.missedShots++;
+        }
         state.game.shotAttempt = false; // Reset once counted
         playTauntSound();
         return;

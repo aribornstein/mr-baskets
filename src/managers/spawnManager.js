@@ -55,24 +55,38 @@ function findNewHoopPosition(state) {
         // Calculate valid X range
         if (cameraX - roomMinX > roomMaxX - cameraX) {
             minX = roomMinX;
-            maxX = Math.max(cameraX - safeRadius, roomMinX);
+            maxX = cameraX - safeRadius;
         } else {
-            minX = Math.min(cameraX + safeRadius, roomMaxX);
+            minX = cameraX + safeRadius;
             maxX = roomMaxX;
         }
 
         // Calculate valid Z range
         if (cameraZ - roomMinZ > roomMaxZ - cameraZ) {
             minZ = roomMinZ;
-            maxZ = Math.max(cameraZ - safeRadius, roomMinZ);
+            maxZ = cameraZ - safeRadius;
         } else {
-            minZ = Math.min(cameraZ + safeRadius, roomMaxZ);
+            minZ = cameraZ + safeRadius;
             maxZ = roomMaxZ;
         }
 
-        // Generate random x and z within the calculated ranges
-        const x = THREE.MathUtils.randFloat(minX, maxX);
-        const z = THREE.MathUtils.randFloat(minZ, maxZ);
+        // Ensure min < max for X and Z ranges
+        if (minX > maxX) {
+            [minX, maxX] = [maxX, minX]; // Swap values
+        }
+        if (minZ > maxZ) {
+            [minZ, maxZ] = [maxZ, minZ]; // Swap values
+        }
+
+        // Clamp the ranges to ensure they are within the room boundaries
+        minX = Math.max(minX, roomMinX);
+        maxX = Math.min(maxX, roomMaxX);
+        minZ = Math.max(minZ, roomMinZ);
+        maxZ = Math.min(maxZ, roomMaxZ);
+
+       // Generate random x and z within the calculated ranges
+        let x = THREE.MathUtils.randFloat(minX, maxX);
+        let z = THREE.MathUtils.randFloat(minZ, maxZ);
 
         newHoopPos.set(x, state.objects.hoop.height + state.environment.floorOffset, z);
     } else {

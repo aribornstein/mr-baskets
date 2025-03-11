@@ -229,8 +229,8 @@ document.getElementById("ar-button").addEventListener("click", async () => {
         session.addEventListener('end', () => {
             console.log("AR session ended.");
             
-            eventBus.removeAllListeners();
             stopAllAudio();
+            eventBus.removeAllListeners();
             resetGame(); // Ensure game state is reset
 
             // Dispose of Three.js resources

@@ -94,14 +94,26 @@ export function createHoopCollider(hoopPrefab) {
   let torusMesh = null;
   let backboardMesh = null;
 
-  // 🔍 Find the torus and backboard meshes inside hoopPrefab
+  // 🔍 Traverse all meshes to find the rim and backboard dynamically
   hoopPrefab.traverse((child) => {
     if (child.isMesh) {
-      if (child.geometry.type === "TorusGeometry") {
+      child.geometry.computeBoundingBox();
+      const bbox = child.geometry.boundingBox;
+      const width = bbox.max.x - bbox.min.x;
+      const height = bbox.max.y - bbox.min.y;
+      const depth = bbox.max.z - bbox.min.z;
+
+      // 🔎 Detect the rim (large width, small height)
+      if (width > height * 3 && width > depth * 3) {
         torusMesh = child;
-      } else if (child.geometry.boundingBox) {
-        backboardMesh = child; // Assuming a plane or box mesh for the backboard
       }
+
+      // 🔎 Detect the backboard (flat vertical rectangle)
+      if (height > width * 1.5 && depth < 0.1) {
+        backboardMesh = child;
+      }
+
+      console.log(`Found mesh: ${child.name} | Size: (${width}, ${height}, ${depth})`);
     }
   });
 
@@ -110,13 +122,15 @@ export function createHoopCollider(hoopPrefab) {
     return;
   }
 
-  // 🔧 Get actual torus dimensions
+  // 🏀 Extract rim dimensions
   const torusGeometry = torusMesh.geometry;
-  const radius = torusGeometry.parameters.radius * hoopPrefab.scale.x;
-  const tubeRadius = torusGeometry.parameters.tube * hoopPrefab.scale.x;
-  const height = tubeRadius * 2;
+  const radius = (torusMesh.scale.x + torusMesh.scale.y) / 2; // Average scale for uniform scaling
+  const tubeRadius = radius * 0.1; // Assume tube radius is 10% of the main radius
+  const height = tubeRadius * 2; // Cylinder height matches tube thickness
 
-  // ✅ Approximate the hoop rim with 4 cylinders
+  console.log("Detected Rim - Radius:", radius, "Tube Radius:", tubeRadius);
+
+  // 🔧 Create 4 cylinder colliders to approximate the rim
   const offsets = [
     { x: radius, y: 0, z: 0 },
     { x: -radius, y: 0, z: 0 },
@@ -131,18 +145,20 @@ export function createHoopCollider(hoopPrefab) {
     hoopColliders.push({ rigidBody, collider });
   });
 
-  // ✅ Create a box collider for the backboard
+  // 🏀 Create a box collider for the backboard
   backboardMesh.geometry.computeBoundingBox();
   const bbox = backboardMesh.geometry.boundingBox;
-  const backboardWidth = (bbox.max.x - bbox.min.x) * hoopPrefab.scale.x;
-  const backboardHeight = (bbox.max.y - bbox.min.y) * hoopPrefab.scale.y;
-  const backboardDepth = 0.02; // Thin depth for a flat backboard
+  const backboardWidth = bbox.max.x - bbox.min.x;
+  const backboardHeight = bbox.max.y - bbox.min.y;
+  const backboardDepth = 0.02; // Thin depth
+
+  console.log("Detected Backboard - Width:", backboardWidth, "Height:", backboardHeight);
 
   const backboardColliderDesc = RAPIER.ColliderDesc.cuboid(
     backboardWidth / 2,
     backboardHeight / 2,
     backboardDepth / 2
-  ).setTranslation(0, backboardHeight / 2, -radius); // Position the backboard behind the hoop
+  ).setTranslation(0, backboardHeight / 2, -radius); // Position behind hoop
 
   world.createCollider(backboardColliderDesc, rigidBody);
   hoopColliders.push({ rigidBody, collider: backboardColliderDesc });

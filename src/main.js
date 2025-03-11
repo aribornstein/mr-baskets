@@ -96,7 +96,7 @@ async function initGame() {
         state.game.missedShots++;
         state.game.shotAttempt = false; // Reset once counted
         playTauntSound();
-
+        return;
         // End game if 3 missed shots have accumulated
         if (state.game.missedShots >= 3) {
             console.log("Game Over due to 3 missed shots.");

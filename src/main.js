@@ -229,8 +229,6 @@ document.getElementById("ar-button").addEventListener("click", async () => {
         session.addEventListener('end', () => {
             console.log("AR session ended.");
             
-            resetGame(); // Ensure game state is reset
-
             stopAllAudio();
             eventBus.removeAllListeners();
 

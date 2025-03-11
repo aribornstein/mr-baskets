@@ -38,7 +38,7 @@ function createHoop(state) {
 function findNewHoopPosition(state) {
     const camera = getCamera();
     let newHoopPos = new THREE.Vector3();
-    const safeRadius = 3; // Define a safe radius around the player
+    const safeRadius = 1; // Define a safe radius around the player
 
     // Generate a random position within the room boundaries, ensuring it's outside the safe radius
     if (state.environment.roomBoundary) {

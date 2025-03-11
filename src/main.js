@@ -90,7 +90,7 @@ async function initGame() {
 
     eventBus.on("missedShot", () => {
         if (state.debugger){
-            debuggerInstance.log("Missed Shot");
+            console.log("Missed Shot");
             return;
         }
         state.game.missedShots++;

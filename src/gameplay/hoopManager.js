@@ -298,15 +298,21 @@ export function updateHoopMovement() {
     }
     let offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
 
-    // Clamp the new position to stay within the allowed bounds
+    // Clamp the new position to stay within the allowed bounds by reflecting the oscillation
     let minPos = initialHoopPos[axis] - maxAllowed;
     let maxPos = initialHoopPos[axis] + maxAllowed;
-    if (axis !== "y" && roomBoundary ) {
+    if (roomBoundary) {
       minPos = Math.max(minPos, roomBoundary.min[axis] + radius);
       maxPos = Math.min(maxPos, roomBoundary.max[axis] - radius);
     }
-    offset = Math.max(Math.min(offset, maxPos - base), minPos - base);
-
+    let deltaMax = maxPos - base;
+    let deltaMin = minPos - base;
+    if (offset > deltaMax) {
+      offset = deltaMax - (offset - deltaMax);
+    } else if (offset < deltaMin) {
+      offset = deltaMin - (offset - deltaMin);
+    }
+    
     newPos[axis] = base + offset;
   });
 

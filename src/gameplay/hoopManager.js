@@ -7,10 +7,11 @@ import { state } from "../managers/stateManager.js";
 import { loadHoopModel } from "../effects/graphics.js";
 
 let hoopMesh = null;
-let sensor; // Global sensor collider reference
+let sensor;
 let sensorCooldown = false;
 let initialHoopPos = null;
 let hoopColliderRB = null;
+
 let hoopColliders = []; // Track all colliders associated with the hoop
 
 export function setInitialHoopPos(pos) {
@@ -18,238 +19,150 @@ export function setInitialHoopPos(pos) {
 }
 
 /**
- * Loads the hoop model prefab, adds it to the scene, and creates colliders.
+ * Loads the hoop model prefab and adds it to the scene.
+ * This replaces both the hoop ring and backboard visuals.
  */
 export async function createHoopObject(pos) {
   console.log("Loading hoop prefab at:", pos);
   try {
     const world = getWorld();
     const hoopPrefab = await loadHoopModel(); // load prefab from graphics module
-
-    // Scale the prefab (this affects the world scale of its children)
+    // Scale the prefab
     hoopPrefab.scale.set(0.05, 0.05, 0.05);
-
-    // Wrap in a group for unified transforms.
+    // createHoopCollider(hoopPrefab);
+    // Wrap in a group to allow unified transforms
     hoopMesh = new THREE.Group();
     hoopMesh.add(hoopPrefab);
 
-    // Position and orient the prefab to face the camera.
+    // Position and orient the prefab to face the camera
     hoopMesh.position.copy(pos);
     const dummy = new THREE.Object3D();
     dummy.position.copy(pos);
     dummy.lookAt(getCamera().position);
     hoopMesh.quaternion.copy(dummy.quaternion);
 
-    // Optional offset.
+    // (Optional) Apply any offsets if desired
     hoopMesh.translateZ(-0.1);
 
     addObject(hoopMesh);
     setInitialHoopPos(pos);
 
-    // Update world matrix.
+    // Update the world matrix to include group transforms
     hoopMesh.updateMatrixWorld(true);
 
-    // Create the compound collider (backboard + rim) using the scaled prefab.
-    createHoopCompoundCollider(hoopMesh);
+    // Now create the collider using hoopMesh rather than the raw prefab
+    createHoopCollider(hoopMesh);
 
-    // Create the sensor for basket detection.
-    const sensorData = createHoopSensor(hoopMesh);
-    if (sensorData) {
-      sensor = sensorData.sensorCollider;
-    }
+    // Create sensor for basket detection
+    const sensorThickness = 0.0001; // Extremely thin sensor
+    const sensorYOffset = -0.01; // Slightly below the hoop center
+
+    const sensorDesc = RAPIER.ColliderDesc.cylinder(
+      sensorThickness,
+      state.objects.hoop.radius * 0.9
+    )
+      .setSensor(true)
+      .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+    sensorDesc.setRotation({
+      x: hoopMesh.quaternion.x,
+      y: hoopMesh.quaternion.y,
+      z: hoopMesh.quaternion.z,
+      w: hoopMesh.quaternion.w,
+    });
+
+    const sensorBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+      pos.x,
+      pos.y + sensorYOffset,
+      pos.z
+    );
+    const sensorBody = world.createRigidBody(sensorBodyDesc);
+    sensor = world.createCollider(sensorDesc, sensorBody);
 
   } catch (error) {
     console.error("Failed to load hoop prefab:", error);
   }
+
 }
-
-
-/**
- * Creates a compound collider for the hoop.
- * This function creates a cuboid collider for the backboard and a ring
- * of small cuboid colliders (arranged in a circle) for the rim.
- * It uses the effective (world) scale of the hoopPrefab so that colliders
- * match the scaled-down visuals.
- */
-export function createHoopCompoundCollider(hoopPrefab) {
+export function createHoopCollider(hoopPrefab) {
   const world = getWorld();
   hoopColliders = []; // Reset colliders list
 
-  // Get effective scale from the prefab.
-  const effectiveScale = new THREE.Vector3();
-  hoopPrefab.getWorldScale(effectiveScale);
+  let vertices = [];
+  let indices = [];
 
-  // Create a kinematic rigid body for the compound collider.
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
-  const rigidBody = world.createRigidBody(rigidBodyDesc);
-  hoopColliderRB = rigidBody; // Store for later updates
-
-  let backboardMesh = null;
-  let netMesh = null;
-
-  // Identify backboard and net meshes.
+  // Traverse the hoopPrefab to extract mesh data for a trimesh collider
   hoopPrefab.traverse((child) => {
     if (child.isMesh) {
-      const lowerName = child.name.toLowerCase();
-      if (lowerName.includes("board")) {
-        backboardMesh = child;
-        console.log(`✅ Detected Backboard: ${child.name}`);
-      } else if (lowerName.includes("net")) {
-        netMesh = child;
-        console.log(`✅ Detected Net: ${child.name}`);
+      // Extract mesh data as before
+      child.updateWorldMatrix(true, false);
+      const geometry = child.geometry;
+      const positionAttribute = geometry.attributes.position;
+
+      for (let i = 0; i < positionAttribute.count; i++) {
+        const vertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
+        vertex.applyMatrix4(child.matrixWorld);
+        vertices.push(vertex.x, vertex.y, vertex.z);
       }
-    }
-  });
 
-  if (!backboardMesh) {
-    console.error("❌ Backboard not found! Check mesh names.");
-    return;
-  }
-  if (!netMesh) {
-    console.error("❌ Net not found! Check mesh names.");
-    return;
-  }
-
-  // --- Backboard Collider ---
-  backboardMesh.geometry.computeBoundingBox();
-  const bboxBoard = backboardMesh.geometry.boundingBox;
-  // Multiply bounding box dimensions by effective scale.
-  const boardWidth = (bboxBoard.max.x - bboxBoard.min.x) * effectiveScale.x;
-  const boardHeight = (bboxBoard.max.y - bboxBoard.min.y) * effectiveScale.y;
-  const boardDepth = 0.02; // Use a thin depth for the backboard collider.
-  const backboardColliderDesc = RAPIER.ColliderDesc.cuboid(
-    boardWidth / 2,
-    boardHeight / 2,
-    boardDepth / 2
-  ).setTranslation(0, boardHeight / 2, 0);
-  world.createCollider(backboardColliderDesc, rigidBody);
-  hoopColliders.push({ rigidBody, collider: backboardColliderDesc });
-  console.log(`🎯 Backboard Collider: Width ${boardWidth.toFixed(3)}, Height ${boardHeight.toFixed(3)}`);
-
-  // --- Rim (Net Ring) Colliders ---
-  netMesh.geometry.computeBoundingBox();
-  const bboxNet = netMesh.geometry.boundingBox;
-  const netWidth = (bboxNet.max.x - bboxNet.min.x) * effectiveScale.x;
-  const netDepth = (bboxNet.max.z - bboxNet.min.z) * effectiveScale.z;
-  // Estimate the rim opening as roughly circular.
-  const ringRadius = (netWidth + netDepth) / 4; // half of average diameter
-  const netTopY = bboxNet.max.y * effectiveScale.y; // top of net
-  
-  // Parameters for the rim colliders.
-  const ringThickness = 0.05;    // Width of each small collider.
-  const ringColliderHeight = 0.02; // Thickness in Y.
-  const numColliders = 8;          // Number of colliders for the ring.
-
-  console.log(`🎯 Net Collider: netWidth ${netWidth.toFixed(3)}, netDepth ${netDepth.toFixed(3)}, ringRadius ${ringRadius.toFixed(3)}, netTopY ${netTopY.toFixed(3)}`);
-
-  for (let i = 0; i < numColliders; i++) {
-    const angle = (i / numColliders) * Math.PI * 2;
-    const offsetX = ringRadius * Math.cos(angle);
-    const offsetZ = ringRadius * Math.sin(angle);
-    const colliderDesc = RAPIER.ColliderDesc.cuboid(
-      ringThickness / 2,        // half-width
-      ringColliderHeight / 2,     // half-height
-      ringThickness / 2         // half-depth
-    ).setTranslation(offsetX, netTopY, offsetZ);
-    world.createCollider(colliderDesc, rigidBody);
-    hoopColliders.push({ rigidBody, collider: colliderDesc });
-    console.log(`🛠️ Added Rim Collider #${i + 1} at offset: (${offsetX.toFixed(3)}, ${netTopY.toFixed(3)}, ${offsetZ.toFixed(3)})`);
-  }
-
-  console.log("✅ Compound collider created: Backboard + Rim Colliders");
-  return { rigidBody };
-}
-
-
-/**
- * Creates a dedicated sensor inside the hoop opening.
- * This sensor triggers when the ball passes through from above.
- */
-export function createHoopSensor(hoopPrefab) {
-  const world = getWorld();
-
-  // Get effective scale.
-  const effectiveScale = new THREE.Vector3();
-  hoopPrefab.getWorldScale(effectiveScale);
-
-  let netMesh = null;
-  hoopPrefab.traverse((child) => {
-    if (child.isMesh && child.name.toLowerCase().includes("net")) {
-      netMesh = child;
-    }
-  });
-  if (!netMesh) {
-    console.error("❌ Net mesh not found for sensor creation!");
-    return;
-  }
-
-  netMesh.geometry.computeBoundingBox();
-  const bboxNet = netMesh.geometry.boundingBox;
-  const netWidth = (bboxNet.max.x - bboxNet.min.x) * effectiveScale.x;
-  const netDepth = (bboxNet.max.z - bboxNet.min.z) * effectiveScale.z;
-  // Sensor radius is 90% of the rim's computed radius.
-  const sensorRadius = ((netWidth + netDepth) / 4) * 0.9;
-  const netTopY = bboxNet.max.y * effectiveScale.y;
-
-  // Create a sensor collider – using a very thin cylinder.
-  const sensorThickness = 0.0001;
-  const sensorDesc = RAPIER.ColliderDesc.cylinder(sensorThickness, sensorRadius)
-    .setSensor(true)
-    .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
-  // Store the sensor radius on the collider for later use.
-  sensorDesc._sensorRadius = sensorRadius;
-  
-  // Use the hoop's current position for sensor placement.
-  const hoopPos = hoopMesh ? hoopMesh.position : new THREE.Vector3();
-  const sensorBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
-    hoopPos.x, hoopPos.y + netTopY, hoopPos.z
-  );
-  const sensorBody = world.createRigidBody(sensorBodyDesc);
-  const sensorCollider = world.createCollider(sensorDesc, sensorBody);
-
-  console.log(`✅ Hoop Sensor created: sensorRadius ${sensorRadius.toFixed(3)}, positioned at Y offset ${netTopY.toFixed(3)}`);
-
-  return { sensorBody, sensorCollider };
-}
-
-
-/**
- * Checks whether a basket has been made.
- * The sensor only triggers if the ball passes cleanly through from above.
- */
-export function isBasket(collider1, collider2) {
-  if (sensorCooldown) return false;
-
-  // Check if one of the colliders is our sensor.
-  if (collider1 === sensor || collider2 === sensor) {
-    const ballCollider = collider1 === sensor ? collider2 : collider1;
-    const ballBody = ballCollider.parent();
-
-    if (ballBody) {
-      const velocity = ballBody.linvel();
-
-      // Only count as a basket if the ball is moving downward.
-      if (velocity.y < 0) {
-        // Check ball’s horizontal distance from the sensor center.
-        const sensorPos = sensor.parent().translation();
-        const ballPos = ballBody.translation();
-        const horizontalDist = Math.hypot(ballPos.x - sensorPos.x, ballPos.z - sensorPos.z);
-        
-        // Use the stored sensor radius.
-        const sensorRadius = sensor._sensorRadius || 0.1;
-        if (horizontalDist < sensorRadius * 0.9) {
-          sensorCooldown = true;
-          setTimeout(() => {
-            sensorCooldown = false;
-          }, 500); // 500ms cooldown
-          return true;
+      if (geometry.index) {
+        for (let i = 0; i < geometry.index.count; i++) {
+          indices.push(geometry.index.getX(i));
+        }
+      } else {
+        for (let i = 0; i < positionAttribute.count; i++) {
+          indices.push(i);
         }
       }
     }
-  }
-  return false;
+  });
+
+  const verticesArray = new Float32Array(vertices);
+  const indicesArray = new Uint32Array(indices);
+
+  const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
+  const rigidBody = world.createRigidBody(rigidBodyDesc);
+  
+  // Store the hoop collider's rigid body for updating on move.
+  hoopColliderRB = rigidBody;
+
+  const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indicesArray);
+  const collider = world.createCollider(colliderDesc, rigidBody);
+  
+  // Store this collider
+  hoopColliders.push({ rigidBody, collider });
+
+  return { rigidBody, collider };
 }
 
+export function isBasket(collider1, collider2) {
+  if (sensorCooldown) return false;
+
+  // Check if one of the colliders is our sensor
+  if (collider1 === sensor || collider2 === sensor) {
+    // Determine which collider is the ball
+    const ballCollider = collider1 === sensor ? collider2 : collider1;
+    const ballBody = ballCollider.parent();
+
+    // Get the ball's velocity
+    if (ballBody) {
+      const velocity = ballBody.linvel();
+
+      // Only count as a basket if the ball is moving downward (y velocity is negative)
+      // This ensures the ball came from above the hoop
+      if (velocity.y < 0) {
+        // Start the cooldown
+        sensorCooldown = true;
+        setTimeout(() => {
+          sensorCooldown = false;
+        }, 500); // Cooldown for 500 milliseconds
+
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 export function removeHoop() {
   const world = getWorld();
@@ -261,24 +174,24 @@ export function removeHoop() {
     world.removeCollider(sensor);
     sensor = null;
   }
+  // Also remove the hoop collider rigid body
   if (hoopColliderRB) {
     world.removeRigidBody(hoopColliderRB);
     hoopColliderRB = null;
   }
 }
 
-
 export function moveHoop(newPos) {
   if (!hoopMesh || !sensor || !hoopColliderRB) return;
 
-  // Wake up the physics body.
+  // Ensure the physics body is active
   hoopColliderRB.wakeUp();
 
-  // Move the Rapier rigid body.
+  // Move the Rapier body
   const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
   hoopColliderRB.setNextKinematicTranslation(colliderPos);
 
-  // Compute orientation so the hoop faces the camera.
+  // Compute quaternion to face the camera
   const hoopDummy = new THREE.Object3D();
   hoopDummy.position.copy(newPos);
   hoopDummy.lookAt(getCamera().position);
@@ -288,12 +201,12 @@ export function moveHoop(newPos) {
     new RAPIER.Quaternion(hoopMeshQuat.x, hoopMeshQuat.y, hoopMeshQuat.z, hoopMeshQuat.w)
   );
 
-  // Sync the Three.js mesh.
+  // ✅ Sync the Three.js mesh
   hoopMesh.position.copy(newPos);
   hoopMesh.quaternion.copy(hoopMeshQuat);
   hoopMesh.updateMatrixWorld();
 
-  // Update the sensor's position.
+  // ✅ Update the sensor position
   const sensorYOffset = -0.01;
   const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
   const sensorBody = sensor.parent();
@@ -302,8 +215,9 @@ export function moveHoop(newPos) {
     sensorBody.setNextKinematicTranslation(sensorPos);
   }
   
-  console.log(hoopColliderRB.translation());
-  console.log(hoopMesh.position);
+  console.log(hoopColliderRB.translation()); // Ensure Rapier is actually moving it
+  console.log(hoopMesh.position); // Ensure Three.js follows it
+
 }
 
 
@@ -324,10 +238,13 @@ export function updateHoopMovement() {
   const newPos = { ...initialHoopPos };
   const roomBoundary = state.environment.roomBoundary;
 
+  // Define level-based multipliers so that initial movement is only 30%
+  // and then gradually increases with each level (capped at 1).
   const levelMultiplier = Math.min(0.5 + (state.game.level - 1) * 0.05, 2);
   const freqMultiplier = Math.min(0.5 + (state.game.level - 1) * 0.05, 2);
 
-  // Map axis movement flags.
+
+  // Map axis keys to their movement flags.
   const axes = {
     x: moveLeftAndRight,
     y: moveUpAndDown,
@@ -342,15 +259,20 @@ export function updateHoopMovement() {
     if (roomBoundary) {
       const minBound = roomBoundary.min[axis];
       const maxBound = roomBoundary.max[axis];
+      // Use hoop radius as a buffer on both sides.
       const allowedMin = base - minBound - radius;
       const allowedMax = maxBound - base - radius;
       maxAllowed = Math.min(movementAmplitude, allowedMin, allowedMax);
     }
+
+    // Apply level multiplier to amplitude and frequency.
     let effectiveAmplitude = maxAllowed * levelMultiplier;
     if (axis === "y") {
-      effectiveAmplitude *= 0.1;
+      effectiveAmplitude *= 0.1; // Reduce vertical movement
     }
     let offset = effectiveAmplitude * Math.sin(elapsedTime * movementFrequency * freqMultiplier * Math.PI * 2);
+
+    // Clamp the new position to stay within the allowed bounds
     let minPos = initialHoopPos[axis] - maxAllowed;
     let maxPos = initialHoopPos[axis] + maxAllowed;
     if (roomBoundary) {
@@ -358,6 +280,7 @@ export function updateHoopMovement() {
       maxPos = Math.min(maxPos, roomBoundary.max[axis] - radius);
     }
     offset = Math.max(Math.min(offset, maxPos - base), minPos - base);
+
     newPos[axis] = base + offset;
   });
 

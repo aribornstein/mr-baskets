@@ -187,55 +187,32 @@ export function moveHoop(newPos) {
   // Ensure the physics body is active
   hoopColliderRB.wakeUp();
 
-  // Convert position to Rapier vector
+  // Move the Rapier body
   const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
+  hoopColliderRB.setNextKinematicTranslation(colliderPos);
 
-  // Compute the quaternion for orientation
+  // Compute quaternion to face the camera
   const hoopDummy = new THREE.Object3D();
   hoopDummy.position.copy(newPos);
   hoopDummy.lookAt(getCamera().position);
   const hoopMeshQuat = hoopDummy.quaternion.clone();
 
-  // Move the Rapier collider **before** updating the Three.js mesh
-  hoopColliderRB.setNextKinematicTranslation(colliderPos);
-  hoopColliderRB.setNextKinematicRotation({
-    x: hoopMeshQuat.x,
-    y: hoopMeshQuat.y,
-    z: hoopMeshQuat.z,
-    w: hoopMeshQuat.w,
-  });
+  hoopColliderRB.setNextKinematicRotation(
+    new RAPIER.Quaternion(hoopMeshQuat.x, hoopMeshQuat.y, hoopMeshQuat.z, hoopMeshQuat.w)
+  );
 
-  // Sync the Three.js mesh **with the Rapier body**
-  const bodyPosition = hoopColliderRB.translation();
-  hoopMesh.position.set(bodyPosition.x, bodyPosition.y, bodyPosition.z);
+  // ✅ Sync the Three.js mesh
+  hoopMesh.position.copy(newPos);
   hoopMesh.quaternion.copy(hoopMeshQuat);
-
-  // Update matrices before rendering
-  hoopMesh.updateMatrix();
   hoopMesh.updateMatrixWorld();
 
-  // ✅ Update sensor position and orientation
-  const sensorDummy = new THREE.Object3D();
-  sensorDummy.position.copy(newPos);
-  sensorDummy.lookAt(getCamera().position);
-  
-  // Correct the orientation by 90 degrees
-  const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
-  const hoopQuat = sensorDummy.quaternion.clone().multiply(correction);
-
+  // ✅ Update the sensor position
   const sensorYOffset = -0.01;
   const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
-
   const sensorBody = sensor.parent();
   if (sensorBody) {
     sensorBody.wakeUp();
     sensorBody.setNextKinematicTranslation(sensorPos);
-    sensorBody.setNextKinematicRotation({
-      x: hoopQuat.x,
-      y: hoopQuat.y,
-      z: hoopQuat.z,
-      w: hoopQuat.w,
-    });
   }
   
   console.log(hoopColliderRB.translation()); // Ensure Rapier is actually moving it

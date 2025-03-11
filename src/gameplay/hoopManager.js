@@ -182,53 +182,56 @@ export function removeHoop() {
 }
 
 export function moveHoop(newPos) {
-  if (!hoopMesh) return;
-  
-  // First update the visual mesh position and orientation
-  hoopMesh.position.copy(newPos);
-  
+  if (!hoopMesh || !hoopColliderRB) return;
+
+  // Ensure the physics body is active
+  hoopColliderRB.wakeUp();
+
+  // Convert position to Rapier vector
+  const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
+
+  // Compute the quaternion for orientation
   const hoopDummy = new THREE.Object3D();
   hoopDummy.position.copy(newPos);
   hoopDummy.lookAt(getCamera().position);
   const hoopMeshQuat = hoopDummy.quaternion.clone();
-  hoopMesh.quaternion.copy(hoopMeshQuat);
-  
-  // Update matrices before updating physics
-  hoopMesh.updateMatrix();
-  hoopMesh.updateMatrixWorld();
 
-  // Create a RAPIER position and rotation
-  const colliderPos = new RAPIER.Vector3(newPos.x, newPos.y, newPos.z);
-  const rapierRotation = {
+  // Move the Rapier collider **before** updating the Three.js mesh
+  hoopColliderRB.setNextKinematicTranslation(colliderPos);
+  hoopColliderRB.setNextKinematicRotation({
     x: hoopMeshQuat.x,
     y: hoopMeshQuat.y,
     z: hoopMeshQuat.z,
     w: hoopMeshQuat.w,
-  };
-  
-  // Update hoopColliderRB position and rotation
-  if (hoopColliderRB) {
-    // Make sure to wakeUp the body to ensure updates are applied
-    hoopColliderRB.wakeUp();
-    hoopColliderRB.setNextKinematicTranslation(colliderPos);
-    hoopColliderRB.setRotation(rapierRotation);
-  }
+  });
 
-  // Update sensor orientation and position
+  // Sync the Three.js mesh **with the Rapier body**
+  const bodyPosition = hoopColliderRB.translation();
+  hoopMesh.position.set(bodyPosition.x, bodyPosition.y, bodyPosition.z);
+  hoopMesh.quaternion.copy(hoopMeshQuat);
+
+  // Update matrices before rendering
+  hoopMesh.updateMatrix();
+  hoopMesh.updateMatrixWorld();
+
+  // ✅ Update sensor position and orientation
   if (sensor) {
     const sensorDummy = new THREE.Object3D();
     sensorDummy.position.copy(newPos);
     sensorDummy.lookAt(getCamera().position);
+    
+    // Correct the orientation by 90 degrees
     const correction = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
     const hoopQuat = sensorDummy.quaternion.clone().multiply(correction);
 
     const sensorYOffset = -0.01;
     const sensorPos = new RAPIER.Vector3(newPos.x, newPos.y + sensorYOffset, newPos.z);
+
     const sensorBody = sensor.parent();
     if (sensorBody) {
-      sensorBody.wakeUp(); // Make sure it's awake
+      sensorBody.wakeUp();
       sensorBody.setNextKinematicTranslation(sensorPos);
-      sensorBody.setRotation({
+      sensorBody.setNextKinematicRotation({
         x: hoopQuat.x,
         y: hoopQuat.y,
         z: hoopQuat.z,
@@ -237,6 +240,7 @@ export function moveHoop(newPos) {
     }
   }
 }
+
 
 export function updateHoopMovement() {
   if (!initialHoopPos) return;

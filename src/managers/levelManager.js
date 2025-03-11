@@ -9,7 +9,6 @@ import { eventBus } from "../core/eventBus.js";
 function setLevelHoopMovement() {
     const level = state.game.level;
     if (level < 5) {
-        state.objects.hoop.moveBackAndForth = true;
         state.objects.hoop.moveLeftAndRight = false;
     } else if (level < 7) {
         if (Math.random() < 0.5) {

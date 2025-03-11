@@ -89,18 +89,23 @@ export function createHoopCollider(hoopPrefab) {
   let vertices = [];
   let indices = [];
 
+  // Precompute the inverse matrix of the hoopMesh (assuming hoopMesh is available)
+  const inverseMatrix = new THREE.Matrix4().getInverse(hoopMesh.matrixWorld);
+
   // Traverse the hoopPrefab to extract mesh data for a trimesh collider
   hoopPrefab.traverse((child) => {
     if (child.isMesh) {
-      // Extract mesh data as before
       child.updateWorldMatrix(true, false);
       const geometry = child.geometry;
       const positionAttribute = geometry.attributes.position;
 
       for (let i = 0; i < positionAttribute.count; i++) {
-        const vertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, i);
-        vertex.applyMatrix4(child.matrixWorld);
-        vertices.push(vertex.x, vertex.y, vertex.z);
+        // Get the vertex in world space using the child's matrixWorld
+        const worldVertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, i)
+          .applyMatrix4(child.matrixWorld);
+        // Convert the vertex to hoopMesh's local space
+        const localVertex = worldVertex.clone().applyMatrix4(inverseMatrix);
+        vertices.push(localVertex.x, localVertex.y, localVertex.z);
       }
 
       if (geometry.index) {
@@ -127,11 +132,10 @@ export function createHoopCollider(hoopPrefab) {
   const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indicesArray);
   const collider = world.createCollider(colliderDesc, rigidBody);
   
-  // Store this collider
   hoopColliders.push({ rigidBody, collider });
-
   return { rigidBody, collider };
 }
+
 
 export function isBasket(collider1, collider2) {
   if (sensorCooldown) return false;

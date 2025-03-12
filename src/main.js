@@ -76,7 +76,7 @@ async function initGame() {
         // Random chance to trigger a power-up
         const ballMesh = getBallMesh();
         const chance = Math.random();
-        if (ballMesh && state.game.level > 5) {
+        if (ballMesh && state.game.level > 3) {
             // e.g., 30% chance to trigger a power-up after a basket
             if (chance < 0.15) {
             // Trigger the fire power-up: double score points and play flame effect.
@@ -93,12 +93,9 @@ async function initGame() {
             console.log("Missed Shot");
             return;
         }
-        if (state.game.missedShots < 3){
-            state.game.missedShots++;
-        }
+        state.game.missedShots++;
         state.game.shotAttempt = false; // Reset once counted
         playTauntSound();
-        return;
         // End game if 3 missed shots have accumulated
         if (state.game.missedShots >= 3) {
             console.log("Game Over due to 3 missed shots.");

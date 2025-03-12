@@ -20,47 +20,14 @@ This project is a WebXR-based basketball game that leverages augmented reality (
 - **Enhanced Ball Physics:**  
   - Refine ball physics (e.g., spin, restitution, friction, and continuous collision detection) for more natural behavior.
 
-## Planned Enhancements & Features
-
-### Gameplay Enhancements
-
-- Add level system based on number of baksets
-  - reduced shot clock time
-  - moving baskets (side to side, up and down, back and forth )
-  -
-- Add power ups
-- ball size
-- score multiplier
-- different kinds of balls with different physics properties (baseball, tennis ball, volley ball, beach)
-
-### Visual & Audio Improvements
-
-- **Improved Graphics:**  
-  - Upgrade the hoop model with detailed rim and a dynamic net (using cloth simulation) for enhanced realism.
-  - Upgrade score board graphics
-
-- **Sound & Haptic Feedback:**  
-  - Integrate sound effects (dribbling, swishes, rim bounces) and haptic feedback to enhance immersion.
-- **Particle Effects:**  
-  - Add visual effects (e.g., confetti, sparks) when a shot is made.
-- **Debugging Tools:**  
-  - Implement visual debugging (such as collider outlines) to assist in fine-tuning physics and gameplay during development.
-
-### Additional Game Features
-
-- **Game Modes & Leaderboards:**  
-  - Introduce varied game modes, power-ups, and online leaderboards to track and compare player performance.
-- **User Interface Enhancements:**  
-  - Develop start screens, pause menus, and interactive tutorials to improve the overall user experience.
-- **Replay & Analytics:**  
-  - Capture shot statistics and enable a replay feature for players to review their gameplay.
 
 ## Todo
 
 - Reconcile state vs event managment code (score board, boundries, hoop placement)
 - ensure proper use of design patterns
-- Integrate sound effects and haptic feedback for immersive interactions.
-- Add particle effects and visual feedback on scoring.
-- Develop power-up mechanics and varied game modes.
-- Implement level mechanism
+- Develop start screens, pause menus, and interactive tutorials to improve the overall user experience.
+- Identify and fix bugs 
 - Implement leaderboards and shot replay analytics.
+- Add object pooling to the ball and particles 
+- Decouple constants and add them to state.js
+- Integrate logger for debugging

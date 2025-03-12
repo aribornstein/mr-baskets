@@ -167,7 +167,7 @@ export function moveHoopToNewPosition(state, delay = 200) {
     // Wait for the specified delay before moving the hoop
     setTimeout(() => {
         moveHoop(newHoopPos);
-        console.log("Hoop moved to a new position within room bounds.");
+        console.log("Hoop moved to a new position within room bounds.", newHoopPos);
     }, delay);
 }
 

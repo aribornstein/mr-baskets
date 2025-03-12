@@ -38,3 +38,7 @@ This project is a WebXR-based basketball game that leverages augmented reality (
 - **“Basketball Hoop” by Alec Huxley**  
 Available on [Sketchfab](https://sketchfab.com/3d-models/basketball-hoop-2dc0a999ab8c4d378dd3256a6a6619a6)  
 Licensed under [Creative Commons Attribution](https://creativecommons.org/licenses/by/)
+
+- **“Basketball Classic Standard Ball” by HQ3DMOD**  
+Available on [Sketchfab](https://sketchfab.com/3d-models/basketball-classic-standard-ball-39d0e28487d2426bb9c24010dcfc4808)  
+Licensed under [Creative Commons Attribution](https://creativecommons.org/licenses/by/)

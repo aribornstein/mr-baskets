@@ -15,9 +15,11 @@ export function applyFirePowerUp(ballMesh, state, scoreboardManager) {
 export function applyIcePowerUp(ballMesh, scoreboardManager) {
     // Trigger ice power-up: add ice effect and pause the shot clock
     addIceEffectToBall(ballMesh);
-    scoreboardManager.stopShotClock();
+    scoreboardManager.pauseShotClock();
     // Resume shot clock after 5 seconds
     setTimeout(() => {
-        scoreboardManager.startShotClock();
+        if (!state.game.gameOver){
+            scoreboardManager.unpauseShotClock();
+        }
     }, 5000);
 }

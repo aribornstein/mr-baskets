@@ -181,9 +181,27 @@ export class Scoreboard {
         }, 1000);
     }
 
-    // Stop the game clock
-    stopGameClock() {
-        clearInterval(this.gameClockInterval);
+
+    pauseShotClock() {
+        clearInterval(this.shotClockInterval);
+        this.savedShotClock = this.shotClock;
+        this.shotClockInterval = null; // Ensure the interval is cleared
+    }
+
+    unpauseShotClock() {
+        if (this.shotClockInterval === null) {
+            this.shotClock = this.savedShotClock !== undefined ? this.savedShotClock : state.game.shotClockInit;
+            this.shotClockInterval = setInterval(() => {
+                if (this.shotClock > 0) {
+                    this.shotClock--;
+                    this.updateTexture();
+                } else {
+                    this.stopShotClock();
+                    this.stopGameClock(); // Stop the game clock when game is over
+                    eventBus.emit("gameOver");
+                }
+            }, SHOT_CLOCK_INTERVAL_MS);
+        }
     }
 
     // Reset the game clock
@@ -375,10 +393,6 @@ export class ScoreboardManager {
 
     startGameClock() {
         this.scoreboard.startGameClock();
-    }
-
-    stopGameClock() {
-        this.scoreboard.stopGameClock();
     }
 
     stopShotClock() {

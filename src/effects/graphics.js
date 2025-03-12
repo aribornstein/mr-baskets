@@ -14,7 +14,7 @@ export function loadHandModel(handedness) {
 export function loadBasketballModel() {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
-    const url = "src/assets/basketball1.glb";
+    const url = "src/assets/basketball.glb";
     loader.load(url, (gltf) => resolve(gltf.scene), undefined, (error) => reject(error));
   });
 }

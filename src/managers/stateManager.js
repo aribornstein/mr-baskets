@@ -4,6 +4,7 @@ export const state = {
         floorOffset: 0,
         floorConfigured: false,
         roomBoundary: null,
+        previousRegionIndex: -1,
     },
     objects: {
         ground: {

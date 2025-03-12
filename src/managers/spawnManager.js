@@ -4,7 +4,6 @@ import { getCamera } from "../core/engine.js";
 import { createBallPhysics, createBallVisual, removeBall } from "../gameplay/ballManager.js";
 import { setInitialHoopPos, createHoopObject, removeHoop, moveHoop } from "../gameplay/hoopManager.js";
 
-let previousRegionIndex = -1;
 
 function createBall(state) {
     const camera = getCamera();
@@ -96,8 +95,8 @@ function findNewHoopPosition(state) {
         let regionIndex;
         do {
             regionIndex = Math.floor(Math.random() * numRegionsX * numRegionsZ);
-        } while (regionIndex === previousRegionIndex);
-        previousRegionIndex = regionIndex;
+        } while (regionIndex === state.environment.previousRegionIndex);
+        state.environment.previousRegionIndex = regionIndex;
 
         // Calculate the region's boundaries
         const regionX = regionIndex % numRegionsX;

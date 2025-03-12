@@ -181,28 +181,9 @@ export class Scoreboard {
         }, 1000);
     }
 
-
-    pauseShotClock() {
-        clearInterval(this.shotClockInterval);
-        this.savedShotClock = this.shotClock;
-        this.shotClockInterval = null; // Ensure the interval is cleared
-    }
-
-    unpauseShotClock() {
-        if (this.shotClockInterval === null) {
-            this.shotClock = this.savedShotClock !== undefined ? this.savedShotClock : state.game.shotClockInit;
-            this.shotClockInterval = setInterval(() => {
-                if (this.shotClock > 0) {
-                    this.shotClock--;
-                    this.updateTexture();
-                } else {
-                    this.stopShotClock();
-                    this.stopGameClock(); // Stop the game clock when game is over
-                    eventBus.emit("gameOver");
-                }
-            }, SHOT_CLOCK_INTERVAL_MS);
-        }
-    }
+    stopGameClock() {
+        clearInterval(this.gameClockInterval);
+    } 
 
     // Reset the game clock
     resetGameClock() {
@@ -245,6 +226,28 @@ export class Scoreboard {
         }, SHOT_CLOCK_INTERVAL_MS);
     }
 
+    pauseShotClock() {
+        clearInterval(this.shotClockInterval);
+        this.savedShotClock = this.shotClock;
+        this.shotClockInterval = null; // Ensure the interval is cleared
+    }
+
+    unpauseShotClock() {
+        if (this.shotClockInterval === null) {
+            this.shotClock = this.savedShotClock !== undefined ? this.savedShotClock : state.game.shotClockInit;
+            this.shotClockInterval = setInterval(() => {
+                if (this.shotClock > 0) {
+                    this.shotClock--;
+                    this.updateTexture();
+                } else {
+                    this.stopShotClock();
+                    this.stopGameClock(); // Stop the game clock when game is over
+                    eventBus.emit("gameOver");
+                }
+            }, SHOT_CLOCK_INTERVAL_MS);
+        }
+    }
+    
     stopShotClock() {
         clearInterval(this.shotClockInterval);
     }

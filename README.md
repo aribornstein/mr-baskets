@@ -31,3 +31,10 @@ This project is a WebXR-based basketball game that leverages augmented reality (
 - Add object pooling to the ball and particles 
 - Decouple constants and add them to state.js
 - Integrate logger for debugging
+
+
+## Credits
+
+- **“Basketball Hoop” by Alec Huxley**  
+Available on [Sketchfab](https://sketchfab.com/3d-models/basketball-hoop-2dc0a999ab8c4d378dd3256a6a6619a6)  
+Licensed under [Creative Commons Attribution](https://creativecommons.org/licenses/by/)

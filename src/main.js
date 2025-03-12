@@ -145,7 +145,9 @@ function animate() {
                 scoreboardManager.incrementScore();
                 scoreboardManager.resetShotClock();
                 updateLevel();
-                moveHoopToNewPosition(state);
+                requestAnimationFrame(() => {
+                    moveHoopToNewPosition(state);
+                });
             }
 
             // Check for collisions between ball and ground using userData markers.

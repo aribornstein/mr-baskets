@@ -52,7 +52,6 @@ export function updateLevel() {
         console.log("Level Up to:", state.game.level);
         // Emit the newLevel event after updating the level.
         eventBus.emit("newLevel", state);
-        state.environment.previousRegionIndices = [];
     }
     // Update hoop movement pattern based on the level.
     setLevelHoopMovement();

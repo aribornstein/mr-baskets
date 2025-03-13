@@ -72,7 +72,6 @@ async function initGame() {
     eventBus.on("newLevel", (state)=> {    
 
         playCheerSound(); // Play cheer sound when level changes
-        state.environment.previousRegionIndex = -1; // Reset region index
         // Random chance to trigger a power-up
         const ballMesh = getBallMesh();
         const chance = Math.random();
@@ -289,7 +288,7 @@ function resetGame() {
         controller.userData.prevPos = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld); // Reset prevPos
     });
 
-    state.environment.previousRegionIndices = [];
+    state.environment.previousRegionIndex = -1;
 
     startGame();
 }

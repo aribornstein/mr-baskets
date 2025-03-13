@@ -40,7 +40,7 @@ function findNewHoopPosition(state) {
     const camera = getCamera();
     let newHoopPos = new THREE.Vector3();
     const safeRadius = 3; // Define a safe radius around the player
-    const numRememberedRegions = 3; // How many previous regions to avoid
+    const minDistanceToPrevious = 2; // Minimum distance to the previous hoop position
 
     // Generate a random position within the room boundaries, ensuring it's outside the safe radius
     if (state.environment.roomBoundary) {
@@ -89,20 +89,24 @@ function findNewHoopPosition(state) {
         // Divide the spawning area into regions
         const numRegionsX = 3; // Number of regions along the X axis
         const numRegionsZ = 3; // Number of regions along the Z axis
-        const regionWidth = (maxX - minX) / numRegionsX;
-        const regionHeight = (maxZ - minZ) / numRegionsZ;
+        const numRegions = numRegionsX * numRegionsZ;
 
-        // Select a random region index that is different from the previous ones
+        // Create an array of available region indices
+        const availableRegions = Array.from({ length: numRegions }, (_, i) => i).filter(
+            (i) => i !== state.environment.previousRegionIndex
+        );
+
+        // Select a random region index from the available regions
         let regionIndex;
-        do {
-            regionIndex = Math.floor(Math.random() * numRegionsX * numRegionsZ);
-        } while (state.environment.previousRegionIndices.includes(regionIndex));
-
-        // Update the previous region indices array
-        state.environment.previousRegionIndices.push(regionIndex);
-        if (state.environment.previousRegionIndices.length > numRememberedRegions) {
-            state.environment.previousRegionIndices.shift(); // Remove the oldest index
+        if (availableRegions.length > 0) {
+            regionIndex = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+        } else {
+            // If no other regions are available, just use the previous region
+            regionIndex = state.environment.previousRegionIndex;
         }
+
+        // Update the previous region index
+        state.environment.previousRegionIndex = regionIndex;
 
         // Calculate the region's boundaries
         const regionX = regionIndex % numRegionsX;
@@ -117,6 +121,27 @@ function findNewHoopPosition(state) {
         let z = THREE.MathUtils.randFloat(regionMinZ, regionMaxZ);
 
         newHoopPos.set(x, state.objects.hoop.height + state.environment.floorOffset, z);
+
+        // Clamp the new position to ensure it's within the room boundaries and outside the safe radius
+        newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, minX, maxX);
+        newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, minZ, maxZ);
+
+        if (initialHoopPos) {
+            const dx = newHoopPos.x - initialHoopPos.x;
+            const dz = newHoopPos.z - initialHoopPos.z;
+            const distanceToPrevious = Math.sqrt(dx * dx + dz * dz);
+
+            if (distanceToPrevious < minDistanceToPrevious) {
+                // Adjust the position to be at least minDistanceToPrevious away from the previous position
+                const angle = Math.atan2(dz, dx);
+                newHoopPos.x = initialHoopPos.x + minDistanceToPrevious * Math.cos(angle);
+                newHoopPos.z = initialHoopPos.z + minDistanceToPrevious * Math.sin(angle);
+
+                // Ensure the adjusted position is still within the clamped ranges
+                newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, minX, maxX);
+                newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, minZ, maxZ);
+            }
+        }
     } else {
         // If no room boundary, default to a position in front of the camera
         const hoopOffset = new THREE.Vector3(0, 0, -2.5);
@@ -169,15 +194,10 @@ export function moveHoopToNewPosition(state, delay = 200) {
         setInitialHoopPos(newHoopPos);
     }
 
-    // Set the isMoving flag to true
-    state.objects.hoop.isMoving = true;
-
     // Wait for the specified delay before moving the hoop
     setTimeout(() => {
         moveHoop(newHoopPos);
         console.log("Hoop moved to a new position within room bounds.", newHoopPos);
-        // Reset the isMoving flag
-        state.objects.hoop.isMoving = false;
     }, delay);
 }
 

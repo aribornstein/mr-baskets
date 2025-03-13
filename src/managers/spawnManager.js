@@ -136,6 +136,8 @@ function findNewHoopPosition(state) {
                 console.log("Adjusted position to enforce min distance:", { newHoopPos });
                 newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, minX, maxX);
                 newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, minZ, maxZ);
+                // Ensure the hoop stays at the correct height
+                newHoopPos.y = state.objects.hoop.height + state.environment.floorOffset;
             }
         }
     } else {

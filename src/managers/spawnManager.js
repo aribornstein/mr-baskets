@@ -56,9 +56,9 @@ function findNewHoopPosition(state) {
         let minZ = Math.max(roomMinZ, cameraZ + safeRadius);
         let maxZ = Math.min(roomMaxZ, cameraZ - safeRadius);
 
-        // Ensure there is enough variation
-        if (Math.abs(maxX - minX) < 1) maxX += 2;
-        if (Math.abs(maxZ - minZ) < 1) maxZ += 2;
+        // Ensure boundaries are valid
+        if (minX > maxX) [minX, maxX] = [roomMinX, roomMaxX];
+        if (minZ > maxZ) [minZ, maxZ] = [roomMinZ, roomMaxZ];
 
         // Divide the area into regions
         const numRegionsX = 3;
@@ -89,11 +89,11 @@ function findNewHoopPosition(state) {
         let x = THREE.MathUtils.randFloat(regionMinX, regionMaxX);
         let z = THREE.MathUtils.randFloat(regionMinZ, regionMaxZ);
 
-        // If the range is too small, add some randomness
-        if (regionMinX === regionMaxX) x += (Math.random() - 0.5) * 0.5;
-        if (regionMinZ === regionMaxZ) z += (Math.random() - 0.5) * 0.5;
-
         newHoopPos.set(x, state.objects.hoop.height + state.environment.floorOffset, z);
+
+        // Ensure the hoop is within the room bounds
+        newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, roomMinX, roomMaxX);
+        newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, roomMinZ, roomMaxZ);
 
         if (state.objects.hoop.pos) {
             const dx = newHoopPos.x - state.objects.hoop.pos.x;
@@ -108,9 +108,12 @@ function findNewHoopPosition(state) {
                 let randomOffset = minDistanceToPrevious + Math.random() * minDistanceToPrevious;
                 newHoopPos.x = state.objects.hoop.pos.x + randomOffset * Math.cos(randomAngle);
                 newHoopPos.z = state.objects.hoop.pos.z + randomOffset * Math.sin(randomAngle);
-                console.log("After offset:", { newHoopPos });
             }
         }
+
+        // Final clamping to keep the hoop inside the room
+        newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, roomMinX, roomMaxX);
+        newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, roomMinZ, roomMaxZ);
 
         // Store new hoop position in state
         state.objects.hoop.pos = newHoopPos.clone();
@@ -124,6 +127,7 @@ function findNewHoopPosition(state) {
     console.log("Final Assigned Hoop Position:", newHoopPos);
     return newHoopPos;
 }
+
 
 
 export function moveHoopToNewPosition(state, delay = 200) {

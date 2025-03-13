@@ -154,6 +154,7 @@ function findNewHoopPosition(state) {
 }
 
 export function moveHoopToNewPosition(state, delay = 200) {
+    state.objects.hoop.isMoving = true;
     const newHoopPos = findNewHoopPosition(state);
 
     // Calculate allowed movement range based on new position
@@ -197,6 +198,7 @@ export function moveHoopToNewPosition(state, delay = 200) {
     // Wait for the specified delay before moving the hoop
     setTimeout(() => {
         moveHoop(newHoopPos);
+        state.objects.hoop.isMoving = false;
         console.log("Hoop moved to a new position within room bounds.", newHoopPos);
     }, delay);
 }

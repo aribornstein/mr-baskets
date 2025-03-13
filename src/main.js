@@ -85,6 +85,9 @@ async function initGame() {
             applyIcePowerUp(ballMesh, scoreboardManager);
             }
         }
+        if (state.game.level > 5) {
+            state.game.shotClockInit = Math.max(3, state.game.shotClockInit - 1);
+        }
     });
 
     eventBus.on("missedShot", () => {

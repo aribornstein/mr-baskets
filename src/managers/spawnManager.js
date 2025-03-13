@@ -89,6 +89,10 @@ function findNewHoopPosition(state) {
         // Divide the spawning area into regions
         const numRegionsX = 3; // Number of regions along the X axis
         const numRegionsZ = 3; // Number of regions along the Z axis
+        
+        // Calculate region dimensions
+        const regionWidth = (maxX - minX) / numRegionsX;
+        const regionHeight = (maxZ - minZ) / numRegionsZ;
         const numRegions = numRegionsX * numRegionsZ;
 
         // Create an array of available region indices

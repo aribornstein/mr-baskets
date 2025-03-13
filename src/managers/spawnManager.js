@@ -39,10 +39,9 @@ function createHoop(state) {
 function findNewHoopPosition(state) {
     const camera = getCamera();
     let newHoopPos = new THREE.Vector3();
-    const safeRadius = 3; // Define a safe radius around the player
-    const minDistanceToPrevious = 2; // Minimum distance to the previous hoop position
+    const safeRadius = 3; // Safe radius around the player
+    const minDistanceToPrevious = 2; // Minimum distance to the previous hoop
 
-    // Generate a random position within the room boundaries, ensuring it's outside the safe radius
     if (state.environment.roomBoundary) {
         const roomMinX = state.environment.roomBoundary.min.x + state.objects.hoop.radius;
         const roomMaxX = state.environment.roomBoundary.max.x - state.objects.hoop.radius;
@@ -52,67 +51,33 @@ function findNewHoopPosition(state) {
         const cameraX = camera.position.x;
         const cameraZ = camera.position.z;
 
-        let minX, maxX, minZ, maxZ;
+        let minX = Math.max(roomMinX, cameraX + safeRadius);
+        let maxX = Math.min(roomMaxX, cameraX - safeRadius);
+        let minZ = Math.max(roomMinZ, cameraZ + safeRadius);
+        let maxZ = Math.min(roomMaxZ, cameraZ - safeRadius);
 
-        // Calculate valid X range
-        if (cameraX - roomMinX > roomMaxX - cameraX) {
-            minX = roomMinX;
-            maxX = cameraX - safeRadius;
-        } else {
-            minX = cameraX + safeRadius;
-            maxX = roomMaxX;
-        }
+        // Ensure there is enough variation
+        if (Math.abs(maxX - minX) < 1) maxX += 2;
+        if (Math.abs(maxZ - minZ) < 1) maxZ += 2;
 
-        // Calculate valid Z range
-        if (cameraZ - roomMinZ > roomMaxZ - cameraZ) {
-            minZ = roomMinZ;
-            maxZ = cameraZ - safeRadius;
-        } else {
-            minZ = cameraZ + safeRadius;
-            maxZ = roomMaxZ;
-        }
-
-        // Ensure min < max for X and Z ranges
-        if (minX > maxX) {
-            [minX, maxX] = [maxX, minX]; // Swap values
-        }
-        if (minZ > maxZ) {
-            [minZ, maxZ] = [maxZ, minZ]; // Swap values
-        }
-
-        // Clamp the ranges to ensure they are within the room boundaries
-        minX = Math.max(minX, roomMinX);
-        maxX = Math.min(maxX, roomMaxX);
-        minZ = Math.max(minZ, roomMinZ);
-        maxZ = Math.min(maxZ, roomMaxZ);
-
-        // Divide the spawning area into regions
-        const numRegionsX = 3; // Number of regions along the X axis
-        const numRegionsZ = 3; // Number of regions along the Z axis
-
-        // Calculate region dimensions
+        // Divide the area into regions
+        const numRegionsX = 3;
+        const numRegionsZ = 3;
         const regionWidth = (maxX - minX) / numRegionsX;
         const regionHeight = (maxZ - minZ) / numRegionsZ;
         const numRegions = numRegionsX * numRegionsZ;
 
-        // Create an array of available region indices
         const availableRegions = Array.from({ length: numRegions }, (_, i) => i).filter(
             (i) => i !== state.environment.previousRegionIndex
         );
 
-        // Select a random region index from the available regions
-        let regionIndex;
-        if (availableRegions.length > 0) {
-            regionIndex = availableRegions[Math.floor(Math.random() * availableRegions.length)];
-        } else {
-            // If no other regions are available, just use the previous region
-            regionIndex = state.environment.previousRegionIndex;
-        }
+        let regionIndex = availableRegions.length > 0
+            ? availableRegions[Math.floor(Math.random() * availableRegions.length)]
+            : state.environment.previousRegionIndex;
 
-        // Update the previous region index
         state.environment.previousRegionIndex = regionIndex;
 
-        // Calculate the region's boundaries
+        // Determine region boundaries
         const regionX = regionIndex % numRegionsX;
         const regionZ = Math.floor(regionIndex / numRegionsX);
         const regionMinX = minX + regionX * regionWidth;
@@ -120,46 +85,46 @@ function findNewHoopPosition(state) {
         const regionMinZ = minZ + regionZ * regionHeight;
         const regionMaxZ = regionMinZ + regionHeight;
 
-        // Generate random x and z within the selected region
+        // Generate a new random position within the region
         let x = THREE.MathUtils.randFloat(regionMinX, regionMaxX);
         let z = THREE.MathUtils.randFloat(regionMinZ, regionMaxZ);
 
-        newHoopPos.set(x, state.objects.hoop.height + state.environment.floorOffset, z);
+        // If the range is too small, add some randomness
+        if (regionMinX === regionMaxX) x += (Math.random() - 0.5) * 0.5;
+        if (regionMinZ === regionMaxZ) z += (Math.random() - 0.5) * 0.5;
 
-        // Clamp the new position to ensure it's within the room boundaries and outside the safe radius
-        newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, minX, maxX);
-        newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, minZ, maxZ);
+        newHoopPos.set(x, state.objects.hoop.height + state.environment.floorOffset, z);
 
         if (state.objects.hoop.pos) {
             const dx = newHoopPos.x - state.objects.hoop.pos.x;
             const dz = newHoopPos.z - state.objects.hoop.pos.z;
             const distanceToPrevious = Math.sqrt(dx * dx + dz * dz);
 
-            if (distanceToPrevious < minDistanceToPrevious) {
-                const angle = distanceToPrevious === 0 ? Math.random() * Math.PI * 2 : Math.atan2(dz, dx);
-                newHoopPos.x = state.objects.hoop.pos.x + minDistanceToPrevious * Math.cos(angle);
-                newHoopPos.z = state.objects.hoop.pos.z + minDistanceToPrevious * Math.sin(angle);
+            console.log("Before adjustment:", { newHoopPos, dx, dz, distanceToPrevious });
 
-                newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, minX, maxX);
-                newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, minZ, maxZ);
+            // Ensure new hoop is at least `minDistanceToPrevious` away from previous
+            if (distanceToPrevious < minDistanceToPrevious) {
+                let randomAngle = Math.random() * Math.PI * 2;
+                let randomOffset = minDistanceToPrevious + Math.random() * minDistanceToPrevious;
+                newHoopPos.x = state.objects.hoop.pos.x + randomOffset * Math.cos(randomAngle);
+                newHoopPos.z = state.objects.hoop.pos.z + randomOffset * Math.sin(randomAngle);
+                console.log("After offset:", { newHoopPos });
             }
         }
+
+        // Store new hoop position in state
+        state.objects.hoop.pos = newHoopPos.clone();
     } else {
-        // If no room boundary, default to a position in front of the camera
         const hoopOffset = new THREE.Vector3(0, 0, -2.5);
         hoopOffset.applyQuaternion(camera.quaternion);
         newHoopPos = camera.position.clone().add(hoopOffset);
         newHoopPos.y = state.objects.hoop.height + state.environment.floorOffset;
     }
 
-
-    console.log("New Hoop Position Attempt:", newHoopPos);
-    console.log("Previous Hoop Position:", state.objects.hoop.pos);
-    console.log("Previous Region Index:", state.environment.previousRegionIndex);
-    console.log("Available Regions:", availableRegions);
-    console.log("Selected Region:", regionIndex);
+    console.log("Final Assigned Hoop Position:", newHoopPos);
     return newHoopPos;
 }
+
 
 export function moveHoopToNewPosition(state, delay = 200) {
     state.objects.hoop.isMoving = true;

@@ -137,7 +137,7 @@ function findNewHoopPosition(state) {
             console.log("Before adjustment:", { dx, dz, distanceToPrevious });
 
             if (distanceToPrevious < minDistanceToPrevious) {
-                const angle = Math.atan2(dz, dx);
+                const angle = distanceToPrevious === 0 ? Math.random() * Math.PI * 2 : Math.atan2(dz, dx);
                 newHoopPos.x = state.objects.hoop.pos.x + minDistanceToPrevious * Math.cos(angle);
                 newHoopPos.z = state.objects.hoop.pos.z + minDistanceToPrevious * Math.sin(angle);
                 console.log("After offset:", { newHoopPos });

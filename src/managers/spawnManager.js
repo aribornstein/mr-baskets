@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { getCamera } from "../core/engine.js";
 import { createBallPhysics, createBallVisual, removeBall } from "../gameplay/ballManager.js";
-import { setInitialHoopPos, createHoopObject, removeHoop, moveHoop } from "../gameplay/hoopManager.js";
+import { createHoopObject, removeHoop, moveHoop } from "../gameplay/hoopManager.js";
 
 
 function createBall(state) {
@@ -89,7 +89,7 @@ function findNewHoopPosition(state) {
         // Divide the spawning area into regions
         const numRegionsX = 3; // Number of regions along the X axis
         const numRegionsZ = 3; // Number of regions along the Z axis
-        
+
         // Calculate region dimensions
         const regionWidth = (maxX - minX) / numRegionsX;
         const regionHeight = (maxZ - minZ) / numRegionsZ;
@@ -130,16 +130,16 @@ function findNewHoopPosition(state) {
         newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, minX, maxX);
         newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, minZ, maxZ);
 
-        if (initialHoopPos) {
-            const dx = newHoopPos.x - initialHoopPos.x;
-            const dz = newHoopPos.z - initialHoopPos.z;
+        if (state.objects.hoop.pos) {
+            const dx = newHoopPos.x - state.objects.hoop.pos.x;
+            const dz = newHoopPos.z - state.objects.hoop.pos.z;
             const distanceToPrevious = Math.sqrt(dx * dx + dz * dz);
 
             if (distanceToPrevious < minDistanceToPrevious) {
                 // Adjust the position to be at least minDistanceToPrevious away from the previous position
                 const angle = Math.atan2(dz, dx);
-                newHoopPos.x = initialHoopPos.x + minDistanceToPrevious * Math.cos(angle);
-                newHoopPos.z = initialHoopPos.z + minDistanceToPrevious * Math.sin(angle);
+                newHoopPos.x = state.objects.hoop.pos.x + minDistanceToPrevious * Math.cos(angle);
+                newHoopPos.z = state.objects.hoop.pos.z + minDistanceToPrevious * Math.sin(angle);
 
                 // Ensure the adjusted position is still within the clamped ranges
                 newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, minX, maxX);
@@ -194,9 +194,9 @@ export function moveHoopToNewPosition(state, delay = 200) {
         state.objects.hoop.phaseZ = (newHoopPos.z - centerZ) / state.objects.hoop.amplitudeZ;
 
         // Update initialHoopPos with the new position
-        setInitialHoopPos(newHoopPos);
+        state.objects.hoop.pos = newHoopPos;
     } else {
-        setInitialHoopPos(newHoopPos);
+        state.objects.hoop.pos = newHoopPos;
     }
 
     // Wait for the specified delay before moving the hoop

@@ -9,14 +9,9 @@ import { loadHoopModel } from "../effects/graphics.js";
 let hoopMesh = null;
 let sensor;
 let sensorCooldown = false;
-let initialHoopPos = null;
 let hoopColliderRB = null;
 
 let hoopColliders = []; // Track all colliders associated with the hoop
-
-export function setInitialHoopPos(pos) {
-  initialHoopPos = { x: pos.x, y: pos.y, z: pos.z };
-}
 
 /**
  * Loads the hoop model prefab and adds it to the scene.
@@ -44,7 +39,6 @@ export async function createHoopObject(pos) {
     // hoopMesh.translateZ(-0.1);
 
     addObject(hoopMesh);
-    // setInitialHoopPos(pos); // Remove this line
 
     // Update the world matrix to include group transforms
     hoopMesh.updateMatrixWorld(true);
@@ -245,7 +239,7 @@ export function moveHoop(newPos) {
 }
 
 export function updateHoopMovement() {
-  if (!initialHoopPos || state.objects.hoop.isMoving) return;
+  if (!state.objects.hoop.pos || state.objects.hoop.isMoving) return;
 
   const {
     moveLeftAndRight,
@@ -263,7 +257,7 @@ export function updateHoopMovement() {
   if (!(moveLeftAndRight || moveUpAndDown || moveBackAndForth)) return;
 
   const elapsedTime = performance.now() / 1000;
-  const newPos = { ...initialHoopPos };
+  const newPos = { ...state.objects.hoop.pos };
 
   // Define level-based multipliers so that initial movement is only 10%
   // and then gradually increases with each level (capped at 1).

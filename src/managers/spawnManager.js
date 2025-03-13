@@ -86,11 +86,12 @@ function findNewHoopPosition(state) {
         const numRegions = numRegionsX * numRegionsZ;
 
         let targetRegionIndex;
+        let prevHoopPos = null;
         if (state.objects.hoop.pos) {
-            // Compute the previous hoop's region index
-            const prev = state.objects.hoop.pos;
-            let prevRegionX = Math.floor((prev.x - minX) / regionWidth);
-            let prevRegionZ = Math.floor((prev.z - minZ) / regionHeight);
+            // Clone previous hoop position once
+            prevHoopPos = state.objects.hoop.pos.clone();
+            let prevRegionX = Math.floor((prevHoopPos.x - minX) / regionWidth);
+            let prevRegionZ = Math.floor((prevHoopPos.z - minZ) / regionHeight);
             // Clamp indices to ensure they fall within the grid
             prevRegionX = THREE.MathUtils.clamp(prevRegionX, 0, numRegionsX - 1);
             prevRegionZ = THREE.MathUtils.clamp(prevRegionZ, 0, numRegionsZ - 1);
@@ -122,21 +123,19 @@ function findNewHoopPosition(state) {
         newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, minX, maxX);
         newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, minZ, maxZ);
 
-        // If a previous hoop exists, enforce the minimum distance by a one‑time adjustment
-        if (state.objects.hoop.pos) {
-            const dx = newHoopPos.x - state.objects.hoop.pos.x;
-            const dz = newHoopPos.z - state.objects.hoop.pos.z;
+        // If a previous hoop exists, enforce the minimum distance using the cloned value
+        if (prevHoopPos) {
+            const dx = newHoopPos.x - prevHoopPos.x;
+            const dz = newHoopPos.z - prevHoopPos.z;
             const distanceToPrevious = Math.sqrt(dx * dx + dz * dz);
             console.log("Calculated distance:", { dx, dz, distanceToPrevious });
             if (distanceToPrevious < minDistanceToPrevious) {
-                // Compute the normalized direction and offset exactly minDistanceToPrevious units away
                 const dir = new THREE.Vector3(dx, 0, dz).normalize();
-                newHoopPos.copy(state.objects.hoop.pos)
+                newHoopPos.copy(prevHoopPos)
                     .addScaledVector(dir, minDistanceToPrevious);
                 console.log("Adjusted position to enforce min distance:", { newHoopPos });
                 newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, minX, maxX);
                 newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, minZ, maxZ);
-                // Ensure the hoop stays at the correct height
                 newHoopPos.y = state.objects.hoop.height + state.environment.floorOffset;
             }
         }

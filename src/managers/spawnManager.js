@@ -39,8 +39,8 @@ function createHoop(state) {
 function findNewHoopPosition(state) {
     const camera = getCamera();
     let newHoopPos = new THREE.Vector3();
-    const safeRadius = 3; // Safe radius around the player
-    const minDistanceToPrevious = 2; // Minimum distance to the previous hoop
+    const safeRadius = 3; // Minimum distance from player
+    const minDistanceToPrevious = 2.5; // Minimum distance to previous hoop
 
     if (state.environment.roomBoundary) {
         const roomMinX = state.environment.roomBoundary.min.x + state.objects.hoop.radius;
@@ -51,14 +51,21 @@ function findNewHoopPosition(state) {
         const cameraX = camera.position.x;
         const cameraZ = camera.position.z;
 
-        let minX = Math.max(roomMinX, cameraX + safeRadius);
-        let maxX = Math.min(roomMaxX, cameraX - safeRadius);
-        let minZ = Math.max(roomMinZ, cameraZ + safeRadius);
-        let maxZ = Math.min(roomMaxZ, cameraZ - safeRadius);
+        // Define a valid range outside the `safeRadius` around the player
+        const validMinX = Math.max(roomMinX, cameraX + safeRadius);
+        const validMaxX = Math.min(roomMaxX, cameraX - safeRadius);
+        const validMinZ = Math.max(roomMinZ, cameraZ + safeRadius);
+        const validMaxZ = Math.min(roomMaxZ, cameraZ - safeRadius);
 
-        // Ensure boundaries are valid
-        if (minX > maxX) [minX, maxX] = [roomMinX, roomMaxX];
-        if (minZ > maxZ) [minZ, maxZ] = [roomMinZ, roomMaxZ];
+        // Ensure the valid range is still inside room bounds
+        let minX = Math.max(validMinX, roomMinX);
+        let maxX = Math.min(validMaxX, roomMaxX);
+        let minZ = Math.max(validMinZ, roomMinZ);
+        let maxZ = Math.min(validMaxZ, roomMaxZ);
+
+        // Handle edge cases where safeRadius constraint collapses the valid area
+        if (minX >= maxX) { minX = roomMinX; maxX = roomMaxX; }
+        if (minZ >= maxZ) { minZ = roomMinZ; maxZ = roomMaxZ; }
 
         // Divide the area into regions
         const numRegionsX = 3;
@@ -67,17 +74,17 @@ function findNewHoopPosition(state) {
         const regionHeight = (maxZ - minZ) / numRegionsZ;
         const numRegions = numRegionsX * numRegionsZ;
 
+        // Select a different region than the previous one
         const availableRegions = Array.from({ length: numRegions }, (_, i) => i).filter(
             (i) => i !== state.environment.previousRegionIndex
         );
-
-        let regionIndex = availableRegions.length > 0
+        const regionIndex = availableRegions.length > 0
             ? availableRegions[Math.floor(Math.random() * availableRegions.length)]
             : state.environment.previousRegionIndex;
 
         state.environment.previousRegionIndex = regionIndex;
 
-        // Determine region boundaries
+        // Compute region boundaries
         const regionX = regionIndex % numRegionsX;
         const regionZ = Math.floor(regionIndex / numRegionsX);
         const regionMinX = minX + regionX * regionWidth;
@@ -85,39 +92,37 @@ function findNewHoopPosition(state) {
         const regionMinZ = minZ + regionZ * regionHeight;
         const regionMaxZ = regionMinZ + regionHeight;
 
-        // Generate a new random position within the region
+        // Generate a position within the selected region
         let x = THREE.MathUtils.randFloat(regionMinX, regionMaxX);
         let z = THREE.MathUtils.randFloat(regionMinZ, regionMaxZ);
 
         newHoopPos.set(x, state.objects.hoop.height + state.environment.floorOffset, z);
 
-        // Ensure the hoop is within the room bounds
-        newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, roomMinX, roomMaxX);
-        newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, roomMinZ, roomMaxZ);
-
+        // Ensure the new position is at least `minDistanceToPrevious` away from the last hoop
         if (state.objects.hoop.pos) {
             const dx = newHoopPos.x - state.objects.hoop.pos.x;
             const dz = newHoopPos.z - state.objects.hoop.pos.z;
-            const distanceToPrevious = Math.sqrt(dx * dx + dz * dz);
+            let distanceToPrevious = Math.sqrt(dx * dx + dz * dz);
 
-            console.log("Before adjustment:", { newHoopPos, dx, dz, distanceToPrevious });
+            console.log("Before adjustment:", { newHoopPos, distanceToPrevious });
 
-            // Ensure new hoop is at least `minDistanceToPrevious` away from previous
             if (distanceToPrevious < minDistanceToPrevious) {
-                let randomAngle = Math.random() * Math.PI * 2;
-                let randomOffset = minDistanceToPrevious + Math.random() * minDistanceToPrevious;
-                newHoopPos.x = state.objects.hoop.pos.x + randomOffset * Math.cos(randomAngle);
-                newHoopPos.z = state.objects.hoop.pos.z + randomOffset * Math.sin(randomAngle);
+                // Move it exactly `minDistanceToPrevious` away in a random direction
+                const angle = Math.random() * Math.PI * 2;
+                newHoopPos.x = state.objects.hoop.pos.x + minDistanceToPrevious * Math.cos(angle);
+                newHoopPos.z = state.objects.hoop.pos.z + minDistanceToPrevious * Math.sin(angle);
             }
         }
 
-        // Final clamping to keep the hoop inside the room
+        // Final clamping to ensure it remains inside room bounds
         newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, roomMinX, roomMaxX);
         newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, roomMinZ, roomMaxZ);
+        newHoopPos.y = state.objects.hoop.height + state.environment.floorOffset;
 
         // Store new hoop position in state
         state.objects.hoop.pos = newHoopPos.clone();
     } else {
+        // Default positioning when no room boundaries exist
         const hoopOffset = new THREE.Vector3(0, 0, -2.5);
         hoopOffset.applyQuaternion(camera.quaternion);
         newHoopPos = camera.position.clone().add(hoopOffset);
@@ -127,7 +132,6 @@ function findNewHoopPosition(state) {
     console.log("Final Assigned Hoop Position:", newHoopPos);
     return newHoopPos;
 }
-
 
 
 export function moveHoopToNewPosition(state, delay = 200) {

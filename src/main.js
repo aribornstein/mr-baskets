@@ -289,7 +289,7 @@ function resetGame() {
         controller.userData.prevPos = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld); // Reset prevPos
     });
 
-    state.environment.previousRegionIndex = -1;
+    state.environment.previousRegionIndices = [];
 
     startGame();
 }

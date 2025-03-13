@@ -40,6 +40,7 @@ function findNewHoopPosition(state) {
     const camera = getCamera();
     let newHoopPos = new THREE.Vector3();
     const safeRadius = 3; // Define a safe radius around the player
+    const numRememberedRegions = 3; // How many previous regions to avoid
 
     // Generate a random position within the room boundaries, ensuring it's outside the safe radius
     if (state.environment.roomBoundary) {
@@ -91,12 +92,17 @@ function findNewHoopPosition(state) {
         const regionWidth = (maxX - minX) / numRegionsX;
         const regionHeight = (maxZ - minZ) / numRegionsZ;
 
-        // Select a random region index that is different from the previous one
+        // Select a random region index that is different from the previous ones
         let regionIndex;
         do {
             regionIndex = Math.floor(Math.random() * numRegionsX * numRegionsZ);
-        } while (regionIndex === state.environment.previousRegionIndex);
-        state.environment.previousRegionIndex = regionIndex;
+        } while (state.environment.previousRegionIndices.includes(regionIndex));
+
+        // Update the previous region indices array
+        state.environment.previousRegionIndices.push(regionIndex);
+        if (state.environment.previousRegionIndices.length > numRememberedRegions) {
+            state.environment.previousRegionIndices.shift(); // Remove the oldest index
+        }
 
         // Calculate the region's boundaries
         const regionX = regionIndex % numRegionsX;

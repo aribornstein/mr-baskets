@@ -167,8 +167,8 @@ export class Scoreboard {
 
     // Method to update the displayed game clock
     updateGameClockDisplay() {
-        const minutes = Math.floor(state.game.gameClock/ 60);
-        const seconds = state.game.gameClock% 60;
+        const minutes = Math.floor(state.game.gameClock / 60);
+        const seconds = state.game.gameClock % 60;
         this.gameClockDisplay = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         this.updateTexture();
     }
@@ -183,11 +183,11 @@ export class Scoreboard {
 
     stopGameClock() {
         clearInterval(this.gameClockInterval);
-    } 
+    }
 
     // Reset the game clock
     resetGameClock() {
-        state.game.gameClock= 0;
+        state.game.gameClock = 0;
         this.updateGameClockDisplay();
     }
 
@@ -247,7 +247,7 @@ export class Scoreboard {
             }, SHOT_CLOCK_INTERVAL_MS);
         }
     }
-    
+
     stopShotClock() {
         clearInterval(this.shotClockInterval);
     }

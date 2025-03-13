@@ -35,9 +35,6 @@ export async function createHoopObject(pos) {
     dummy.lookAt(getCamera().position);
     hoopMesh.quaternion.copy(dummy.quaternion);
 
-    // Removed translateZ(-0.1) to avoid offset mismatch
-    // hoopMesh.translateZ(-0.1);
-
     addObject(hoopMesh);
 
     // Update the world matrix to include group transforms

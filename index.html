@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -20,9 +21,10 @@
       font-family: 'DSEG14 Classic';
       src: url('src/assets/DSEG14Classic-Regular.ttf') format('truetype');
     }
-    body { 
-      margin: 0; 
-      overflow: hidden; 
+
+    body {
+      margin: 0;
+      overflow: hidden;
       background: url('./src/assets/web_background.webp') no-repeat center center fixed;
       -webkit-background-size: cover;
       -moz-background-size: cover;
@@ -30,7 +32,11 @@
       background-size: cover;
       font-family: sans-serif;
     }
-    canvas { display: block; }
+
+    canvas {
+      display: block;
+    }
+
     #ar-button {
       position: absolute;
       bottom: 20px;
@@ -39,7 +45,8 @@
       padding: 12px 24px;
       font-size: 16px;
       z-index: 100;
-      background-color: #4CAF50; /* Green */
+      background-color: #4CAF50;
+      /* Green */
       border: none;
       color: white;
       text-align: center;
@@ -49,9 +56,11 @@
       border-radius: 5px;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     }
+
     #ar-button:hover {
       background-color: #367c39;
     }
+
     #instructions {
       position: absolute;
       top: 20px;
@@ -64,19 +73,23 @@
       border-radius: 10px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
+
     #instructions h2 {
       margin-top: 0;
       margin-bottom: 10px;
       font-size: 24px;
     }
+
     #instructions ul {
       padding-left: 20px;
     }
+
     #instructions li {
       margin-bottom: 5px;
     }
   </style>
 </head>
+
 <body>
   <button id="ar-button">Start Game! </button>
   <div id="instructions">
@@ -90,6 +103,7 @@
     </ul>
   </div>
   <script type="module" src="./src/main.js"></script>
-  
+
 </body>
+
 </html>

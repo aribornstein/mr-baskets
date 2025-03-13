@@ -44,7 +44,7 @@ function setLevelHoopMovement() {
 }
 // Call updateLevel each time the score updates.
 export function updateLevel() {
-    
+
     const threshold = Math.ceil(0.5 * Math.pow(state.game.level, 2));
 
     if (state.game.score >= threshold) {

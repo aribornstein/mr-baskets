@@ -177,7 +177,7 @@ export function moveHoopToNewPosition(state, delay = 200) {
         const rangeZ = roomMaxZ - roomMinZ;
 
         // Define amplitudes as fractions of the ranges
-        state.objects.hoop.amplitudeX = rangeX; 
+        state.objects.hoop.amplitudeX = rangeX;
         state.objects.hoop.amplitudeY = rangeY;
         state.objects.hoop.amplitudeZ = rangeZ;
 

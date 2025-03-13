@@ -11,7 +11,7 @@ import { RealityAccelerator } from "ratk";
 import { ScoreboardManager } from "./gameplay/scoreboardManager.js";
 import { createBallAndHoop, removeBallAndHoop, moveHoopToNewPosition } from "./managers/spawnManager.js";
 import { registerBallInput, updateBall, getBallMesh } from "./gameplay/ballManager.js";
-import { isBasket, updateHoopMovement} from "./gameplay/hoopManager.js";
+import { isBasket, updateHoopMovement } from "./gameplay/hoopManager.js";
 import { playBackgroundMusic, stopBackgroundMusic, loadBounceSound, playBounceSound, playBuzzerSound, loadBuzzerSound, playCheerSound, playTauntSound, stopAllAudio } from "./effects/audioManager.js";
 import { updateFlameParticles, updateIceParticles } from "./effects/particles.js";
 import { applyFirePowerUp, applyIcePowerUp } from "./gameplay/powerUpManager.js";
@@ -46,7 +46,7 @@ async function initGame() {
     world = getWorld();
 
     // Initialize the debugger
-    if (state.debugger){
+    if (state.debugger) {
         debuggerInstance = new Debugger(world); // Add this line
         debuggerInstance.enable(); // Enable debugger initially
         getScene().add(debuggerInstance); // Add to scene
@@ -60,7 +60,7 @@ async function initGame() {
         scoreboardManager.scoreboard.updateTexture(); // Update scoreboard to show game over
         removeBallAndHoop(state);
         stopBackgroundMusic(); // Stop
-        playBuzzerSound(); 
+        playBuzzerSound();
     });
 
     eventBus.on("roomSetupComplete", (state) => {
@@ -69,7 +69,7 @@ async function initGame() {
         }
     });
 
-    eventBus.on("newLevel", (state)=> {    
+    eventBus.on("newLevel", (state) => {
 
         playCheerSound(); // Play cheer sound when level changes
         // Random chance to trigger a power-up
@@ -78,11 +78,11 @@ async function initGame() {
         if (ballMesh && state.game.level > 3) {
             // e.g., 30% chance to trigger a power-up after a basket
             if (chance < 0.15) {
-            // Trigger the fire power-up: double score points and play flame effect.
-            applyFirePowerUp(ballMesh, state, scoreboardManager);
+                // Trigger the fire power-up: double score points and play flame effect.
+                applyFirePowerUp(ballMesh, state, scoreboardManager);
             } else if (chance < 0.30) {
-            // Trigger the ice power-up: pause shot clock and play ice effect.
-            applyIcePowerUp(ballMesh, scoreboardManager);
+                // Trigger the ice power-up: pause shot clock and play ice effect.
+                applyIcePowerUp(ballMesh, scoreboardManager);
             }
         }
         if (state.game.level > 5) {
@@ -91,15 +91,17 @@ async function initGame() {
     });
 
     eventBus.on("missedShot", () => {
-        if (state.debugger){
+        if (state.debugger) {
             console.log("Missed Shot");
             return;
         }
-        state.game.missedShots++;
+        if (state.game.missedShots < 3) {
+            state.game.missedShots++;
+        }
         state.game.shotAttempt = false; // Reset once counted
         playTauntSound();
         // End game if 3 missed shots have accumulated
-        if (state.game.missedShots >= 3) {
+        if (state.game.missedShots >= 3 && !state.game.mode === "practice") {
             console.log("Game Over due to 3 missed shots.");
             eventBus.emit("gameOver");
         }
@@ -152,9 +154,9 @@ function animate() {
 
             // Check for collisions between ball and ground using userData markers.
             if (started && ((collider1.userData === "ball" && collider2.userData === "ground") ||
-                            (collider1.userData === "ground" && collider2.userData === "ball"))) {
+                (collider1.userData === "ground" && collider2.userData === "ball"))) {
                 if (state.game.shotAttempt) {
-                  eventBus.emit("missedShot");
+                    eventBus.emit("missedShot");
                 }
                 playBounceSound();
             }
@@ -195,7 +197,7 @@ function animate() {
     if (state.objects.ball.created && !state.objects.ball.isHeld) {
         updateBall(delta, state.environment.roomBoundary);
     }
-    
+
     if (ballMesh) {
         if (ballMesh.userData.flameParticles) {
             updateFlameParticles(ballMesh.userData.flameParticles);
@@ -209,7 +211,7 @@ function animate() {
     if (debuggerInstance && debuggerInstance.isEnabled()) { // Add this line
         debuggerInstance.update(); // Add this line
     } // Add this line
-    
+
     getRenderer().render(getScene(), getCamera());
 }
 
@@ -229,7 +231,7 @@ document.getElementById("ar-button").addEventListener("click", async () => {
         // Add event listener for session end
         session.addEventListener('end', () => {
             console.log("AR session ended.");
-            
+
             stopAllAudio();
             eventBus.removeAllListeners();
 
@@ -244,8 +246,8 @@ document.getElementById("ar-button").addEventListener("click", async () => {
             });
 
             // Remove all objects from the scene
-            while(scene.children.length > 0){ 
-              scene.remove(scene.children[0]); 
+            while (scene.children.length > 0) {
+                scene.remove(scene.children[0]);
             }
 
             // Dispose of physics world
@@ -278,7 +280,7 @@ function resetGame() {
     state.objects.hoop.movementAmplitude = 0.2;
     state.objects.hoop.movementFrequency = 0.5;
 
-    
+
     // Reset scoreboard
     scoreboardManager.resetShotClock();
     scoreboardManager.resetGameClock();

@@ -47,6 +47,7 @@ export const state = {
         level: 1,
         gameClock: 0,
         score: 0,
+        mode: "practice",
         roomSetupComplete: false,
         gameOver: false,
         gameStarted: false,
@@ -58,5 +59,5 @@ export const state = {
         onGrab: null,
         onRelease: null,
     },
-    debugger: true,
+    debugger: false,
 };

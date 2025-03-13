@@ -18,7 +18,7 @@ export function applyIcePowerUp(ballMesh, scoreboardManager) {
     scoreboardManager.pauseShotClock();
     // Resume shot clock after 5 seconds
     setTimeout(() => {
-        if (!state.game.gameOver){
+        if (!state.game.gameOver) {
             scoreboardManager.unpauseShotClock();
         }
     }, 5000);

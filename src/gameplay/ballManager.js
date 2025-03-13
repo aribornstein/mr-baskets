@@ -14,15 +14,15 @@ let ballRigidBody = null, ballCollider = null;
 export function createBallPhysics(pos) {
   const world = getWorld();
   const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-                  .setCcdEnabled(true)
-                  .setTranslation(pos.x, pos.y, pos.z)
-                  
+    .setCcdEnabled(true)
+    .setTranslation(pos.x, pos.y, pos.z)
+
   ballRigidBody = world.createRigidBody(bodyDesc);
   const colliderDesc = RAPIER.ColliderDesc.ball(state.objects.ball.radius)
-    .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS) 
+    .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
     .setRestitution(0.7)
     .setFriction(0.7)
-    
+
   ballCollider = world.createCollider(colliderDesc, ballRigidBody);
   ballCollider.userData = "ball";
 }
@@ -31,7 +31,7 @@ export function createBallVisual(pos) {
   loadBasketballModel()
     .then(basketball => {
       basketballMesh = basketball;
-      basketballMesh.scale.set(state.objects.ball.scale , state.objects.ball.scale, state.objects.ball.scale); // Adjust scale if necessary
+      basketballMesh.scale.set(state.objects.ball.scale, state.objects.ball.scale, state.objects.ball.scale); // Adjust scale if necessary
       basketballMesh.position.copy(pos);
       addObject(basketballMesh);
     })
@@ -74,7 +74,7 @@ function onGrab(event, controller) {
     eventBus.emit("missedShot");
   }
   if (!state.objects.ball.isHeld) {
-    if (ballCollider){
+    if (ballCollider) {
       getWorld().removeCollider(ballCollider);
       ballCollider = null;
     }
@@ -146,7 +146,7 @@ export function removeBall() {
     getScene().remove(basketballMesh);
     basketballMesh = null;
   }
-  if (ballCollider){
+  if (ballCollider) {
     world.removeCollider(ballCollider);
     ballCollider = null;
   }

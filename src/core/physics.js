@@ -14,11 +14,11 @@ export function getWorld() {
 }
 
 export function getEventQueue() { // Add this function
-    return eventQueue;
+  return eventQueue;
 }
 
 export function stepPhysics() { // Add this function
-    world.step(eventQueue);
+  world.step(eventQueue);
 }
 
 export function createGroundPhysics(floorOffset) {
@@ -42,7 +42,7 @@ export function createRoomWalls(roomBoundary) {
   const halfWidth = (roomBoundary.max.x - roomBoundary.min.x) / 2;
   const halfHeight = (roomBoundary.max.y - roomBoundary.min.y) / 2;
   const halfDepth = (roomBoundary.max.z - roomBoundary.min.z) / 2;
-  
+
   // Left wall
   {
     const xPos = roomBoundary.min.x - padding;

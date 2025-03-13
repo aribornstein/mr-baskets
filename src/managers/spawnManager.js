@@ -163,10 +163,15 @@ export function moveHoopToNewPosition(state, delay = 200) {
         setInitialHoopPos(newHoopPos);
     }
 
+    // Set the isMoving flag to true
+    state.objects.hoop.isMoving = true;
+
     // Wait for the specified delay before moving the hoop
     setTimeout(() => {
         moveHoop(newHoopPos);
         console.log("Hoop moved to a new position within room bounds.", newHoopPos);
+        // Reset the isMoving flag
+        state.objects.hoop.isMoving = false;
     }, delay);
 }
 

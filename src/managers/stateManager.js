@@ -32,6 +32,7 @@ export const state = {
             phaseY: 0,
             phaseZ: 0,
             centerPosition: { x: 0, y: 0, z: 0 },
+            isMoving: false, // Add this line
         },
         walls: {
             created: false,

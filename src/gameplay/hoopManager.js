@@ -245,7 +245,7 @@ export function moveHoop(newPos) {
 }
 
 export function updateHoopMovement() {
-  if (!initialHoopPos) return;
+  if (!initialHoopPos || state.objects.hoop.isMoving) return;
 
   const {
     moveLeftAndRight,

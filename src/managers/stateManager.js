@@ -13,7 +13,8 @@ export const state = {
         ball: {
             created: false,
             isHeld: false,
-            radius: 0.24,
+            radius: 0.12,
+            scale: 0.24,
             // BALL-specific values if needed
         },
         hoop: {

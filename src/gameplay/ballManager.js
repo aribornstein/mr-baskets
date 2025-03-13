@@ -31,7 +31,7 @@ export function createBallVisual(pos) {
   loadBasketballModel()
     .then(basketball => {
       basketballMesh = basketball;
-      basketballMesh.scale.set(state.objects.ball.radius , state.objects.ball.radius, state.objects.ball.radius); // Adjust scale if necessary
+      basketballMesh.scale.set(state.objects.ball.scale , state.objects.ball.scale, state.objects.ball.scale); // Adjust scale if necessary
       basketballMesh.position.copy(pos);
       addObject(basketballMesh);
     })

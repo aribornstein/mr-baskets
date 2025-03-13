@@ -134,16 +134,17 @@ function findNewHoopPosition(state) {
             const dx = newHoopPos.x - state.objects.hoop.pos.x;
             const dz = newHoopPos.z - state.objects.hoop.pos.z;
             const distanceToPrevious = Math.sqrt(dx * dx + dz * dz);
+            console.log("Before adjustment:", { dx, dz, distanceToPrevious });
 
             if (distanceToPrevious < minDistanceToPrevious) {
-                // Adjust the position to be at least minDistanceToPrevious away from the previous position
                 const angle = Math.atan2(dz, dx);
                 newHoopPos.x = state.objects.hoop.pos.x + minDistanceToPrevious * Math.cos(angle);
                 newHoopPos.z = state.objects.hoop.pos.z + minDistanceToPrevious * Math.sin(angle);
+                console.log("After offset:", { newHoopPos });
 
-                // Ensure the adjusted position is still within the clamped ranges
                 newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, minX, maxX);
                 newHoopPos.z = THREE.MathUtils.clamp(newHoopPos.z, minZ, maxZ);
+                console.log("After clamping:", { newHoopPos });
             }
         }
     } else {

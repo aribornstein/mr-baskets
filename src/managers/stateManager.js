@@ -59,5 +59,5 @@ export const state = {
         onGrab: null,
         onRelease: null,
     },
-    debugger: true,
+    debugger: false,
 };

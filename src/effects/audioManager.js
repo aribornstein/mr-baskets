@@ -88,7 +88,7 @@ export async function playBackgroundMusic() {
         audio.play();
 
         // Automatically play the next track when the current one ends
-        audio.onEnded = () => {
+        audio.source.onended = () => {
             playBackgroundMusic();
         };
     } catch (error) {

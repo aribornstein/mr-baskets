@@ -31,19 +31,10 @@ export function createBallVisual(pos) {
   loadBasketballModel()
     .then(basketball => {
       basketballMesh = basketball;
-      basketballMesh.scale.set(state.objects.ball.radius * 2.0, state.objects.ball.radius * 2.0, state.objects.ball.radius * 2.0); // Adjust scale if necessary
+      basketballMesh.scale.set(state.objects.ball.radius , state.objects.ball.radius, state.objects.ball.radius); // Adjust scale if necessary
       basketballMesh.position.copy(pos);
       addObject(basketballMesh);
     })
-    .catch(error => {
-      console.error("Failed to load basketball model:", error);
-      // Fallback to sphere geometry if loading fails
-      const geometry = new THREE.SphereGeometry(state.objects.ball.radius, 32, 32);
-      const material = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
-      basketballMesh = new THREE.Mesh(geometry, material);
-      basketballMesh.position.copy(pos);
-      addObject(basketballMesh);
-    });
 }
 
 export function updateBall(delta, roomBoundary) {

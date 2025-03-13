@@ -39,8 +39,9 @@ function createHoop(state) {
 function findNewHoopPosition(state) {
     const camera = getCamera();
     let newHoopPos = new THREE.Vector3();
-    const safeRadius = 3; // Minimum distance from player
-    const minDistanceToPrevious = 2.5; // Minimum distance to previous hoop
+    const safeRadius = 3; // Minimum distance from the player
+    const numRegionsX = 3;
+    const numRegionsZ = 3;
 
     if (state.environment.roomBoundary) {
         const roomMinX = state.environment.roomBoundary.min.x + state.objects.hoop.radius;
@@ -68,19 +69,33 @@ function findNewHoopPosition(state) {
         if (minZ >= maxZ) { minZ = roomMinZ; maxZ = roomMaxZ; }
 
         // Divide the area into regions
-        const numRegionsX = 3;
-        const numRegionsZ = 3;
         const regionWidth = (maxX - minX) / numRegionsX;
         const regionHeight = (maxZ - minZ) / numRegionsZ;
         const numRegions = numRegionsX * numRegionsZ;
 
-        // Select a different region than the previous one
-        const availableRegions = Array.from({ length: numRegions }, (_, i) => i).filter(
-            (i) => i !== state.environment.previousRegionIndex
-        );
+        // Convert previous region to grid coordinates
+        const prevRegionX = state.environment.previousRegionIndex % numRegionsX;
+        const prevRegionZ = Math.floor(state.environment.previousRegionIndex / numRegionsX);
+
+        // Get all non-adjacent regions
+        const availableRegions = [];
+        for (let i = 0; i < numRegions; i++) {
+            const regionX = i % numRegionsX;
+            const regionZ = Math.floor(i / numRegionsX);
+
+            // Exclude the previous region and its adjacent regions
+            if (
+                Math.abs(regionX - prevRegionX) > 1 || 
+                Math.abs(regionZ - prevRegionZ) > 1
+            ) {
+                availableRegions.push(i);
+            }
+        }
+
+        // Pick a region from non-adjacent regions
         const regionIndex = availableRegions.length > 0
             ? availableRegions[Math.floor(Math.random() * availableRegions.length)]
-            : state.environment.previousRegionIndex;
+            : state.environment.previousRegionIndex; // Fallback in case no valid regions
 
         state.environment.previousRegionIndex = regionIndex;
 
@@ -97,22 +112,6 @@ function findNewHoopPosition(state) {
         let z = THREE.MathUtils.randFloat(regionMinZ, regionMaxZ);
 
         newHoopPos.set(x, state.objects.hoop.height + state.environment.floorOffset, z);
-
-        // Ensure the new position is at least `minDistanceToPrevious` away from the last hoop
-        if (state.objects.hoop.pos) {
-            const dx = newHoopPos.x - state.objects.hoop.pos.x;
-            const dz = newHoopPos.z - state.objects.hoop.pos.z;
-            let distanceToPrevious = Math.sqrt(dx * dx + dz * dz);
-
-            console.log("Before adjustment:", { newHoopPos, distanceToPrevious });
-
-            if (distanceToPrevious < minDistanceToPrevious) {
-                // Move it exactly `minDistanceToPrevious` away in a random direction
-                const angle = Math.random() * Math.PI * 2;
-                newHoopPos.x = state.objects.hoop.pos.x + minDistanceToPrevious * Math.cos(angle);
-                newHoopPos.z = state.objects.hoop.pos.z + minDistanceToPrevious * Math.sin(angle);
-            }
-        }
 
         // Final clamping to ensure it remains inside room bounds
         newHoopPos.x = THREE.MathUtils.clamp(newHoopPos.x, roomMinX, roomMaxX);
@@ -132,6 +131,7 @@ function findNewHoopPosition(state) {
     console.log("Final Assigned Hoop Position:", newHoopPos);
     return newHoopPos;
 }
+
 
 
 export function moveHoopToNewPosition(state, delay = 200) {

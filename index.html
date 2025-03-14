@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>972 Ball</title>
+  <title>+972 Shot Clock</title>
   <link rel="icon" type="image/ico" href="favicon.ico">
   <script type="importmap">
     {
@@ -26,9 +26,6 @@
       margin: 0;
       overflow: hidden;
       background: url('./src/assets/web_background.webp') no-repeat center center fixed;
-      -webkit-background-size: cover;
-      -moz-background-size: cover;
-      -o-background-size: cover;
       background-size: cover;
       font-family: sans-serif;
     }
@@ -46,12 +43,8 @@
       font-size: 16px;
       z-index: 100;
       background-color: #4CAF50;
-      /* Green */
       border: none;
       color: white;
-      text-align: center;
-      text-decoration: none;
-      display: inline-block;
       cursor: pointer;
       border-radius: 5px;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
@@ -76,7 +69,6 @@
 
     #instructions h2 {
       margin-top: 0;
-      margin-bottom: 10px;
       font-size: 24px;
     }
 
@@ -87,10 +79,71 @@
     #instructions li {
       margin-bottom: 5px;
     }
+
+    /* EULA Popup */
+    #eula-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      text-align: center;
+      z-index: 2000;
+      width: 80%;
+      max-width: 500px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      display: none;
+    }
+
+    #eula-popup h2 {
+      margin-top: 0;
+    }
+
+    #eula-popup p {
+      font-size: 14px;
+    }
+
+    #eula-popup a {
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    #eula-popup a:hover {
+      text-decoration: underline;
+    }
+
+    #accept-eula {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #accept-eula:hover {
+      background-color: #218838;
+    }
+
+    body.eula-blocked {
+      overflow: hidden;
+    }
   </style>
 </head>
 
 <body>
+
+  <!-- EULA Popup -->
+  <div id="eula-popup">
+    <h2>End User License Agreement</h2>
+    <p>By playing <strong>+972 Shot Clock</strong>, you agree to the <a href="eula.html" target="_blank">EULA</a>.</p>
+    <button id="accept-eula">I Agree</button>
+  </div>
+
   <button id="ar-button">Start Game! </button>
   <div id="instructions">
     <h2>How to Play</h2>
@@ -102,7 +155,25 @@
       <li>Press the 'A' button to reset the game after game over.</li>
     </ul>
   </div>
+
   <script type="module" src="./src/main.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const eulaAccepted = localStorage.getItem("eulaAccepted");
+
+      if (!eulaAccepted) {
+        document.body.classList.add("eula-blocked");
+        document.getElementById("eula-popup").style.display = "block";
+      }
+
+      document.getElementById("accept-eula").addEventListener("click", function () {
+        localStorage.setItem("eulaAccepted", "true");
+        document.getElementById("eula-popup").style.display = "none";
+        document.body.classList.remove("eula-blocked");
+      });
+    });
+  </script>
 
 </body>
 

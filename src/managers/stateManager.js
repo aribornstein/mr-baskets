@@ -47,7 +47,7 @@ export const state = {
         level: 1,
         gameClock: 0,
         score: 0,
-        mode: "practice",
+        mode: "normal",
         roomSetupComplete: false,
         gameOver: false,
         gameStarted: false,
